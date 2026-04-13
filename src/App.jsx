@@ -1,182 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
-
-// ─── Defaults ───
-const DEFAULT_EXERCISES = [
-  // Chest
-  { id: "e1", name: "Bench Press", muscle: "Chest", equipment: "weighted", category: "strength", yt: "bench+press+form" },
-  { id: "e2", name: "Incline Dumbbell Press", muscle: "Chest", equipment: "weighted", category: "strength", yt: "incline+dumbbell+press" },
-  { id: "e3", name: "Cable Fly", muscle: "Chest", equipment: "weighted", category: "strength", yt: "cable+fly+form" },
-  { id: "e25", name: "Push-up", muscle: "Chest", equipment: "bodyweight", category: "strength", yt: "push+up+form" },
-  // Legs
-  { id: "e4", name: "Squat", muscle: "Legs", equipment: "weighted", category: "strength", yt: "barbell+squat+form" },
-  { id: "e5", name: "Romanian Deadlift", muscle: "Legs", equipment: "weighted", category: "strength", yt: "romanian+deadlift+form" },
-  { id: "e6", name: "Leg Press", muscle: "Legs", equipment: "weighted", category: "strength", yt: "leg+press+form" },
-  { id: "e7", name: "Leg Curl", muscle: "Legs", equipment: "weighted", category: "strength", yt: "leg+curl+form" },
-  { id: "e23", name: "Bulgarian Split Squat", muscle: "Legs", equipment: "weighted", category: "strength", yt: "bulgarian+split+squat" },
-  { id: "e24", name: "Calf Raise", muscle: "Legs", equipment: "weighted", category: "strength", yt: "calf+raise+form" },
-  { id: "e26", name: "Front Squat", muscle: "Legs", equipment: "weighted", category: "strength", yt: "front+squat+form" },
-  { id: "e27", name: "Lunge", muscle: "Legs", equipment: "bodyweight", category: "strength", yt: "lunge+form" },
-  { id: "e28", name: "Pistol Squat", muscle: "Legs", equipment: "bodyweight", category: "strength", yt: "pistol+squat+tutorial" },
-  { id: "e29", name: "Bodyweight Squat", muscle: "Legs", equipment: "bodyweight", category: "strength", yt: "bodyweight+squat+form" },
-  { id: "e30", name: "World's Greatest Stretch", muscle: "Legs", equipment: "bodyweight", category: "mobility", yt: "worlds+greatest+stretch" },
-  // Shoulders
-  { id: "e8", name: "Overhead Press", muscle: "Shoulders", equipment: "weighted", category: "strength", yt: "overhead+press+form" },
-  { id: "e9", name: "Lateral Raise", muscle: "Shoulders", equipment: "weighted", category: "strength", yt: "lateral+raise+form" },
-  { id: "e10", name: "Face Pull", muscle: "Shoulders", equipment: "weighted", category: "strength", yt: "face+pull+form" },
-  { id: "e31", name: "Arnold Press", muscle: "Shoulders", equipment: "weighted", category: "strength", yt: "arnold+press+form" },
-  { id: "e32", name: "Shoulder Dislocate", muscle: "Shoulders", equipment: "bodyweight", category: "mobility", yt: "shoulder+dislocate+band" },
-  // Back
-  { id: "e11", name: "Barbell Row", muscle: "Back", equipment: "weighted", category: "strength", yt: "barbell+row+form" },
-  { id: "e12", name: "Lat Pulldown", muscle: "Back", equipment: "weighted", category: "strength", yt: "lat+pulldown+form" },
-  { id: "e13", name: "Seated Cable Row", muscle: "Back", equipment: "weighted", category: "strength", yt: "seated+cable+row" },
-  { id: "e14", name: "Deadlift", muscle: "Back", equipment: "weighted", category: "strength", yt: "deadlift+form" },
-  { id: "e33", name: "Pendlay Row", muscle: "Back", equipment: "weighted", category: "strength", yt: "pendlay+row+form" },
-  { id: "e34", name: "Pull-up", muscle: "Back", equipment: "bodyweight", category: "strength", yt: "pull+up+form" },
-  { id: "e35", name: "Thoracic Rotation", muscle: "Back", equipment: "bodyweight", category: "mobility", yt: "thoracic+spine+rotation+mobility" },
-  { id: "e36", name: "Cat-Cow", muscle: "Back", equipment: "bodyweight", category: "mobility", yt: "cat+cow+stretch" },
-  { id: "e40", name: "Dead Hang", muscle: "Back", equipment: "bodyweight", category: "mobility", yt: "dead+hang+form+benefits" },
-  // Arms
-  { id: "e15", name: "Barbell Curl", muscle: "Arms", equipment: "weighted", category: "strength", yt: "barbell+curl+form" },
-  { id: "e16", name: "Tricep Pushdown", muscle: "Arms", equipment: "weighted", category: "strength", yt: "tricep+pushdown" },
-  { id: "e17", name: "Hammer Curl", muscle: "Arms", equipment: "weighted", category: "strength", yt: "hammer+curl+form" },
-  { id: "e18", name: "Skull Crusher", muscle: "Arms", equipment: "weighted", category: "strength", yt: "skull+crusher+form" },
-  { id: "e37", name: "Dip", muscle: "Arms", equipment: "bodyweight", category: "strength", yt: "dip+form+tricep" },
-  // Core
-  { id: "e19", name: "Plank", muscle: "Core", equipment: "bodyweight", category: "strength", yt: "plank+form" },
-  { id: "e20", name: "Cable Crunch", muscle: "Core", equipment: "weighted", category: "strength", yt: "cable+crunch+form" },
-  { id: "e21", name: "Hanging Leg Raise", muscle: "Core", equipment: "bodyweight", category: "strength", yt: "hanging+leg+raise" },
-  // Glutes
-  { id: "e22", name: "Hip Thrust", muscle: "Glutes", equipment: "weighted", category: "strength", yt: "hip+thrust+form" },
-  { id: "e38", name: "Hip Circle", muscle: "Glutes", equipment: "bodyweight", category: "mobility", yt: "hip+circle+activation" },
-  { id: "e39", name: "90/90 Hip Stretch", muscle: "Glutes", equipment: "bodyweight", category: "mobility", yt: "90+90+hip+stretch" },
-  { id: "e50", name: "Pigeon Pose", muscle: "Glutes", equipment: "bodyweight", category: "mobility", yt: "pigeon+pose+hip+stretch" },
-  { id: "e41", name: "Frog Stretch", muscle: "Glutes", equipment: "bodyweight", category: "mobility", yt: "frog+stretch+hip+mobility" },
-  { id: "e42", name: "Cossack Squat", muscle: "Legs", equipment: "bodyweight", category: "mobility", yt: "cossack+squat+mobility" },
-  { id: "e43", name: "Standing Forward Fold", muscle: "Legs", equipment: "bodyweight", category: "mobility", yt: "standing+forward+fold+hamstring" },
-  { id: "e44", name: "Supine Hamstring Stretch", muscle: "Legs", equipment: "bodyweight", category: "mobility", yt: "supine+hamstring+stretch" },
-  { id: "e45", name: "Jefferson Curl", muscle: "Back", equipment: "bodyweight", category: "mobility", yt: "jefferson+curl+mobility" },
-  { id: "e46", name: "Nordic Hamstring Curl", muscle: "Legs", equipment: "bodyweight", category: "strength", yt: "nordic+hamstring+curl" },
-  { id: "e47", name: "Elephant Walk", muscle: "Legs", equipment: "bodyweight", category: "mobility", yt: "elephant+walk+hamstring+stretch" },
-  { id: "e48", name: "Glute Bridge", muscle: "Glutes", equipment: "bodyweight", category: "strength", yt: "glute+bridge+form" },
-  { id: "e49", name: "Single-Leg RDL", muscle: "Legs", equipment: "bodyweight", category: "strength", yt: "single+leg+rdl+bodyweight" },
-];
-const MUSCLE_GROUPS = ["All", "Chest", "Back", "Shoulders", "Legs", "Arms", "Core", "Glutes"];
-const MUSCLE_GROUPS_NO_ALL = MUSCLE_GROUPS.slice(1);
-const MUSCLE_ICONS = { Chest: "🫁", Back: "🔙", Shoulders: "💪", Legs: "🦵", Arms: "💪", Core: "🎯", Glutes: "🍑" };
-const EQUIPMENT_TYPES = ["Weighted", "Bodyweight"];
-const CATEGORY_TYPES = ["Strength", "Mobility"];
-const KG_TO_LBS = 2.20462;
-const DEFAULT_SETTINGS = { unit: "kg" };
-
-// ─── Storage ───
-const STORAGE_KEY = "temple-data";
-const mkDefault = () => ({ exercises: DEFAULT_EXERCISES, sets: [], sessions: [], prs: {}, settings: DEFAULT_SETTINGS });
-
-function useAppData() {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  useEffect(() => {
-    (async () => {
-      const minSplash = new Promise(r => setTimeout(r, 1200));
-      let loaded;
-      try {
-        const res = await window.storage.get(STORAGE_KEY);
-        if (res?.value) {
-          const parsed = JSON.parse(res.value);
-          if (!parsed.settings) parsed.settings = DEFAULT_SETTINGS;
-          // Migrate: backfill equipment/category from defaults or sensible fallback
-          const defaultMap = {};
-          DEFAULT_EXERCISES.forEach(e => { defaultMap[e.id] = e; });
-          parsed.exercises = parsed.exercises.map(e => {
-            if (!e.equipment || !e.category) {
-              const def = defaultMap[e.id];
-              return { ...e, equipment: e.equipment || def?.equipment || "weighted", category: e.category || def?.category || "strength" };
-            }
-            return e;
-          });
-          // Add new default exercises the user doesn't have yet
-          const existingIds = new Set(parsed.exercises.map(e => e.id));
-          DEFAULT_EXERCISES.forEach(de => {
-            if (!existingIds.has(de.id)) parsed.exercises.push(de);
-          });
-          loaded = parsed;
-        } else loaded = mkDefault();
-      } catch (e) { loaded = mkDefault(); }
-      await minSplash;
-      setData(loaded);
-      setLoading(false);
-    })();
-  }, []);
-  const save = useCallback(async (newData) => {
-    setData(newData);
-    setSaving(true);
-    try { await window.storage.set(STORAGE_KEY, JSON.stringify(newData)); } catch (e) { console.error(e); }
-    setSaving(false);
-  }, []);
-  return { data, loading, saving, save };
-}
-
-// ─── Utility ───
-const uid = () => Math.random().toString(36).slice(2, 9);
-const fmtDate = (d) => new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-const fmtDateFull = (d) => new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-
-// ─── Unit helpers ───
-function displayWeight(kg, unit) {
-  if (unit === "lbs") return Math.round(kg * KG_TO_LBS * 10) / 10;
-  return kg;
-}
-function toKg(val, unit) {
-  if (unit === "lbs") return Math.round((val / KG_TO_LBS) * 10) / 10;
-  return val;
-}
-function weightLabel(unit) { return unit === "lbs" ? "lbs" : "kg"; }
-// Epley formula: estimated 1RM = weight × (1 + reps/30). Only meaningful for reps > 1 and weight > 0.
-function est1RM(weight, reps) {
-  if (reps <= 0 || weight <= 0) return 0;
-  if (reps === 1) return weight;
-  return Math.round(weight * (1 + reps / 30) * 10) / 10;
-}
-
-// ─── Design Tokens ───
-const T = {
-  color: {
-    bg: "#0a0a0f", surface: "#12121c", border: "#1e1e2e",
-    text: "#e8e8ef", textDim: "#6b6b80", textOnAccent: "#0a0a0f",
-    accent: "#00e5c8", accentDim: "rgba(0,229,200,0.12)", accentBorder: "rgba(0,229,200,0.2)",
-    pr: "#7c5cfc", prDim: "rgba(124,92,252,0.12)", prBorder: "rgba(124,92,252,0.2)",
-    danger: "#ff4466", dangerDim: "rgba(255,68,102,0.12)", dangerBorder: "rgba(255,68,102,0.2)",
-    youtube: "#ff4444", youtubeDim: "rgba(255,0,0,0.12)",
-    overlay: "rgba(0,0,0,0.7)",
-  },
-  font: { body: `-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`, mono: `"SF Mono", "Fira Code", "Consolas", monospace` },
-  fontSize: { hero: 48, timer: 40, icon: 36, stat: 28, statMd: 24, h1: 22, h2: 18, h3: 17, body: 15, bodySmall: 14, caption: 13, small: 12, xs: 11, xxs: 10, micro: 9 },
-  fontWeight: { black: 900, heavy: 800, bold: 700, semi: 600, medium: 500 },
-  letterSpacing: { tight: "-0.02em", label: "0.04em", uppercase: "0.05em" },
-  space: { xs: 2, sm: 4, md: 6, base: 8, lg: 12, xl: 16, "2xl": 20, "3xl": 32, "4xl": 40 },
-  radius: { sm: 2, base: 4, md: 6, lg: 8, xl: 12, full: 20 },
-  size: { checkbox: 20, setColumn: 32, progressBar: 3, maxWidth: 480, tabIcon: 18, scrollList: 340 },
-  z: { tabBar: 100, header: 50, modal: 200 },
-  easing: {
-    default: "cubic-bezier(0.4, 0, 0.2, 1)",   // standard — snappy settle
-    enter: "cubic-bezier(0, 0, 0.2, 1)",         // decelerate — things arriving
-    exit: "cubic-bezier(0.4, 0, 1, 1)",          // accelerate — things leaving
-    spring: "cubic-bezier(0.34, 1.56, 0.64, 1)", // overshoot — playful emphasis
-  },
-  duration: { fast: "0.15s", medium: "0.25s", slow: "0.35s" },
-  transition: {
-    fast: "0.15s cubic-bezier(0.4, 0, 0.2, 1)",
-    medium: "0.25s cubic-bezier(0.4, 0, 0.2, 1)",
-    slow: "0.35s cubic-bezier(0.4, 0, 0.2, 1)",
-    spring: "0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
-    enter: "0.25s cubic-bezier(0, 0, 0.2, 1)",
-    exit: "0.2s cubic-bezier(0.4, 0, 1, 1)",
-  },
-  opacity: { disabled: 0.35 },
-};
-const C = T.color;
+import { T, C } from "./tokens";
+import {
+  DEFAULT_EXERCISES, MUSCLE_GROUPS, MUSCLE_GROUPS_NO_ALL, MUSCLE_ICONS,
+  EQUIPMENT_TYPES, CATEGORY_TYPES, DEFAULT_REST, DEFAULT_SETTINGS,
+  uid, fmtDate, fmtDateFull, fmt, mkDefault,
+  displayWeight, toKg, weightLabel, est1RM,
+} from "./data";
+import { useAppData, usePWA } from "./hooks";
 
 // ─── Shared Components ───
 function Tabs({ active, onChange }) {
@@ -589,7 +420,6 @@ function SetsPage({ data, save, onStartSession }) {
 }
 
 // ─── Session Page (redesigned training flow) ───
-const DEFAULT_REST = 90;
 
 function SessionPage({ data, save, activeSet, setActiveSet, setTab }) {
   const [sessionData, setSessionData] = useState(null);
@@ -1253,67 +1083,6 @@ function SettingsPage({ data, save }) {
       </Card>
     </div>
   );
-}
-
-// ─── PWA Support ───
-function usePWA() {
-  const [installPrompt, setInstallPrompt] = useState(null);
-  const [dismissed, setDismissed] = useState(false);
-
-  useEffect(() => {
-    try {
-      // Inject manifest
-      const manifest = {
-        name: "Temple", short_name: "Temple",
-        description: "Your body is a temple. Train it.",
-        start_url: ".", display: "standalone",
-        background_color: C.bg, theme_color: C.accent,
-        icons: [{ src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🟁</text></svg>", sizes: "any", type: "image/svg+xml" }],
-      };
-      const mBlob = new Blob([JSON.stringify(manifest)], { type: "application/json" });
-      const mUrl = URL.createObjectURL(mBlob);
-      let link = document.querySelector('link[rel="manifest"]');
-      if (!link) { link = document.createElement("link"); link.rel = "manifest"; document.head.appendChild(link); }
-      link.href = mUrl;
-
-      // Theme color
-      let meta = document.querySelector('meta[name="theme-color"]');
-      if (!meta) { meta = document.createElement("meta"); meta.name = "theme-color"; document.head.appendChild(meta); }
-      meta.content = C.bg;
-
-      // Apple meta
-      if (!document.querySelector('meta[name="apple-mobile-web-app-capable"]')) {
-        const m1 = document.createElement("meta"); m1.name = "apple-mobile-web-app-capable"; m1.content = "yes"; document.head.appendChild(m1);
-        const m2 = document.createElement("meta"); m2.name = "apple-mobile-web-app-status-bar-style"; m2.content = "black-translucent"; document.head.appendChild(m2);
-      }
-
-      // Service worker (best-effort, fails gracefully in sandboxes)
-      if ("serviceWorker" in navigator) {
-        const swCode = `
-          const CACHE='temple-v0.4';self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(['/'])).then(()=>self.skipWaiting()))});
-          self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
-          self.addEventListener('fetch',e=>{e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>caches.match('/'))))});
-        `;
-        const swBlob = new Blob([swCode], { type: "application/javascript" });
-        navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(() => {});
-      }
-    } catch (e) {
-      // PWA setup failed (sandboxed environment) — app continues normally
-    }
-
-    // Install prompt
-    const handler = (e) => { e.preventDefault(); setInstallPrompt(e); };
-    try { window.addEventListener("beforeinstallprompt", handler); } catch (e) {}
-    return () => { try { window.removeEventListener("beforeinstallprompt", handler); } catch (e) {} };
-  }, []);
-
-  const install = async () => {
-    if (!installPrompt) return;
-    try { installPrompt.prompt(); const r = await installPrompt.userChoice; if (r.outcome === "accepted") setInstallPrompt(null); } catch (e) {}
-  };
-  const dismiss = () => { setDismissed(true); setInstallPrompt(null); };
-
-  return { canInstall: !!installPrompt && !dismissed, install, dismiss };
 }
 
 function InstallBanner({ onInstall, onDismiss }) {

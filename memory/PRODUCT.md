@@ -38,7 +38,7 @@ Temple's voice is warm, minimal, never performative. "Your body is a temple" —
 ## Overview
 Free, private workout PWA. Custom exercise sets, guided training sessions, PR tracking. No accounts, no backend, data stays on device.
 
-**Tech**: React 18 single-file JSX (~1300 lines), recharts, `T` token system, `window.storage` API.
+**Tech**: React 18 single-file JSX (~1450 lines), recharts, `T` token system, `window.storage` API.
 
 ## Navigation
 - **Top**: centered 🟁 TEMPLE logo, pulsing save dot
@@ -47,7 +47,7 @@ Free, private workout PWA. Custom exercise sets, guided training sessions, PR tr
 ## Features
 
 ### Library (📖)
-50 default exercises, 8 muscle groups. Custom CRUD (cascades to sets + PRs). Search + grouped filter bar (muscle | equipment | category). YouTube form-check links. BW/MOB tags on cards.
+51 default exercises, 8 muscle groups. Custom CRUD (cascades to sets + PRs). Search + grouped filter bar (muscle | equipment | category). YouTube form-check links. BW/MOB tags on cards.
 
 ### Sets (📋)
 Exercise picker with reordering (▲▼). Muscle activation highlight. Edit/delete with confirmation. Ghost CTA when sets exist.

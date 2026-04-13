@@ -8,7 +8,7 @@
 
 ## File Structure
 ```
-temple.jsx              — Single-file React app (~1300 lines)
+temple.jsx              — Single-file React app (~1450 lines)
 memory/
   PROJECT.md            — Project overview and current state
   PRODUCT.md            — Feature documentation
@@ -35,6 +35,8 @@ interface Exercise {
   id: string;        // "e1" (default) or "ex_" + uid() (custom)
   name: string;
   muscle: string;    // "Chest" | "Back" | "Shoulders" | "Legs" | "Arms" | "Core" | "Glutes"
+  equipment: string; // "weighted" | "bodyweight"
+  category: string;  // "strength" | "mobility"
   yt: string;        // YouTube search query
 }
 
@@ -95,6 +97,7 @@ Temple (root, default export)
 | `ConfirmDialog` | message, onConfirm, onCancel         | Modal confirmation with backdrop     |
 | `ErrorBanner`   | message                              | Inline danger-colored validation message |
 | `PillFilter`    | options, active, onChange, small      | Reusable pill toggle group           |
+| `FilterBar`     | muscle, onMuscle, equipment, onEquipment, category, onCategory, small | Grouped filter: muscle pills + equipment/category toggles |
 | `MuscleBar`     | label, value, max, icon, unit        | Horizontal progress bar for muscle volume |
 | `InstallBanner` | onInstall, onDismiss                 | PWA install prompt                   |
 
@@ -134,8 +137,10 @@ Temple (root, default export)
 - All animation timings use easing curves from `T.easing.*`
 
 ## Constants
-- `DEFAULT_EXERCISES` — 24 exercises
+- `DEFAULT_EXERCISES` — 51 exercises (25 weighted, 26 bodyweight, 37 strength, 14 mobility)
 - `MUSCLE_GROUPS` / `MUSCLE_GROUPS_NO_ALL` — filter options
+- `EQUIPMENT_TYPES` — `["Weighted", "Bodyweight"]`
+- `CATEGORY_TYPES` — `["Strength", "Mobility"]`
 - `MUSCLE_ICONS` — emoji per muscle group
 - `KG_TO_LBS` — 2.20462
 - `DEFAULT_REST` — 90 (seconds)
@@ -143,7 +148,7 @@ Temple (root, default export)
 - `STORAGE_KEY` — `"temple-data"`
 
 ## Constraints
-- **Single file** — ~1300 lines. Will split into modules for Netlify deploy.
+- **Single file** — ~1450 lines. Will split into modules for Netlify deploy.
 - **Artifact sandbox** — service worker registration from Blob URLs fails; PWA features degrade gracefully.
 - **No external CSS** — all styling inline or via injected `<style>` tag.
 - **No localStorage** — artifact runtime blocks it; must use `window.storage` API.
