@@ -1,0 +1,1473 @@
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+
+// ─── Defaults ───
+const DEFAULT_EXERCISES = [
+  // Chest
+  { id: "e1", name: "Bench Press", muscle: "Chest", equipment: "weighted", category: "strength", yt: "bench+press+form" },
+  { id: "e2", name: "Incline Dumbbell Press", muscle: "Chest", equipment: "weighted", category: "strength", yt: "incline+dumbbell+press" },
+  { id: "e3", name: "Cable Fly", muscle: "Chest", equipment: "weighted", category: "strength", yt: "cable+fly+form" },
+  { id: "e25", name: "Push-up", muscle: "Chest", equipment: "bodyweight", category: "strength", yt: "push+up+form" },
+  // Legs
+  { id: "e4", name: "Squat", muscle: "Legs", equipment: "weighted", category: "strength", yt: "barbell+squat+form" },
+  { id: "e5", name: "Romanian Deadlift", muscle: "Legs", equipment: "weighted", category: "strength", yt: "romanian+deadlift+form" },
+  { id: "e6", name: "Leg Press", muscle: "Legs", equipment: "weighted", category: "strength", yt: "leg+press+form" },
+  { id: "e7", name: "Leg Curl", muscle: "Legs", equipment: "weighted", category: "strength", yt: "leg+curl+form" },
+  { id: "e23", name: "Bulgarian Split Squat", muscle: "Legs", equipment: "weighted", category: "strength", yt: "bulgarian+split+squat" },
+  { id: "e24", name: "Calf Raise", muscle: "Legs", equipment: "weighted", category: "strength", yt: "calf+raise+form" },
+  { id: "e26", name: "Front Squat", muscle: "Legs", equipment: "weighted", category: "strength", yt: "front+squat+form" },
+  { id: "e27", name: "Lunge", muscle: "Legs", equipment: "bodyweight", category: "strength", yt: "lunge+form" },
+  { id: "e28", name: "Pistol Squat", muscle: "Legs", equipment: "bodyweight", category: "strength", yt: "pistol+squat+tutorial" },
+  { id: "e29", name: "Bodyweight Squat", muscle: "Legs", equipment: "bodyweight", category: "strength", yt: "bodyweight+squat+form" },
+  { id: "e30", name: "World's Greatest Stretch", muscle: "Legs", equipment: "bodyweight", category: "mobility", yt: "worlds+greatest+stretch" },
+  // Shoulders
+  { id: "e8", name: "Overhead Press", muscle: "Shoulders", equipment: "weighted", category: "strength", yt: "overhead+press+form" },
+  { id: "e9", name: "Lateral Raise", muscle: "Shoulders", equipment: "weighted", category: "strength", yt: "lateral+raise+form" },
+  { id: "e10", name: "Face Pull", muscle: "Shoulders", equipment: "weighted", category: "strength", yt: "face+pull+form" },
+  { id: "e31", name: "Arnold Press", muscle: "Shoulders", equipment: "weighted", category: "strength", yt: "arnold+press+form" },
+  { id: "e32", name: "Shoulder Dislocate", muscle: "Shoulders", equipment: "bodyweight", category: "mobility", yt: "shoulder+dislocate+band" },
+  // Back
+  { id: "e11", name: "Barbell Row", muscle: "Back", equipment: "weighted", category: "strength", yt: "barbell+row+form" },
+  { id: "e12", name: "Lat Pulldown", muscle: "Back", equipment: "weighted", category: "strength", yt: "lat+pulldown+form" },
+  { id: "e13", name: "Seated Cable Row", muscle: "Back", equipment: "weighted", category: "strength", yt: "seated+cable+row" },
+  { id: "e14", name: "Deadlift", muscle: "Back", equipment: "weighted", category: "strength", yt: "deadlift+form" },
+  { id: "e33", name: "Pendlay Row", muscle: "Back", equipment: "weighted", category: "strength", yt: "pendlay+row+form" },
+  { id: "e34", name: "Pull-up", muscle: "Back", equipment: "bodyweight", category: "strength", yt: "pull+up+form" },
+  { id: "e35", name: "Thoracic Rotation", muscle: "Back", equipment: "bodyweight", category: "mobility", yt: "thoracic+spine+rotation+mobility" },
+  { id: "e36", name: "Cat-Cow", muscle: "Back", equipment: "bodyweight", category: "mobility", yt: "cat+cow+stretch" },
+  { id: "e40", name: "Dead Hang", muscle: "Back", equipment: "bodyweight", category: "mobility", yt: "dead+hang+form+benefits" },
+  // Arms
+  { id: "e15", name: "Barbell Curl", muscle: "Arms", equipment: "weighted", category: "strength", yt: "barbell+curl+form" },
+  { id: "e16", name: "Tricep Pushdown", muscle: "Arms", equipment: "weighted", category: "strength", yt: "tricep+pushdown" },
+  { id: "e17", name: "Hammer Curl", muscle: "Arms", equipment: "weighted", category: "strength", yt: "hammer+curl+form" },
+  { id: "e18", name: "Skull Crusher", muscle: "Arms", equipment: "weighted", category: "strength", yt: "skull+crusher+form" },
+  { id: "e37", name: "Dip", muscle: "Arms", equipment: "bodyweight", category: "strength", yt: "dip+form+tricep" },
+  // Core
+  { id: "e19", name: "Plank", muscle: "Core", equipment: "bodyweight", category: "strength", yt: "plank+form" },
+  { id: "e20", name: "Cable Crunch", muscle: "Core", equipment: "weighted", category: "strength", yt: "cable+crunch+form" },
+  { id: "e21", name: "Hanging Leg Raise", muscle: "Core", equipment: "bodyweight", category: "strength", yt: "hanging+leg+raise" },
+  // Glutes
+  { id: "e22", name: "Hip Thrust", muscle: "Glutes", equipment: "weighted", category: "strength", yt: "hip+thrust+form" },
+  { id: "e38", name: "Hip Circle", muscle: "Glutes", equipment: "bodyweight", category: "mobility", yt: "hip+circle+activation" },
+  { id: "e39", name: "90/90 Hip Stretch", muscle: "Glutes", equipment: "bodyweight", category: "mobility", yt: "90+90+hip+stretch" },
+  { id: "e50", name: "Pigeon Pose", muscle: "Glutes", equipment: "bodyweight", category: "mobility", yt: "pigeon+pose+hip+stretch" },
+  { id: "e41", name: "Frog Stretch", muscle: "Glutes", equipment: "bodyweight", category: "mobility", yt: "frog+stretch+hip+mobility" },
+  { id: "e42", name: "Cossack Squat", muscle: "Legs", equipment: "bodyweight", category: "mobility", yt: "cossack+squat+mobility" },
+  { id: "e43", name: "Standing Forward Fold", muscle: "Legs", equipment: "bodyweight", category: "mobility", yt: "standing+forward+fold+hamstring" },
+  { id: "e44", name: "Supine Hamstring Stretch", muscle: "Legs", equipment: "bodyweight", category: "mobility", yt: "supine+hamstring+stretch" },
+  { id: "e45", name: "Jefferson Curl", muscle: "Back", equipment: "bodyweight", category: "mobility", yt: "jefferson+curl+mobility" },
+  { id: "e46", name: "Nordic Hamstring Curl", muscle: "Legs", equipment: "bodyweight", category: "strength", yt: "nordic+hamstring+curl" },
+  { id: "e47", name: "Elephant Walk", muscle: "Legs", equipment: "bodyweight", category: "mobility", yt: "elephant+walk+hamstring+stretch" },
+  { id: "e48", name: "Glute Bridge", muscle: "Glutes", equipment: "bodyweight", category: "strength", yt: "glute+bridge+form" },
+  { id: "e49", name: "Single-Leg RDL", muscle: "Legs", equipment: "bodyweight", category: "strength", yt: "single+leg+rdl+bodyweight" },
+];
+const MUSCLE_GROUPS = ["All", "Chest", "Back", "Shoulders", "Legs", "Arms", "Core", "Glutes"];
+const MUSCLE_GROUPS_NO_ALL = MUSCLE_GROUPS.slice(1);
+const MUSCLE_ICONS = { Chest: "🫁", Back: "🔙", Shoulders: "💪", Legs: "🦵", Arms: "💪", Core: "🎯", Glutes: "🍑" };
+const EQUIPMENT_TYPES = ["Weighted", "Bodyweight"];
+const CATEGORY_TYPES = ["Strength", "Mobility"];
+const KG_TO_LBS = 2.20462;
+const DEFAULT_SETTINGS = { unit: "kg" };
+
+// ─── Storage ───
+const STORAGE_KEY = "temple-data";
+const mkDefault = () => ({ exercises: DEFAULT_EXERCISES, sets: [], sessions: [], prs: {}, settings: DEFAULT_SETTINGS });
+
+function useAppData() {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  useEffect(() => {
+    (async () => {
+      const minSplash = new Promise(r => setTimeout(r, 1200));
+      let loaded;
+      try {
+        const res = await window.storage.get(STORAGE_KEY);
+        if (res?.value) {
+          const parsed = JSON.parse(res.value);
+          if (!parsed.settings) parsed.settings = DEFAULT_SETTINGS;
+          // Migrate: backfill equipment/category from defaults or sensible fallback
+          const defaultMap = {};
+          DEFAULT_EXERCISES.forEach(e => { defaultMap[e.id] = e; });
+          parsed.exercises = parsed.exercises.map(e => {
+            if (!e.equipment || !e.category) {
+              const def = defaultMap[e.id];
+              return { ...e, equipment: e.equipment || def?.equipment || "weighted", category: e.category || def?.category || "strength" };
+            }
+            return e;
+          });
+          // Add new default exercises the user doesn't have yet
+          const existingIds = new Set(parsed.exercises.map(e => e.id));
+          DEFAULT_EXERCISES.forEach(de => {
+            if (!existingIds.has(de.id)) parsed.exercises.push(de);
+          });
+          loaded = parsed;
+        } else loaded = mkDefault();
+      } catch (e) { loaded = mkDefault(); }
+      await minSplash;
+      setData(loaded);
+      setLoading(false);
+    })();
+  }, []);
+  const save = useCallback(async (newData) => {
+    setData(newData);
+    setSaving(true);
+    try { await window.storage.set(STORAGE_KEY, JSON.stringify(newData)); } catch (e) { console.error(e); }
+    setSaving(false);
+  }, []);
+  return { data, loading, saving, save };
+}
+
+// ─── Utility ───
+const uid = () => Math.random().toString(36).slice(2, 9);
+const fmtDate = (d) => new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+const fmtDateFull = (d) => new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+
+// ─── Unit helpers ───
+function displayWeight(kg, unit) {
+  if (unit === "lbs") return Math.round(kg * KG_TO_LBS * 10) / 10;
+  return kg;
+}
+function toKg(val, unit) {
+  if (unit === "lbs") return Math.round((val / KG_TO_LBS) * 10) / 10;
+  return val;
+}
+function weightLabel(unit) { return unit === "lbs" ? "lbs" : "kg"; }
+// Epley formula: estimated 1RM = weight × (1 + reps/30). Only meaningful for reps > 1 and weight > 0.
+function est1RM(weight, reps) {
+  if (reps <= 0 || weight <= 0) return 0;
+  if (reps === 1) return weight;
+  return Math.round(weight * (1 + reps / 30) * 10) / 10;
+}
+
+// ─── Design Tokens ───
+const T = {
+  color: {
+    bg: "#0a0a0f", surface: "#12121c", border: "#1e1e2e",
+    text: "#e8e8ef", textDim: "#6b6b80", textOnAccent: "#0a0a0f",
+    accent: "#00e5c8", accentDim: "rgba(0,229,200,0.12)", accentBorder: "rgba(0,229,200,0.2)",
+    pr: "#7c5cfc", prDim: "rgba(124,92,252,0.12)", prBorder: "rgba(124,92,252,0.2)",
+    danger: "#ff4466", dangerDim: "rgba(255,68,102,0.12)", dangerBorder: "rgba(255,68,102,0.2)",
+    youtube: "#ff4444", youtubeDim: "rgba(255,0,0,0.12)",
+    overlay: "rgba(0,0,0,0.7)",
+  },
+  font: { body: `-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`, mono: `"SF Mono", "Fira Code", "Consolas", monospace` },
+  fontSize: { hero: 48, timer: 40, icon: 36, stat: 28, statMd: 24, h1: 22, h2: 18, h3: 17, body: 15, bodySmall: 14, caption: 13, small: 12, xs: 11, xxs: 10, micro: 9 },
+  fontWeight: { black: 900, heavy: 800, bold: 700, semi: 600, medium: 500 },
+  letterSpacing: { tight: "-0.02em", label: "0.04em", uppercase: "0.05em" },
+  space: { xs: 2, sm: 4, md: 6, base: 8, lg: 12, xl: 16, "2xl": 20, "3xl": 32, "4xl": 40 },
+  radius: { sm: 2, base: 4, md: 6, lg: 8, xl: 12, full: 20 },
+  size: { checkbox: 20, setColumn: 32, progressBar: 3, maxWidth: 480, tabIcon: 18, scrollList: 340 },
+  z: { tabBar: 100, header: 50, modal: 200 },
+  easing: {
+    default: "cubic-bezier(0.4, 0, 0.2, 1)",   // standard — snappy settle
+    enter: "cubic-bezier(0, 0, 0.2, 1)",         // decelerate — things arriving
+    exit: "cubic-bezier(0.4, 0, 1, 1)",          // accelerate — things leaving
+    spring: "cubic-bezier(0.34, 1.56, 0.64, 1)", // overshoot — playful emphasis
+  },
+  duration: { fast: "0.15s", medium: "0.25s", slow: "0.35s" },
+  transition: {
+    fast: "0.15s cubic-bezier(0.4, 0, 0.2, 1)",
+    medium: "0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+    slow: "0.35s cubic-bezier(0.4, 0, 0.2, 1)",
+    spring: "0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
+    enter: "0.25s cubic-bezier(0, 0, 0.2, 1)",
+    exit: "0.2s cubic-bezier(0.4, 0, 1, 1)",
+  },
+  opacity: { disabled: 0.35 },
+};
+const C = T.color;
+
+// ─── Shared Components ───
+function Tabs({ active, onChange }) {
+  const tabs = [
+    { id: "library", icon: "📖", label: "Library" },
+    { id: "sets", icon: "📋", label: "Sets" },
+    { id: "session", icon: "▶️", label: "Train" },
+    { id: "progress", icon: "📊", label: "Progress" },
+    { id: "settings", icon: "⚙️", label: "Settings" },
+  ];
+  return (
+    <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: C.surface, borderTop: `1px solid ${C.border}`, display: "flex", zIndex: T.z.tabBar, paddingBottom: "env(safe-area-inset-bottom)" }}>
+      {tabs.map(t => (
+        <button key={t.id} onClick={() => onChange(t.id)} style={{ flex: 1, border: "none", background: "none", padding: "10px 0 8px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: T.space.xs, color: active === t.id ? C.accent : C.textDim, transition: `color ${T.transition.fast}` }}>
+          <span style={{ fontSize: T.size.tabIcon }}>{t.icon}</span>
+          <span style={{ fontSize: T.fontSize.xxs, fontWeight: T.fontWeight.semi, letterSpacing: T.letterSpacing.label, textTransform: "uppercase" }}>{t.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function Card({ children, style, onClick, className }) {
+  return <div className={className} onClick={onClick} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: T.radius.xl, padding: T.space.xl, ...style, cursor: onClick ? "pointer" : "default", transition: `border-color ${T.transition.fast}, background ${T.transition.fast}` }}>{children}</div>;
+}
+
+function Btn({ children, variant = "primary", style, disabled, onClick, ...props }) {
+  const v = { primary: { background: C.accent, color: C.textOnAccent, fontWeight: T.fontWeight.bold }, secondary: { background: C.accentDim, color: C.accent, fontWeight: T.fontWeight.semi }, danger: { background: C.dangerDim, color: C.danger, fontWeight: T.fontWeight.semi }, ghost: { background: "transparent", color: C.textDim, fontWeight: T.fontWeight.medium } };
+  return <button {...props} disabled={disabled} onClick={disabled ? undefined : onClick} style={{ border: "none", borderRadius: T.radius.lg, padding: "10px 18px", fontSize: T.fontSize.bodySmall, cursor: disabled ? "not-allowed" : "pointer", transition: `opacity ${T.transition.fast}`, opacity: disabled ? T.opacity.disabled : 1, ...v[variant], ...style }}>{children}</button>;
+}
+
+function Input({ label, ...props }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: T.space.sm }}>
+      {label && <label style={{ fontSize: T.fontSize.small, color: C.textDim, fontWeight: T.fontWeight.semi, textTransform: "uppercase", letterSpacing: T.letterSpacing.uppercase }}>{label}</label>}
+      <input {...props} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: "10px 12px", color: C.text, fontSize: T.fontSize.body, outline: "none", ...props.style }} />
+    </div>
+  );
+}
+
+function YTButton({ query }) {
+  return <a href={`https://www.youtube.com/results?search_query=${query}`} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: T.space.sm, background: C.youtubeDim, color: C.youtube, border: "none", borderRadius: T.radius.md, padding: "5px 10px", fontSize: T.fontSize.xs, fontWeight: T.fontWeight.bold, textDecoration: "none", cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>▶ YouTube</a>;
+}
+function PRBadge() { return <span style={{ background: C.prDim, color: C.pr, fontSize: T.fontSize.xxs, fontWeight: T.fontWeight.heavy, padding: "2px 8px", borderRadius: T.radius.full, letterSpacing: T.letterSpacing.uppercase }}>🏆 PR</span>; }
+
+function ConfirmDialog({ message, onConfirm, onCancel }) {
+  return (
+    <div className="t-fade-in" style={{ position: "fixed", inset: 0, background: C.overlay, display: "flex", alignItems: "center", justifyContent: "center", zIndex: T.z.modal, padding: T.space.xl }}>
+      <div className="t-scale-in" style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: T.radius.xl, padding: T.space["2xl"], maxWidth: 320, width: "100%" }}>
+        <div style={{ fontSize: T.fontSize.body, fontWeight: T.fontWeight.semi, marginBottom: T.space.xl, color: C.text, lineHeight: 1.5 }}>{message}</div>
+        <div style={{ display: "flex", gap: T.space.base }}><Btn variant="ghost" onClick={onCancel} style={{ flex: 1 }}>No</Btn><Btn variant="danger" onClick={onConfirm} style={{ flex: 1 }}>Yes</Btn></div>
+      </div>
+    </div>
+  );
+}
+
+function ErrorBanner({ message }) {
+  if (!message) return null;
+  return <div style={{ background: C.dangerDim, border: `1px solid ${C.dangerBorder}`, borderRadius: T.radius.lg, padding: "10px 14px", fontSize: T.fontSize.small, color: C.danger, fontWeight: T.fontWeight.semi }}>{message}</div>;
+}
+
+function PillFilter({ options, active, onChange, small }) {
+  return (
+    <div style={{ display: "flex", gap: T.space.md, flexWrap: "wrap" }}>
+      {options.map(g => (
+        <button key={g} onClick={() => onChange(g)} style={{ border: "none", borderRadius: T.radius.full, padding: small ? "5px 12px" : "6px 14px", fontSize: small ? T.fontSize.xs : T.fontSize.small, fontWeight: T.fontWeight.semi, cursor: "pointer", transition: `background ${T.transition.fast}, color ${T.transition.fast}, border-color ${T.transition.fast}`, background: active === g ? C.accentDim : C.surface, color: active === g ? C.accent : C.textDim }}>{g}</button>
+      ))}
+    </div>
+  );
+}
+
+function FilterBar({ muscle, onMuscle, equipment, onEquipment, category, onCategory, small }) {
+  const pillStyle = (active) => ({
+    border: "none", borderRadius: T.radius.full,
+    padding: small ? "5px 12px" : "6px 14px",
+    fontSize: small ? T.fontSize.xs : T.fontSize.small,
+    fontWeight: T.fontWeight.semi, cursor: "pointer",
+    transition: `background ${T.transition.fast}, color ${T.transition.fast}`,
+    background: active ? C.accentDim : C.surface,
+    color: active ? C.accent : C.textDim,
+  });
+  const outlineStyle = (active) => ({
+    border: `1px solid ${active ? C.accent : C.border}`, borderRadius: T.radius.full,
+    padding: small ? "4px 11px" : "5px 13px",
+    fontSize: small ? T.fontSize.xs : T.fontSize.small,
+    fontWeight: T.fontWeight.semi, cursor: "pointer",
+    transition: `background ${T.transition.fast}, color ${T.transition.fast}, border-color ${T.transition.fast}`,
+    background: active ? C.accentDim : "transparent",
+    color: active ? C.accent : C.textDim,
+  });
+  const sep = { width: 1, alignSelf: "stretch", background: C.border, margin: `0 ${T.space.xs}px`, flexShrink: 0 };
+
+  return (
+    <div style={{ display: "flex", gap: T.space.md, flexWrap: "wrap", alignItems: "center" }}>
+      {MUSCLE_GROUPS.map(g => (
+        <button key={g} onClick={() => onMuscle(g)} style={pillStyle(muscle === g)}>{g}</button>
+      ))}
+      <div style={sep} />
+      {EQUIPMENT_TYPES.map(g => (
+        <button key={g} onClick={() => onEquipment(equipment === g ? null : g)} style={outlineStyle(equipment === g)}>{g}</button>
+      ))}
+      <div style={sep} />
+      {CATEGORY_TYPES.map(g => (
+        <button key={g} onClick={() => onCategory(category === g ? null : g)} style={outlineStyle(category === g)}>{g}</button>
+      ))}
+    </div>
+  );
+}
+
+// ─── Library Page (with CRUD) ───
+function LibraryPage({ data, save }) {
+  const [filter, setFilter] = useState("All");
+  const [eqFilter, setEqFilter] = useState(null);
+  const [catFilter, setCatFilter] = useState(null);
+  const [search, setSearch] = useState("");
+  const [editing, setEditing] = useState(null);
+  const [exName, setExName] = useState("");
+  const [exMuscle, setExMuscle] = useState("Chest");
+  const [exEquipment, setExEquipment] = useState("weighted");
+  const [exCategory, setExCategory] = useState("strength");
+  const [exYt, setExYt] = useState("");
+  const [error, setError] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(null);
+
+  const filtered = data.exercises.filter(e => {
+    if (filter !== "All" && e.muscle !== filter) return false;
+    if (eqFilter && (e.equipment || "weighted") !== eqFilter.toLowerCase()) return false;
+    if (catFilter && (e.category || "strength") !== catFilter.toLowerCase()) return false;
+    if (search && !e.name.toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  });
+
+  const startNew = () => { setEditing("new"); setExName(""); setExMuscle("Chest"); setExEquipment("weighted"); setExCategory("strength"); setExYt(""); setError(""); };
+  const startEdit = (ex) => { setEditing(ex); setExName(ex.name); setExMuscle(ex.muscle); setExEquipment(ex.equipment || "weighted"); setExCategory(ex.category || "strength"); setExYt(ex.yt); setError(""); };
+  const cancelEdit = () => setEditing(null);
+
+  const saveExercise = () => {
+    if (!exName.trim()) { setError("Give the exercise a name."); return; }
+    const ytQuery = exYt.trim() || exName.trim().toLowerCase().replace(/\s+/g, "+") + "+form";
+    if (editing === "new") {
+      const ex = { id: "ex_" + uid(), name: exName.trim(), muscle: exMuscle, equipment: exEquipment, category: exCategory, yt: ytQuery };
+      save({ ...data, exercises: [...data.exercises, ex] });
+    } else {
+      save({ ...data, exercises: data.exercises.map(e => e.id === editing.id ? { ...e, name: exName.trim(), muscle: exMuscle, equipment: exEquipment, category: exCategory, yt: ytQuery } : e) });
+    }
+    setEditing(null);
+  };
+
+  const deleteExercise = (id) => {
+    const newSets = data.sets.map(s => ({ ...s, exerciseIds: s.exerciseIds.filter(eid => eid !== id) }));
+    const newPrs = { ...data.prs };
+    delete newPrs[id];
+    save({ ...data, exercises: data.exercises.filter(e => e.id !== id), sets: newSets, prs: newPrs });
+    setConfirmDelete(null);
+  };
+
+  if (editing) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: T.space.xl }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <h2 style={{ fontSize: T.fontSize.h1, fontWeight: T.fontWeight.heavy, margin: 0 }}>{editing === "new" ? "New" : "Edit"} Exercise</h2>
+          <Btn variant="ghost" onClick={cancelEdit}>Cancel</Btn>
+        </div>
+        <Input label="Exercise Name" placeholder="e.g. Dumbbell Fly" value={exName} onChange={e => { setExName(e.target.value); setError(""); }} />
+        <div>
+          <label style={{ fontSize: T.fontSize.small, color: C.textDim, fontWeight: T.fontWeight.semi, textTransform: "uppercase", letterSpacing: T.letterSpacing.uppercase, marginBottom: T.space.base, display: "block" }}>Muscle Group</label>
+          <PillFilter options={MUSCLE_GROUPS_NO_ALL} active={exMuscle} onChange={setExMuscle} small />
+        </div>
+        <div style={{ display: "flex", gap: T.space.xl }}>
+          <div style={{ flex: 1 }}>
+            <label style={{ fontSize: T.fontSize.small, color: C.textDim, fontWeight: T.fontWeight.semi, textTransform: "uppercase", letterSpacing: T.letterSpacing.uppercase, marginBottom: T.space.base, display: "block" }}>Equipment</label>
+            <div style={{ display: "flex", gap: T.space.md }}>
+              {[["weighted", "Weighted"], ["bodyweight", "Bodyweight"]].map(([v, l]) => (
+                <button key={v} onClick={() => setExEquipment(v)} style={{ flex: 1, border: `1px solid ${exEquipment === v ? C.accent : C.border}`, borderRadius: T.radius.lg, padding: "8px 0", fontSize: T.fontSize.xs, fontWeight: T.fontWeight.semi, cursor: "pointer", background: exEquipment === v ? C.accentDim : "transparent", color: exEquipment === v ? C.accent : C.textDim, transition: `background ${T.transition.fast}, color ${T.transition.fast}, border-color ${T.transition.fast}` }}>{l}</button>
+              ))}
+            </div>
+          </div>
+          <div style={{ flex: 1 }}>
+            <label style={{ fontSize: T.fontSize.small, color: C.textDim, fontWeight: T.fontWeight.semi, textTransform: "uppercase", letterSpacing: T.letterSpacing.uppercase, marginBottom: T.space.base, display: "block" }}>Type</label>
+            <div style={{ display: "flex", gap: T.space.md }}>
+              {[["strength", "Strength"], ["mobility", "Mobility"]].map(([v, l]) => (
+                <button key={v} onClick={() => setExCategory(v)} style={{ flex: 1, border: `1px solid ${exCategory === v ? C.accent : C.border}`, borderRadius: T.radius.lg, padding: "8px 0", fontSize: T.fontSize.xs, fontWeight: T.fontWeight.semi, cursor: "pointer", background: exCategory === v ? C.accentDim : "transparent", color: exCategory === v ? C.accent : C.textDim, transition: `background ${T.transition.fast}, color ${T.transition.fast}, border-color ${T.transition.fast}` }}>{l}</button>
+              ))}
+            </div>
+          </div>
+        </div>
+        <Input label="YouTube Search (optional)" placeholder="Auto-generated if blank" value={exYt} onChange={e => setExYt(e.target.value)} />
+        <ErrorBanner message={error} />
+        <Btn onClick={saveExercise} style={{ width: "100%", padding: 14 }}>{editing === "new" ? "Add" : "Update"} Exercise</Btn>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: T.space.xl }}>
+      {confirmDelete && <ConfirmDialog message={`Delete "${data.exercises.find(e => e.id === confirmDelete)?.name}"? It will be removed from all sets.`} onConfirm={() => deleteExercise(confirmDelete)} onCancel={() => setConfirmDelete(null)} />}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div>
+          <h2 style={{ fontSize: T.fontSize.h1, fontWeight: T.fontWeight.heavy, margin: 0, letterSpacing: T.letterSpacing.tight }}>Exercise Library</h2>
+          <p style={{ color: C.textDim, fontSize: T.fontSize.caption, margin: `${T.space.sm}px 0 0` }}>{data.exercises.length} exercises</p>
+        </div>
+        <Btn onClick={startNew}>+ New</Btn>
+      </div>
+      <Input placeholder="Search exercises..." value={search} onChange={e => setSearch(e.target.value)} />
+      <FilterBar muscle={filter} onMuscle={setFilter} equipment={eqFilter} onEquipment={setEqFilter} category={catFilter} onCategory={setCatFilter} small />
+      <div style={{ display: "flex", flexDirection: "column", gap: T.space.base }}>
+        {filtered.map(ex => (
+          <Card key={ex.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ flex: 1, minWidth: 0, marginRight: T.space.base }}>
+              <div style={{ fontWeight: T.fontWeight.bold, fontSize: T.fontSize.body }}>{ex.name}</div>
+              <div style={{ display: "flex", gap: T.space.base, alignItems: "center", marginTop: T.space.xs }}>
+                <span style={{ fontSize: T.fontSize.small, color: C.textDim }}>{MUSCLE_ICONS[ex.muscle] || ""} {ex.muscle}</span>
+                {(ex.equipment === "bodyweight" || ex.category === "mobility") && (
+                  <span style={{ fontSize: T.fontSize.micro, color: C.textDim, background: C.bg, padding: "2px 6px", borderRadius: T.radius.base }}>
+                    {ex.equipment === "bodyweight" ? "BW" : ""}{ex.equipment === "bodyweight" && ex.category === "mobility" ? " · " : ""}{ex.category === "mobility" ? "MOB" : ""}
+                  </span>
+                )}
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: T.space.sm, alignItems: "center" }}>
+              <YTButton query={ex.yt} />
+              <button onClick={() => startEdit(ex)} style={{ background: "none", border: "none", color: C.textDim, cursor: "pointer", fontSize: T.fontSize.bodySmall, padding: "4px" }}>✎</button>
+              <button onClick={() => setConfirmDelete(ex.id)} style={{ background: "none", border: "none", color: C.danger, cursor: "pointer", fontSize: T.fontSize.bodySmall, padding: "4px" }}>✕</button>
+            </div>
+          </Card>
+        ))}
+        {filtered.length === 0 && <p style={{ color: C.textDim, textAlign: "center", padding: T.space["3xl"] }}>No exercises found</p>}
+      </div>
+    </div>
+  );
+}
+
+// ─── Sets Page (with reordering) ───
+function SetsPage({ data, save, onStartSession }) {
+  const [creating, setCreating] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [name, setName] = useState("");
+  const [selected, setSelected] = useState([]);
+  const [muscleFilter, setMuscleFilter] = useState("All");
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [error, setError] = useState("");
+
+  const startCreate = () => { setCreating(true); setEditingId(null); setName(""); setSelected([]); setMuscleFilter("All"); setError(""); };
+  const startEdit = (s) => { setCreating(true); setEditingId(s.id); setName(s.name); setSelected([...s.exerciseIds]); setMuscleFilter("All"); setError(""); };
+  const saveSet = () => {
+    if (!name.trim() && selected.length === 0) { setError("Give your set a name and select at least one exercise."); return; }
+    if (!name.trim()) { setError("Give your set a name."); return; }
+    if (selected.length === 0) { setError("Select at least one exercise."); return; }
+    setError("");
+    const newSets = editingId
+      ? data.sets.map(s => s.id === editingId ? { ...s, name: name.trim(), exerciseIds: selected } : s)
+      : [...data.sets, { id: uid(), name: name.trim(), exerciseIds: selected, createdAt: Date.now() }];
+    save({ ...data, sets: newSets });
+    setCreating(false);
+  };
+  const deleteSet = (id) => { save({ ...data, sets: data.sets.filter(s => s.id !== id) }); setConfirmDelete(null); };
+  const toggle = (id) => {
+    setSelected(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id]);
+    setError("");
+  };
+  const moveUp = (id) => {
+    const idx = selected.indexOf(id);
+    if (idx <= 0) return;
+    const ns = [...selected];
+    [ns[idx - 1], ns[idx]] = [ns[idx], ns[idx - 1]];
+    setSelected(ns);
+  };
+  const moveDown = (id) => {
+    const idx = selected.indexOf(id);
+    if (idx < 0 || idx >= selected.length - 1) return;
+    const ns = [...selected];
+    [ns[idx], ns[idx + 1]] = [ns[idx + 1], ns[idx]];
+    setSelected(ns);
+  };
+  const removeFromSelected = (id) => { setSelected(s => s.filter(x => x !== id)); };
+  const filteredEx = data.exercises.filter(e => muscleFilter === "All" || e.muscle === muscleFilter);
+
+  if (creating) {
+    const selectedExercises = selected.map(id => data.exercises.find(e => e.id === id)).filter(Boolean);
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: T.space.xl }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <h2 style={{ fontSize: T.fontSize.h1, fontWeight: T.fontWeight.heavy, margin: 0 }}>{editingId ? "Edit" : "New"} Workout Set</h2>
+          <Btn variant="ghost" onClick={() => setCreating(false)}>Cancel</Btn>
+        </div>
+        <Input label="Set Name" placeholder="e.g. Push Day" value={name} onChange={e => { setName(e.target.value); setError(""); }} />
+
+        {/* Muscle activation summary */}
+        {selected.length > 0 && (() => {
+          const muscles = {};
+          selectedExercises.forEach(ex => { muscles[ex.muscle] = (muscles[ex.muscle] || 0) + 1; });
+          const allMuscles = MUSCLE_GROUPS_NO_ALL;
+          return (
+            <div>
+              <label style={{ fontSize: T.fontSize.small, color: C.textDim, fontWeight: T.fontWeight.semi, textTransform: "uppercase", letterSpacing: T.letterSpacing.uppercase }}>Muscles Targeted</label>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: T.space.md, marginTop: T.space.base }}>
+                {allMuscles.map(m => {
+                  const count = muscles[m] || 0;
+                  const active = count > 0;
+                  return (
+                    <div key={m} style={{
+                      padding: "6px 12px", borderRadius: T.radius.full, fontSize: T.fontSize.xs, fontWeight: T.fontWeight.semi,
+                      background: active ? C.accentDim : C.bg,
+                      color: active ? C.accent : C.border,
+                      border: `1px solid ${active ? C.accent : C.border}`,
+                      transition: `background ${T.transition.fast}, color ${T.transition.fast}, border-color ${T.transition.fast}`,
+                    }}>
+                      {MUSCLE_ICONS[m] || ""} {m}{count > 1 ? ` ×${count}` : ""}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Selected exercises with reorder */}
+        {selected.length > 0 && (
+          <div>
+            <label style={{ fontSize: T.fontSize.small, color: C.textDim, fontWeight: T.fontWeight.semi, textTransform: "uppercase", letterSpacing: T.letterSpacing.uppercase }}>Order ({selected.length} selected)</label>
+            <div style={{ display: "flex", flexDirection: "column", gap: T.space.sm, marginTop: T.space.base }}>
+              {selectedExercises.map((ex, idx) => (
+                <div key={ex.id} style={{ display: "flex", alignItems: "center", gap: T.space.base, padding: "8px 10px", borderRadius: T.radius.lg, background: C.accentDim, border: `1px solid ${C.accent}` }}>
+                  <span style={{ fontSize: T.fontSize.caption, fontWeight: T.fontWeight.bold, color: C.accent, width: 20, textAlign: "center" }}>{idx + 1}</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: T.fontWeight.semi, fontSize: T.fontSize.bodySmall }}>{ex.name}</div>
+                    <div style={{ fontSize: T.fontSize.xs, color: C.textDim }}>{ex.muscle}</div>
+                  </div>
+                  <div style={{ display: "flex", gap: T.space.xs }}>
+                    <button onClick={() => moveUp(ex.id)} disabled={idx === 0} style={{ background: "none", border: "none", color: idx === 0 ? C.border : C.textDim, cursor: "pointer", fontSize: T.fontSize.bodySmall, padding: "2px 6px" }}>▲</button>
+                    <button onClick={() => moveDown(ex.id)} disabled={idx === selected.length - 1} style={{ background: "none", border: "none", color: idx === selected.length - 1 ? C.border : C.textDim, cursor: "pointer", fontSize: T.fontSize.bodySmall, padding: "2px 6px" }}>▼</button>
+                    <button onClick={() => removeFromSelected(ex.id)} style={{ background: "none", border: "none", color: C.danger, cursor: "pointer", fontSize: T.fontSize.bodySmall, padding: "2px 6px" }}>✕</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Exercise picker */}
+        <div>
+          <label style={{ fontSize: T.fontSize.small, color: C.textDim, fontWeight: T.fontWeight.semi, textTransform: "uppercase", letterSpacing: T.letterSpacing.uppercase }}>Add Exercises</label>
+          <div style={{ marginTop: T.space.base }}>
+            <PillFilter options={MUSCLE_GROUPS} active={muscleFilter} onChange={setMuscleFilter} small />
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: T.space.md, marginTop: T.space.lg, maxHeight: T.size.scrollList, overflowY: "auto" }}>
+            {filteredEx.map(ex => {
+              const isSel = selected.includes(ex.id);
+              return (
+                <div key={ex.id} onClick={() => toggle(ex.id)} style={{ display: "flex", alignItems: "center", gap: T.space.lg, padding: "10px 12px", borderRadius: T.radius.lg, background: isSel ? C.accentDim : C.surface, border: `1px solid ${isSel ? C.accent : C.border}`, cursor: "pointer", transition: `background ${T.transition.fast}, color ${T.transition.fast}, border-color ${T.transition.fast}` }}>
+                  <div style={{ width: T.size.checkbox, height: T.size.checkbox, borderRadius: T.radius.base, border: `2px solid ${isSel ? C.accent : C.textDim}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, background: isSel ? C.accent : "transparent", color: C.textOnAccent, fontSize: T.fontSize.small, fontWeight: T.fontWeight.black }}>{isSel ? "✓" : ""}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: T.fontWeight.semi, fontSize: T.fontSize.bodySmall }}>{ex.name}</div>
+                    <div style={{ fontSize: T.fontSize.xs, color: C.textDim }}>{ex.muscle}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        <ErrorBanner message={error} />
+        <Btn onClick={saveSet} style={{ width: "100%", padding: 14 }}>
+          {editingId ? "Update" : "Create"} Set{selected.length > 0 ? ` (${selected.length} exercises)` : ""}
+        </Btn>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: T.space.xl }}>
+      {confirmDelete && <ConfirmDialog message={`Delete "${data.sets.find(s => s.id === confirmDelete)?.name}"? This cannot be undone.`} onConfirm={() => deleteSet(confirmDelete)} onCancel={() => setConfirmDelete(null)} />}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div>
+          <h2 style={{ fontSize: T.fontSize.h1, fontWeight: T.fontWeight.heavy, margin: 0 }}>Workout Sets</h2>
+          <p style={{ color: C.textDim, fontSize: T.fontSize.caption, margin: `${T.space.sm}px 0 0` }}>{data.sets.length} sets</p>
+        </div>
+        {data.sets.length > 0 && <Btn variant="ghost" onClick={startCreate} style={{ color: C.accent }}>+ New Set</Btn>}
+      </div>
+      {data.sets.length === 0 && (
+        <Card style={{ textAlign: "center", padding: T.space["4xl"] }}>
+          <div style={{ fontSize: T.fontSize.icon, marginBottom: T.space.lg }}>🏋️</div>
+          <div style={{ fontWeight: T.fontWeight.bold, fontSize: T.fontSize.body, marginBottom: T.space.sm }}>No workout sets yet</div>
+          <div style={{ color: C.textDim, fontSize: T.fontSize.caption, marginBottom: T.space.xl }}>Create your first set to start training</div>
+          <Btn onClick={startCreate}>Create Set</Btn>
+        </Card>
+      )}
+      {data.sets.map(s => {
+        const exNames = s.exerciseIds.map(id => data.exercises.find(e => e.id === id)?.name).filter(Boolean);
+        const sessionCount = data.sessions.filter(ss => ss.setId === s.id).length;
+        return (
+          <Card key={s.id}>
+            <div style={{ marginBottom: T.space.base }}>
+              <div style={{ fontWeight: T.fontWeight.heavy, fontSize: T.fontSize.h3 }}>{s.name}</div>
+              <div style={{ fontSize: T.fontSize.small, color: C.textDim, marginTop: T.space.xs }}>{exNames.length} exercises · {sessionCount} sessions</div>
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: T.space.sm, marginBottom: T.space.lg }}>
+              {exNames.slice(0, 5).map((n, i) => <span key={i} style={{ fontSize: T.fontSize.xs, background: C.bg, padding: "3px 8px", borderRadius: T.radius.md, color: C.textDim }}>{n}</span>)}
+              {exNames.length > 5 && <span style={{ fontSize: T.fontSize.xs, color: C.textDim, padding: "3px 4px" }}>+{exNames.length - 5} more</span>}
+            </div>
+            <div style={{ display: "flex", gap: T.space.base }}>
+              <Btn variant="primary" onClick={() => onStartSession(s)} style={{ flex: 1 }}>▶ Start</Btn>
+              <Btn variant="secondary" onClick={() => startEdit(s)}>Edit</Btn>
+              <Btn variant="danger" onClick={() => setConfirmDelete(s.id)}>✕</Btn>
+            </div>
+          </Card>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Session Page (redesigned training flow) ───
+const DEFAULT_REST = 90;
+
+function SessionPage({ data, save, activeSet, setActiveSet, setTab }) {
+  const [sessionData, setSessionData] = useState(null);
+  const [currentIdx, setCurrentIdx] = useState(0);
+  const [currentSetIdx, setCurrentSetIdx] = useState(0);
+  const [timer, setTimer] = useState(0);
+  const [timerRunning, setTimerRunning] = useState(false);
+  const [restTimer, setRestTimer] = useState(0);
+  const [resting, setResting] = useState(false);
+  const [restDone, setRestDone] = useState(false);
+  const [finished, setFinished] = useState(false);
+  const [newPRs, setNewPRs] = useState([]);
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const intervalRef = useRef(null);
+  const restRef = useRef(null);
+  const unit = data.settings?.unit || "kg";
+  const wl = weightLabel(unit);
+
+  // Find last session for this set to pre-fill values
+  const getLastSessionData = (setId, exerciseIds) => {
+    const lastSession = [...data.sessions].reverse().find(s => s.setId === setId);
+    if (!lastSession) return null;
+    const lookup = {};
+    lastSession.entries.forEach(e => {
+      if (e.sets.length > 0) {
+        lookup[e.exerciseId] = e.sets.map(s => ({
+          weight: String(displayWeight(s.weight, unit)),
+          reps: String(s.reps),
+        }));
+      }
+    });
+    return lookup;
+  };
+
+  useEffect(() => {
+    if (activeSet) {
+      const validIds = activeSet.exerciseIds.filter(eid => data.exercises.some(e => e.id === eid));
+      if (validIds.length === 0) { setActiveSet(null); return; }
+      const lastData = getLastSessionData(activeSet.id, validIds);
+      const entries = validIds.map(eid => {
+        const prev = lastData?.[eid];
+        if (prev) return { exerciseId: eid, sets: prev, logged: [] };
+        return { exerciseId: eid, sets: [{ weight: "", reps: "" }], logged: [] };
+      });
+      setSessionData(entries);
+      setCurrentIdx(0); setCurrentSetIdx(0); setTimer(0); setTimerRunning(true);
+      setFinished(false); setNewPRs([]); setResting(false); setRestTimer(0); setRestDone(false);
+    } else { setSessionData(null); setTimerRunning(false); }
+  }, [activeSet]);
+
+  useEffect(() => {
+    if (timerRunning) { intervalRef.current = setInterval(() => setTimer(t => t + 1), 1000); }
+    else clearInterval(intervalRef.current);
+    return () => clearInterval(intervalRef.current);
+  }, [timerRunning]);
+
+  useEffect(() => {
+    if (resting) {
+      restRef.current = setInterval(() => {
+        setRestTimer(t => {
+          if (t <= 1) { setResting(false); setRestDone(true); return 0; }
+          return t - 1;
+        });
+      }, 1000);
+    } else clearInterval(restRef.current);
+    return () => clearInterval(restRef.current);
+  }, [resting]);
+
+  // Auto-dismiss "REST DONE" after 3 seconds
+  useEffect(() => {
+    if (restDone) {
+      const t = setTimeout(() => setRestDone(false), 3000);
+      return () => clearTimeout(t);
+    }
+  }, [restDone]);
+
+  const fmt = (s) => `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
+
+  // ── Empty state ──
+  if (!activeSet) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: T.space.xl }}>
+        <h2 style={{ fontSize: T.fontSize.h1, fontWeight: T.fontWeight.heavy, margin: 0 }}>Train</h2>
+        <Card style={{ textAlign: "center", padding: T.space["4xl"] }}>
+          <div style={{ fontSize: T.fontSize.icon, marginBottom: T.space.lg }}>🟁</div>
+          <div style={{ fontWeight: T.fontWeight.bold, fontSize: T.fontSize.body, marginBottom: T.space.sm }}>Ready to train?</div>
+          <div style={{ color: C.textDim, fontSize: T.fontSize.caption, marginBottom: T.space.xl }}>Pick a workout set to begin</div>
+          <Btn onClick={() => setTab("sets")}>Go to Sets</Btn>
+        </Card>
+        {data.sessions.length > 0 && (
+          <div>
+            <h3 style={{ fontSize: T.fontSize.bodySmall, fontWeight: T.fontWeight.bold, color: C.textDim, marginBottom: T.space.base, textTransform: "uppercase", letterSpacing: T.letterSpacing.uppercase }}>Recent Sessions</h3>
+            {data.sessions.slice(-3).reverse().map(s => {
+              const set = data.sets.find(ws => ws.id === s.setId);
+              return <Card key={s.id} style={{ marginBottom: T.space.base }}><div style={{ display: "flex", justifyContent: "space-between" }}><div style={{ fontWeight: T.fontWeight.bold }}>{set?.name || "Deleted Set"}</div><div style={{ fontSize: T.fontSize.small, color: C.textDim }}>{fmtDate(s.date)}</div></div><div style={{ fontSize: T.fontSize.small, color: C.textDim, marginTop: T.space.sm }}>{s.entries.length} exercises · {s.entries.reduce((a, e) => a + e.sets.length, 0)} sets</div></Card>;
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── Completion screen ──
+  if (finished) {
+    const totalSets = sessionData.reduce((a, e) => a + e.logged.length, 0);
+    const totalVol = sessionData.reduce((a, e) => a + e.logged.reduce((b, s) => b + (Number(s.reps) || 0) * (Number(s.weight) || 0), 0), 0);
+    const volDisplay = displayWeight(totalVol, unit);
+    return (
+      <div className="t-fade-in" style={{ display: "flex", flexDirection: "column", gap: T.space.xl }}>
+        <div style={{ textAlign: "center", padding: `${T.space["2xl"]}px 0` }}>
+          <div style={{ fontSize: T.fontSize.hero, marginBottom: T.space.base }}>🎉</div>
+          <h2 style={{ fontSize: T.fontSize.statMd, fontWeight: T.fontWeight.heavy, margin: 0, color: C.accent }}>Workout Complete</h2>
+          <p style={{ color: C.textDim, marginTop: T.space.sm }}>{activeSet.name} · {fmt(timer)}</p>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: T.space.base }}>
+          <Card style={{ textAlign: "center" }}><div style={{ fontSize: T.fontSize.stat, fontWeight: T.fontWeight.heavy, color: C.accent }}>{totalSets}</div><div style={{ fontSize: T.fontSize.xs, color: C.textDim, fontWeight: T.fontWeight.semi }}>SETS</div></Card>
+          <Card style={{ textAlign: "center" }}><div style={{ fontSize: T.fontSize.stat, fontWeight: T.fontWeight.heavy, color: C.accent }}>{volDisplay.toLocaleString()}</div><div style={{ fontSize: T.fontSize.xs, color: C.textDim, fontWeight: T.fontWeight.semi }}>VOLUME ({wl})</div></Card>
+        </div>
+        {newPRs.length > 0 && (
+          <Card style={{ border: `1px solid ${C.pr}`, background: C.prDim }}>
+            <div style={{ fontWeight: T.fontWeight.heavy, fontSize: T.fontSize.body, color: C.pr, marginBottom: T.space.base }}>🏆 New Personal Records</div>
+            {newPRs.map((pr, i) => { const ex = data.exercises.find(e => e.id === pr.exerciseId); return <div key={i} style={{ fontSize: T.fontSize.caption, color: C.text, marginBottom: T.space.sm }}><strong>{ex?.name}</strong>: {pr.type === "weight" ? `${displayWeight(pr.value, unit)} ${wl}` : pr.type === "reps" ? `${pr.value} reps` : `${displayWeight(pr.value, unit)} ${wl} vol`}</div>; })}
+          </Card>
+        )}
+        <Btn onClick={() => { setActiveSet(null); setTab("progress"); }} style={{ width: "100%", padding: 18 }}>View Progress</Btn>
+        <Btn variant="secondary" onClick={() => setActiveSet(null)} style={{ width: "100%" }}>Done</Btn>
+      </div>
+    );
+  }
+
+  if (!sessionData) return null;
+  const entry = sessionData[currentIdx];
+  const exercise = data.exercises.find(e => e.id === entry.exerciseId);
+  const prData = data.prs[entry.exerciseId];
+
+  // Current set being edited (the pending one)
+  const currentSet = currentSetIdx < entry.sets.length
+    ? entry.sets[currentSetIdx]
+    : { weight: entry.logged.length > 0 ? String(entry.logged[entry.logged.length - 1].weight) : "", reps: entry.logged.length > 0 ? String(entry.logged[entry.logged.length - 1].reps) : "" };
+
+  const updateCurrentSet = (field, val) => {
+    if (val !== "" && (isNaN(Number(val)) || Number(val) < 0)) return;
+    const nd = [...sessionData];
+    if (currentSetIdx < entry.sets.length) {
+      nd[currentIdx] = { ...nd[currentIdx], sets: nd[currentIdx].sets.map((s, i) => i === currentSetIdx ? { ...s, [field]: val } : s) };
+    } else {
+      // Editing beyond pre-filled sets — extend
+      const newSets = [...nd[currentIdx].sets, { ...currentSet, [field]: val }];
+      nd[currentIdx] = { ...nd[currentIdx], sets: newSets };
+    }
+    setSessionData(nd);
+  };
+
+  const logSet = () => {
+    const w = Number(currentSet.weight);
+    const r = Number(currentSet.reps);
+    if (!w || !r) return;
+    const nd = [...sessionData];
+    nd[currentIdx] = { ...nd[currentIdx], logged: [...nd[currentIdx].logged, { weight: w, reps: r }] };
+    setSessionData(nd);
+    // Move to next pre-filled set or auto-create
+    setCurrentSetIdx(prev => prev + 1);
+    // Auto-start rest
+    setRestTimer(DEFAULT_REST);
+    setResting(true);
+    setRestDone(false);
+  };
+
+  const goNextExercise = () => {
+    if (currentIdx < sessionData.length - 1) {
+      setCurrentIdx(i => i + 1);
+      setCurrentSetIdx(0);
+      setResting(false); setRestTimer(0); setRestDone(false);
+    }
+  };
+
+  const finishSession = () => {
+    const clean = sessionData.map(e => ({
+      exerciseId: e.exerciseId,
+      sets: e.logged.map(s => ({ reps: s.reps, weight: toKg(s.weight, unit) })),
+    })).filter(e => e.sets.length > 0);
+    if (clean.length === 0) { setActiveSet(null); return; }
+    const prs = { ...data.prs }; const found = [];
+    clean.forEach(e => {
+      const maxW = Math.max(...e.sets.map(s => s.weight));
+      const maxR = Math.max(...e.sets.map(s => s.reps));
+      const vol = e.sets.reduce((a, s) => a + s.reps * s.weight, 0);
+      const prev = prs[e.exerciseId] || { maxWeight: 0, maxReps: 0, maxVolume: 0 };
+      if (maxW > prev.maxWeight) found.push({ exerciseId: e.exerciseId, type: "weight", value: maxW });
+      if (maxR > prev.maxReps) found.push({ exerciseId: e.exerciseId, type: "reps", value: maxR });
+      if (vol > prev.maxVolume) found.push({ exerciseId: e.exerciseId, type: "volume", value: vol });
+      prs[e.exerciseId] = { maxWeight: Math.max(maxW, prev.maxWeight), maxReps: Math.max(maxR, prev.maxReps), maxVolume: Math.max(vol, prev.maxVolume), date: Date.now() };
+    });
+    save({ ...data, sessions: [...data.sessions, { id: uid(), setId: activeSet.id, date: Date.now(), duration: timer, entries: clean }], prs });
+    setNewPRs(found); setTimerRunning(false); setFinished(true);
+  };
+
+  const isLastExercise = currentIdx >= sessionData.length - 1;
+  const canLogCurrent = Number(currentSet.weight) > 0 && Number(currentSet.reps) > 0;
+
+  // ── Training UI ──
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: T.space.xl }}>
+      {confirmCancel && <ConfirmDialog message="Cancel this workout? All progress will be lost." onConfirm={() => { setActiveSet(null); setConfirmCancel(false); }} onCancel={() => setConfirmCancel(false)} />}
+
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div>
+          <h2 style={{ fontSize: T.fontSize.h2, fontWeight: T.fontWeight.heavy, margin: 0 }}>{activeSet.name}</h2>
+          <p style={{ color: C.textDim, fontSize: T.fontSize.small, margin: 0 }}>Exercise {currentIdx + 1} of {sessionData.length}</p>
+        </div>
+        <div style={{ display: "flex", gap: T.space.base, alignItems: "center" }}>
+          <span style={{ fontFamily: T.font.mono, fontSize: T.fontSize.h2, fontWeight: T.fontWeight.bold, color: timerRunning ? C.accent : C.textDim }}>{fmt(timer)}</span>
+          <button onClick={() => setTimerRunning(!timerRunning)} style={{ background: "none", border: `1px solid ${C.border}`, borderRadius: T.radius.md, color: C.text, padding: "6px 10px", cursor: "pointer", fontSize: T.fontSize.body }}>{timerRunning ? "⏸" : "▶"}</button>
+        </div>
+      </div>
+
+      {/* Progress bar */}
+      <div style={{ height: T.size.progressBar, background: C.border, borderRadius: T.radius.sm, overflow: "hidden" }}>
+        <div style={{ height: "100%", background: C.accent, width: `${((currentIdx + 1) / sessionData.length) * 100}%`, transition: `width ${T.duration.medium} ${T.easing.enter}`, borderRadius: T.radius.sm }} />
+      </div>
+
+      {/* Rest Done flash */}
+      {restDone && (
+        <div className="t-fade-in" style={{ background: C.accent, color: C.textOnAccent, borderRadius: T.radius.xl, padding: `${T.space.xl}px ${T.space["2xl"]}px`, textAlign: "center", fontWeight: T.fontWeight.heavy, fontSize: T.fontSize.h2, letterSpacing: T.letterSpacing.tight }}>
+          💪 REST DONE — GO!
+        </div>
+      )}
+
+      {/* Rest Timer */}
+      {resting && (
+        <Card className="t-fade-in" style={{ textAlign: "center", border: `1px solid ${C.accent}`, background: C.accentDim }}>
+          <div style={{ fontSize: T.fontSize.xs, color: C.accent, fontWeight: T.fontWeight.bold, textTransform: "uppercase", letterSpacing: T.letterSpacing.uppercase }}>Resting</div>
+          <div style={{ fontSize: T.fontSize.timer, fontWeight: T.fontWeight.heavy, fontFamily: T.font.mono, color: C.accent, margin: `${T.space.base}px 0` }}>{fmt(restTimer)}</div>
+          <div style={{ display: "flex", gap: T.space.base, justifyContent: "center" }}>
+            <Btn variant="ghost" onClick={() => { setResting(false); setRestTimer(0); setRestDone(false); }} style={{ color: C.textDim, fontSize: T.fontSize.small, padding: "8px 16px" }}>Skip Rest</Btn>
+          </div>
+        </Card>
+      )}
+
+      {/* Exercise Card */}
+      <Card style={{ padding: T.space["2xl"] }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: T.space.xl }}>
+          <div style={{ flex: 1, minWidth: 0, marginRight: T.space.base }}>
+            <div style={{ fontWeight: T.fontWeight.heavy, fontSize: T.fontSize.h2 }}>{exercise?.name}</div>
+            <div style={{ fontSize: T.fontSize.small, color: C.textDim }}>{exercise?.muscle}</div>
+          </div>
+          <YTButton query={exercise?.yt} />
+        </div>
+
+        {/* PR reference */}
+        {prData && (
+          <div style={{ background: C.bg, borderRadius: T.radius.lg, padding: "10px 14px", marginBottom: T.space.xl, display: "flex", gap: T.space.xl, fontSize: T.fontSize.small }}>
+            <span style={{ color: C.textDim }}>PR: <strong style={{ color: C.pr }}>{displayWeight(prData.maxWeight, unit)} {wl}</strong></span>
+            <span style={{ color: C.textDim }}>Best Vol: <strong style={{ color: C.pr }}>{displayWeight(prData.maxVolume, unit)} {wl}</strong></span>
+          </div>
+        )}
+
+        {/* Logged sets history for this exercise */}
+        {entry.logged.length > 0 && (
+          <div style={{ marginBottom: T.space.xl }}>
+            <div style={{ fontSize: T.fontSize.xs, color: C.textDim, fontWeight: T.fontWeight.semi, textTransform: "uppercase", marginBottom: T.space.base }}>Completed</div>
+            {entry.logged.map((s, i) => (
+              <div key={i} style={{ display: "flex", gap: T.space.xl, padding: "6px 0", borderBottom: `1px solid ${C.border}`, fontSize: T.fontSize.bodySmall, color: C.textDim }}>
+                <span style={{ color: C.accent, fontWeight: T.fontWeight.bold, width: 28 }}>#{i + 1}</span>
+                <span>{s.weight} {wl} × {s.reps} reps</span>
+                <span style={{ color: C.textDim, marginLeft: "auto" }}>{s.weight * s.reps} {wl}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Current set input */}
+        {!resting && (
+          <div>
+            <div style={{ fontSize: T.fontSize.xs, color: C.accent, fontWeight: T.fontWeight.semi, textTransform: "uppercase", letterSpacing: T.letterSpacing.uppercase, marginBottom: T.space.lg }}>Set {entry.logged.length + 1}</div>
+            <div style={{ display: "flex", gap: T.space.lg }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: T.fontSize.xs, color: C.textDim, fontWeight: T.fontWeight.semi, textTransform: "uppercase", marginBottom: T.space.sm, display: "block" }}>Weight ({wl})</label>
+                <input type="number" inputMode="decimal" min="0" value={currentSet.weight} onChange={e => updateCurrentSet("weight", e.target.value)} placeholder="0"
+                  style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: "14px 16px", color: C.text, fontSize: T.fontSize.h2, fontWeight: T.fontWeight.bold, outline: "none", width: "100%", boxSizing: "border-box", textAlign: "center" }} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: T.fontSize.xs, color: C.textDim, fontWeight: T.fontWeight.semi, textTransform: "uppercase", marginBottom: T.space.sm, display: "block" }}>Reps</label>
+                <input type="number" inputMode="numeric" min="0" value={currentSet.reps} onChange={e => updateCurrentSet("reps", e.target.value)} placeholder="0"
+                  style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: "14px 16px", color: C.text, fontSize: T.fontSize.h2, fontWeight: T.fontWeight.bold, outline: "none", width: "100%", boxSizing: "border-box", textAlign: "center" }} />
+              </div>
+            </div>
+
+            {/* Log Set — the primary action */}
+            <Btn onClick={logSet} disabled={!canLogCurrent} style={{ width: "100%", padding: 18, fontSize: T.fontSize.body, marginTop: T.space.xl }}>
+              ✓ Log Set {entry.logged.length + 1}
+            </Btn>
+          </div>
+        )}
+      </Card>
+
+      {/* Exercise Navigation */}
+      <div style={{ display: "flex", gap: T.space.base }}>
+        <Btn variant="ghost" onClick={() => { setCurrentIdx(i => Math.max(0, i - 1)); setCurrentSetIdx(0); setResting(false); setRestTimer(0); }} disabled={currentIdx === 0} style={{ flex: 1, padding: 16, opacity: currentIdx === 0 ? T.opacity.disabled : 1 }}>← Prev</Btn>
+        {isLastExercise ? (
+          <Btn onClick={finishSession} disabled={sessionData.every(e => e.logged.length === 0)} style={{ flex: 2, padding: 16, fontSize: T.fontSize.body }}>✓ Finish Workout</Btn>
+        ) : (
+          <Btn variant="secondary" onClick={goNextExercise} style={{ flex: 1, padding: 16 }}>Next Exercise →</Btn>
+        )}
+      </div>
+      <Btn variant="danger" onClick={() => setConfirmCancel(true)} style={{ fontSize: T.fontSize.small, padding: 14 }}>Cancel Workout</Btn>
+    </div>
+  );
+}
+
+// ─── Progress Page ───
+function MuscleBar({ label, value, max, icon, unit: wl }) {
+  const pct = max > 0 ? Math.round((value / max) * 100) : 0;
+  return (
+    <div style={{ marginBottom: T.space.lg }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: T.space.sm }}>
+        <span style={{ fontSize: T.fontSize.bodySmall, fontWeight: T.fontWeight.semi }}>{icon} {label}</span>
+        <span style={{ fontSize: T.fontSize.small, color: C.accent, fontWeight: T.fontWeight.bold }}>{displayWeight(value, wl).toLocaleString()} {weightLabel(wl)}</span>
+      </div>
+      <div style={{ height: 8, background: C.bg, borderRadius: T.radius.base, overflow: "hidden" }}>
+        <div style={{ height: "100%", background: C.accent, width: `${pct}%`, borderRadius: T.radius.base, transition: `width ${T.duration.medium} ${T.easing.enter}` }} />
+      </div>
+    </div>
+  );
+}
+
+function ProgressPage({ data, onRepeatSession }) {
+  const [view, setView] = useState("prs");
+  const [selectedExId, setSelectedExId] = useState(null);
+  const unit = data.settings?.unit || "kg";
+  const wl = weightLabel(unit);
+  const prEntries = Object.entries(data.prs).map(([eid, pr]) => { const ex = data.exercises.find(e => e.id === eid); return { ...pr, exerciseId: eid, exerciseName: ex?.name || "Unknown", muscle: ex?.muscle || "" }; }).sort((a, b) => (b.date || 0) - (a.date || 0));
+  const totalSessions = data.sessions.length;
+  const totalVol = data.sessions.reduce((a, s) => a + s.entries.reduce((b, e) => b + e.sets.reduce((c, st) => c + st.reps * st.weight, 0), 0), 0);
+
+  // Weekly consistency: how many of the last 4 weeks had at least 1 session
+  const now = new Date();
+  const weekStart = (weeksAgo) => {
+    const d = new Date(now); d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - d.getDay() + 1 - (weeksAgo * 7)); // Monday
+    return d.getTime();
+  };
+  let thisWeekSessions = 0;
+  let weeksActive = 0;
+  for (let w = 0; w < 4; w++) {
+    const start = weekStart(w);
+    const end = w === 0 ? Date.now() : weekStart(w - 1);
+    const count = data.sessions.filter(s => s.date >= start && s.date < end).length;
+    if (count > 0) weeksActive++;
+    if (w === 0) thisWeekSessions = count;
+  }
+
+  // Muscle volume breakdown
+  const muscleVol = {};
+  data.sessions.forEach(s => {
+    s.entries.forEach(e => {
+      const ex = data.exercises.find(x => x.id === e.exerciseId);
+      if (!ex) return;
+      const vol = e.sets.reduce((a, st) => a + st.reps * st.weight, 0);
+      muscleVol[ex.muscle] = (muscleVol[ex.muscle] || 0) + vol;
+    });
+  });
+  const maxMuscleVol = Math.max(...Object.values(muscleVol), 1);
+  const muscleEntries = Object.entries(muscleVol).sort((a, b) => b[1] - a[1]);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: T.space.xl }}>
+      <h2 style={{ fontSize: T.fontSize.h1, fontWeight: T.fontWeight.heavy, margin: 0 }}>Progress</h2>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: T.space.base }}>
+        <Card style={{ textAlign: "center", padding: T.space.lg }}><div style={{ fontSize: T.fontSize.statMd, fontWeight: T.fontWeight.heavy, color: C.accent }}>{totalSessions}</div><div style={{ fontSize: T.fontSize.xxs, color: C.textDim, fontWeight: T.fontWeight.semi }}>SESSIONS</div></Card>
+        <Card style={{ textAlign: "center", padding: T.space.lg }}><div style={{ fontSize: T.fontSize.statMd, fontWeight: T.fontWeight.heavy, color: C.accent }}>{thisWeekSessions}</div><div style={{ fontSize: T.fontSize.xxs, color: C.textDim, fontWeight: T.fontWeight.semi }}>THIS WEEK</div></Card>
+        <Card style={{ textAlign: "center", padding: T.space.lg }}><div style={{ fontSize: T.fontSize.statMd, fontWeight: T.fontWeight.heavy, color: weeksActive >= 3 ? C.accent : C.pr }}>{weeksActive}<span style={{ fontSize: T.fontSize.xs, fontWeight: T.fontWeight.semi }}>/4</span></div><div style={{ fontSize: T.fontSize.xxs, color: C.textDim, fontWeight: T.fontWeight.semi }}>WEEKS ACTIVE</div></Card>
+      </div>
+      {totalVol > 0 && <Card style={{ textAlign: "center", padding: T.space.lg }}>
+        <div style={{ fontSize: T.fontSize.xs, color: C.textDim, fontWeight: T.fontWeight.semi, marginBottom: T.space.sm }}>TOTAL VOLUME LIFTED</div>
+        <div style={{ fontSize: T.fontSize.stat, fontWeight: T.fontWeight.heavy, color: C.accent }}>{displayWeight(totalVol, unit).toLocaleString()} <span style={{ fontSize: T.fontSize.bodySmall, fontWeight: T.fontWeight.semi, color: C.textDim }}>{wl}</span></div>
+        {prEntries.length > 0 && <div style={{ fontSize: T.fontSize.xs, color: C.pr, fontWeight: T.fontWeight.semi, marginTop: T.space.base }}>{prEntries.length} personal {prEntries.length === 1 ? "record" : "records"} set</div>}
+      </Card>}
+      {weeksActive >= 3 && <Card style={{ background: C.accentDim, border: `1px solid ${C.accentBorder}`, padding: 14 }}><div style={{ fontSize: T.fontSize.bodySmall, fontWeight: T.fontWeight.bold, color: C.accent }}>You've been consistent</div><div style={{ fontSize: T.fontSize.small, color: C.textDim, marginTop: T.space.xs }}>{weeksActive} of the last 4 weeks. That's what builds real progress.</div></Card>}
+      {totalSessions > 0 && totalSessions < 5 && <Card style={{ background: C.accentDim, border: `1px solid ${C.accentBorder}`, padding: 14 }}><div style={{ fontSize: T.fontSize.bodySmall, fontWeight: T.fontWeight.bold, color: C.accent }}>Good start</div><div style={{ fontSize: T.fontSize.small, color: C.textDim, marginTop: T.space.xs }}>{totalSessions} {totalSessions === 1 ? "session" : "sessions"} logged. Every one counts.</div></Card>}
+      {totalSessions >= 5 && totalSessions < 20 && weeksActive < 3 && <Card style={{ background: C.accentDim, border: `1px solid ${C.accentBorder}`, padding: 14 }}><div style={{ fontSize: T.fontSize.bodySmall, fontWeight: T.fontWeight.bold, color: C.accent }}>Building a foundation</div><div style={{ fontSize: T.fontSize.small, color: C.textDim, marginTop: T.space.xs }}>{totalSessions} sessions in. You're finding your rhythm.</div></Card>}
+      {totalSessions >= 20 && weeksActive < 3 && <Card style={{ background: C.prDim, border: `1px solid ${C.prBorder}`, padding: 14 }}><div style={{ fontSize: T.fontSize.bodySmall, fontWeight: T.fontWeight.bold, color: C.pr }}>{totalSessions} sessions</div><div style={{ fontSize: T.fontSize.small, color: C.textDim, marginTop: T.space.xs }}>That's real commitment. Your body knows.</div></Card>}
+
+      {/* Tab switcher */}
+      <div style={{ display: "flex", gap: T.space.sm, background: C.surface, borderRadius: T.radius.lg, padding: 3 }}>
+        {[["prs", "🏆 PRs"], ["muscles", "💪 Muscles"], ["history", "📅 History"]].map(([v, l]) => (
+          <button key={v} onClick={() => setView(v)} style={{ flex: 1, border: "none", borderRadius: T.radius.md, padding: "8px 0", fontSize: T.fontSize.caption, fontWeight: T.fontWeight.semi, cursor: "pointer", background: view === v ? C.bg : "transparent", color: view === v ? C.text : C.textDim, transition: `background ${T.transition.fast}, color ${T.transition.fast}, border-color ${T.transition.fast}` }}>{l}</button>
+        ))}
+      </div>
+
+      {/* PRs tab */}
+      {view === "prs" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: T.space.base }}>
+          {prEntries.length === 0 && <Card style={{ textAlign: "center", padding: T.space["3xl"], color: C.textDim }}>Complete a workout to see your PRs here</Card>}
+          {prEntries.map((pr, i) => {
+            const isOpen = selectedExId === pr.exerciseId;
+            const exercise = data.exercises.find(e => e.id === pr.exerciseId);
+
+            // Build chart data when expanded
+            let chartData = [];
+            let best1RM = 0;
+            if (isOpen) {
+              data.sessions.forEach(s => {
+                const entry = s.entries.find(e => e.exerciseId === pr.exerciseId);
+                if (!entry || entry.sets.length === 0) return;
+                const maxW = Math.max(...entry.sets.map(st => st.weight));
+                const totalVol = entry.sets.reduce((a, st) => a + st.reps * st.weight, 0);
+                const maxR = Math.max(...entry.sets.map(st => st.reps));
+                const session1RM = Math.max(...entry.sets.map(st => est1RM(st.weight, st.reps)));
+                if (session1RM > best1RM) best1RM = session1RM;
+                chartData.push({ date: new Date(s.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }), rawDate: s.date, weight: displayWeight(maxW, unit), volume: displayWeight(totalVol, unit), reps: maxR, sets: entry.sets.length, e1rm: displayWeight(session1RM, unit) });
+              });
+              chartData.sort((a, b) => a.rawDate - b.rawDate);
+            }
+
+            const customTooltip = ({ active, payload }) => {
+              if (!active || !payload || !payload[0]) return null;
+              const d = payload[0].payload;
+              return (
+                <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: "10px 14px", fontSize: T.fontSize.small }}>
+                  <div style={{ fontWeight: T.fontWeight.bold, color: C.text, marginBottom: T.space.sm }}>{d.date}</div>
+                  <div style={{ color: C.accent }}>Max: {d.weight} {wl}</div>
+                  <div style={{ color: C.pr }}>Est 1RM: {d.e1rm} {wl}</div>
+                  <div style={{ color: C.textDim }}>{d.sets} sets · {d.reps} best reps</div>
+                  <div style={{ color: C.textDim }}>Vol: {d.volume} {wl}</div>
+                </div>
+              );
+            };
+
+            return (
+              <Card key={i} style={{ border: isOpen ? `1px solid ${C.accent}` : undefined }}>
+                {/* Header — always visible, tappable */}
+                <div onClick={() => setSelectedExId(isOpen ? null : pr.exerciseId)} style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div>
+                    <div style={{ fontWeight: T.fontWeight.heavy, fontSize: T.fontSize.body }}>{pr.exerciseName}</div>
+                    <div style={{ fontSize: T.fontSize.xs, color: C.textDim }}>{MUSCLE_ICONS[exercise?.muscle] || ""} {pr.muscle}</div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: T.space.base }}>
+                    <PRBadge />
+                    <span style={{ color: C.textDim, fontSize: T.fontSize.h2, lineHeight: 1, transition: `transform ${T.transition.spring}`, transform: isOpen ? "rotate(45deg)" : "none" }}>+</span>
+                  </div>
+                </div>
+
+                {/* Stats — always visible */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: T.space.sm, marginTop: T.space.lg }}>
+                  {[["maxWeight", `MAX ${wl.toUpperCase()}`], ["maxReps", "MAX REPS"], ["maxVolume", "VOLUME"], ["est1rm", "EST 1RM"]].map(([k, l]) => {
+                    let val;
+                    if (k === "maxReps") val = pr[k];
+                    else if (k === "est1rm") {
+                      // Compute from best set across all sessions
+                      let best = 0;
+                      data.sessions.forEach(s => {
+                        const entry = s.entries.find(e => e.exerciseId === pr.exerciseId);
+                        if (!entry) return;
+                        entry.sets.forEach(st => { const e = est1RM(st.weight, st.reps); if (e > best) best = e; });
+                      });
+                      val = best > 0 ? displayWeight(best, unit) : "—";
+                    } else val = displayWeight(pr[k], unit);
+                    return (
+                      <div key={k} style={{ background: C.bg, borderRadius: T.radius.md, padding: "6px 8px", textAlign: "center" }}>
+                        <div style={{ fontSize: T.fontSize.bodySmall, fontWeight: T.fontWeight.heavy, color: k === "est1rm" ? C.pr : C.accent }}>{val}</div>
+                        <div style={{ fontSize: T.fontSize.micro, color: C.textDim, fontWeight: T.fontWeight.semi }}>{l}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Expanded: chart + session log */}
+                {isOpen && (
+                  <div style={{ marginTop: T.space.xl, borderTop: `1px solid ${C.border}`, paddingTop: T.space.xl }}>
+                    {/* Chart */}
+                    {chartData.length >= 2 ? (
+                      <div style={{ width: "100%", height: 200 }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={chartData} margin={{ top: 5, right: 0, left: -20, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
+                            <XAxis dataKey="date" tick={{ fill: C.textDim, fontSize: T.fontSize.micro }} tickLine={false} axisLine={{ stroke: C.border }} />
+                            <YAxis tick={{ fill: C.textDim, fontSize: T.fontSize.micro }} tickLine={false} axisLine={{ stroke: C.border }} domain={["dataMin - 5", "dataMax + 5"]} />
+                            <Tooltip content={customTooltip} cursor={{ stroke: C.accent, strokeDasharray: "3 3" }} />
+                            <Line type="monotone" dataKey="weight" stroke={C.accent} strokeWidth={2} dot={{ fill: C.accent, r: 4, strokeWidth: 0 }} activeDot={{ fill: C.accent, r: 6, strokeWidth: 2, stroke: C.bg }} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    ) : chartData.length === 1 ? (
+                      <div style={{ fontSize: T.fontSize.small, color: C.textDim }}>One session logged. Your progress chart will appear after the next one.</div>
+                    ) : null}
+
+                    {/* Session log */}
+                    {chartData.length > 0 && (
+                      <div style={{ marginTop: chartData.length >= 2 ? T.space.xl : 0 }}>
+                        {[...chartData].reverse().map((d, j) => (
+                          <div key={j} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: j < chartData.length - 1 ? `1px solid ${C.border}` : "none" }}>
+                            <div>
+                              <div style={{ fontSize: T.fontSize.bodySmall, fontWeight: T.fontWeight.semi }}>{d.date}</div>
+                              <div style={{ fontSize: T.fontSize.xs, color: C.textDim }}>{d.sets} sets · best {d.reps} reps</div>
+                            </div>
+                            <div style={{ textAlign: "right" }}>
+                              <div style={{ fontSize: T.fontSize.body, fontWeight: T.fontWeight.heavy, color: C.accent }}>{d.weight} {wl}</div>
+                              <div style={{ fontSize: T.fontSize.xs, color: C.pr }}>1RM: {d.e1rm} {wl}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Muscles tab */}
+      {view === "muscles" && (
+        <Card>
+          {muscleEntries.length === 0 && <div style={{ textAlign: "center", padding: T.space["2xl"], color: C.textDim }}>Complete a workout to see muscle breakdown</div>}
+          {muscleEntries.map(([muscle, vol]) => (
+            <MuscleBar key={muscle} label={muscle} value={vol} max={maxMuscleVol} icon={MUSCLE_ICONS[muscle] || ""} unit={unit} />
+          ))}
+          {muscleEntries.length > 0 && (
+            <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: T.space.base, textAlign: "center" }}>Total volume across all sessions</div>
+          )}
+        </Card>
+      )}
+
+      {/* History tab */}
+      {view === "history" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: T.space.base }}>
+          {data.sessions.length === 0 && <Card style={{ textAlign: "center", padding: T.space["3xl"], color: C.textDim }}>No sessions yet</Card>}
+          {[...data.sessions].reverse().map(s => {
+            const set = data.sets.find(ws => ws.id === s.setId);
+            const vol = s.entries.reduce((a, e) => a + e.sets.reduce((b, st) => b + st.reps * st.weight, 0), 0);
+            return (
+              <Card key={s.id}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div>
+                    <div style={{ fontWeight: T.fontWeight.bold, fontSize: T.fontSize.body }}>{set?.name || "Deleted Set"}</div>
+                    <div style={{ fontSize: T.fontSize.small, color: C.textDim }}>{fmtDateFull(s.date)} {s.duration ? `· ${Math.floor(s.duration / 60)}min` : ""}</div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: T.space.xl, marginTop: T.space.base, fontSize: T.fontSize.small, color: C.textDim }}>
+                  <span>{s.entries.length} exercises</span>
+                  <span>{s.entries.reduce((a, e) => a + e.sets.length, 0)} sets</span>
+                  <span style={{ color: C.accent, fontWeight: T.fontWeight.bold }}>{displayWeight(vol, unit).toLocaleString()} {wl}</span>
+                </div>
+                {set && (
+                  <div style={{ marginTop: T.space.lg }}>
+                    <Btn variant="secondary" onClick={() => onRepeatSession(set)} style={{ width: "100%", fontSize: T.fontSize.small }}>▶ Repeat This Workout</Btn>
+                  </div>
+                )}
+              </Card>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Settings Page ───
+function SettingsPage({ data, save }) {
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [importText, setImportText] = useState("");
+  const [importStatus, setImportStatus] = useState("");
+  const [showImport, setShowImport] = useState(false);
+  const unit = data.settings?.unit || "kg";
+
+  const setUnit = (u) => save({ ...data, settings: { ...data.settings, unit: u } });
+
+  const [exportDone, setExportDone] = useState("");
+
+  const exportData = () => {
+    const json = JSON.stringify(data, null, 2);
+    try {
+      navigator.clipboard.writeText(json).then(() => {
+        setExportDone("Copied to clipboard. Paste into a file to save.");
+        setTimeout(() => setExportDone(""), 3000);
+      }).catch(() => tryDownload(json));
+    } catch (e) { tryDownload(json); }
+  };
+  const tryDownload = (json) => {
+    try {
+      const blob = new Blob([json], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = `temple-backup.json`;
+      a.click(); URL.revokeObjectURL(url);
+    } catch (e) {
+      setExportDone("Copy failed. Use Import on another device to transfer data.");
+      setTimeout(() => setExportDone(""), 4000);
+    }
+  };
+
+  const doImport = () => {
+    try {
+      const parsed = JSON.parse(importText);
+      if (!parsed.exercises || !parsed.sets || !parsed.sessions) { setImportStatus("Invalid format: missing exercises, sets, or sessions."); return; }
+      if (!parsed.settings) parsed.settings = DEFAULT_SETTINGS;
+      if (!parsed.prs) parsed.prs = {};
+      save(parsed);
+      setImportStatus(""); setShowImport(false); setImportText("");
+    } catch (e) { setImportStatus("Invalid JSON. Paste the full contents of a Temple backup file."); }
+  };
+
+  const resetAll = () => { save(mkDefault()); setConfirmReset(false); };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: T.space.xl }}>
+      {confirmReset && <ConfirmDialog message="Erase all data? This will delete all exercises, sets, sessions, and PRs. This cannot be undone." onConfirm={resetAll} onCancel={() => setConfirmReset(false)} />}
+      <h2 style={{ fontSize: T.fontSize.h1, fontWeight: T.fontWeight.heavy, margin: 0 }}>Settings</h2>
+
+      {/* Unit */}
+      <Card>
+        <div style={{ fontSize: T.fontSize.body, fontWeight: T.fontWeight.bold, marginBottom: T.space.lg }}>Weight Unit</div>
+        <div style={{ display: "flex", gap: T.space.sm, background: C.bg, borderRadius: T.radius.lg, padding: 3 }}>
+          {[{ v: "kg", l: "Kilograms (kg)" }, { v: "lbs", l: "Pounds (lbs)" }].map(o => (
+            <button key={o.v} onClick={() => setUnit(o.v)} style={{ flex: 1, border: "none", borderRadius: T.radius.md, padding: "10px 0", fontSize: T.fontSize.caption, fontWeight: T.fontWeight.semi, cursor: "pointer", background: unit === o.v ? C.accentDim : "transparent", color: unit === o.v ? C.accent : C.textDim, transition: `background ${T.transition.fast}, color ${T.transition.fast}, border-color ${T.transition.fast}` }}>{o.l}</button>
+          ))}
+        </div>
+        <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: T.space.base }}>All weights are stored in kg internally. Changing this only affects display.</div>
+      </Card>
+
+      {/* Data Management */}
+      <Card>
+        <div style={{ fontSize: T.fontSize.body, fontWeight: T.fontWeight.bold, marginBottom: T.space.lg }}>Data Management</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: T.space.base }}>
+          <Btn variant="secondary" onClick={exportData} style={{ width: "100%" }}>Export Data (JSON)</Btn>
+          {exportDone && <div style={{ fontSize: T.fontSize.small, color: C.accent, fontWeight: T.fontWeight.semi }}>{exportDone}</div>}
+          <Btn variant="secondary" onClick={() => setShowImport(!showImport)} style={{ width: "100%" }}>{showImport ? "Cancel Import" : "Import Data"}</Btn>
+          {showImport && (
+            <div style={{ display: "flex", flexDirection: "column", gap: T.space.base }}>
+              <textarea value={importText} onChange={e => { setImportText(e.target.value); setImportStatus(""); }} placeholder="Paste your Temple backup JSON here..." rows={6} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: "10px 12px", color: C.text, fontSize: T.fontSize.caption, outline: "none", resize: "vertical", fontFamily: T.font.mono }} />
+              {importStatus && <ErrorBanner message={importStatus} />}
+              <Btn onClick={doImport} disabled={!importText.trim()}>Import & Replace All Data</Btn>
+            </div>
+          )}
+          <Btn variant="danger" onClick={() => setConfirmReset(true)} style={{ width: "100%" }}>Reset All Data</Btn>
+        </div>
+      </Card>
+
+      {/* Stats */}
+      <Card>
+        <div style={{ fontSize: T.fontSize.body, fontWeight: T.fontWeight.bold, marginBottom: T.space.lg }}>Data Summary</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: T.space.sm, fontSize: T.fontSize.caption, color: C.textDim }}>
+          <div style={{ display: "flex", justifyContent: "space-between" }}><span>Exercises</span><span style={{ color: C.text, fontWeight: T.fontWeight.semi }}>{data.exercises.length}</span></div>
+          <div style={{ display: "flex", justifyContent: "space-between" }}><span>Workout Sets</span><span style={{ color: C.text, fontWeight: T.fontWeight.semi }}>{data.sets.length}</span></div>
+          <div style={{ display: "flex", justifyContent: "space-between" }}><span>Sessions Logged</span><span style={{ color: C.text, fontWeight: T.fontWeight.semi }}>{data.sessions.length}</span></div>
+          <div style={{ display: "flex", justifyContent: "space-between" }}><span>PRs Set</span><span style={{ color: C.text, fontWeight: T.fontWeight.semi }}>{Object.keys(data.prs).length}</span></div>
+        </div>
+      </Card>
+
+      {/* About */}
+      <Card>
+        <div style={{ fontSize: T.fontSize.body, fontWeight: T.fontWeight.bold, marginBottom: T.space.base }}>About</div>
+        <div style={{ fontSize: T.fontSize.caption, color: C.textDim, lineHeight: 1.5 }}>
+          <strong style={{ color: C.accent }}>🟁 Temple v0.5</strong><br />
+          Your body is a temple. Train it.<br /><br />
+          Built to replace subscription-gated workout apps. Free, private, all data stays on your device.
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+// ─── PWA Support ───
+function usePWA() {
+  const [installPrompt, setInstallPrompt] = useState(null);
+  const [dismissed, setDismissed] = useState(false);
+
+  useEffect(() => {
+    try {
+      // Inject manifest
+      const manifest = {
+        name: "Temple", short_name: "Temple",
+        description: "Your body is a temple. Train it.",
+        start_url: ".", display: "standalone",
+        background_color: C.bg, theme_color: C.accent,
+        icons: [{ src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🟁</text></svg>", sizes: "any", type: "image/svg+xml" }],
+      };
+      const mBlob = new Blob([JSON.stringify(manifest)], { type: "application/json" });
+      const mUrl = URL.createObjectURL(mBlob);
+      let link = document.querySelector('link[rel="manifest"]');
+      if (!link) { link = document.createElement("link"); link.rel = "manifest"; document.head.appendChild(link); }
+      link.href = mUrl;
+
+      // Theme color
+      let meta = document.querySelector('meta[name="theme-color"]');
+      if (!meta) { meta = document.createElement("meta"); meta.name = "theme-color"; document.head.appendChild(meta); }
+      meta.content = C.bg;
+
+      // Apple meta
+      if (!document.querySelector('meta[name="apple-mobile-web-app-capable"]')) {
+        const m1 = document.createElement("meta"); m1.name = "apple-mobile-web-app-capable"; m1.content = "yes"; document.head.appendChild(m1);
+        const m2 = document.createElement("meta"); m2.name = "apple-mobile-web-app-status-bar-style"; m2.content = "black-translucent"; document.head.appendChild(m2);
+      }
+
+      // Service worker (best-effort, fails gracefully in sandboxes)
+      if ("serviceWorker" in navigator) {
+        const swCode = `
+          const CACHE='temple-v0.4';self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(['/'])).then(()=>self.skipWaiting()))});
+          self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
+          self.addEventListener('fetch',e=>{e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>caches.match('/'))))});
+        `;
+        const swBlob = new Blob([swCode], { type: "application/javascript" });
+        navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(() => {});
+      }
+    } catch (e) {
+      // PWA setup failed (sandboxed environment) — app continues normally
+    }
+
+    // Install prompt
+    const handler = (e) => { e.preventDefault(); setInstallPrompt(e); };
+    try { window.addEventListener("beforeinstallprompt", handler); } catch (e) {}
+    return () => { try { window.removeEventListener("beforeinstallprompt", handler); } catch (e) {} };
+  }, []);
+
+  const install = async () => {
+    if (!installPrompt) return;
+    try { installPrompt.prompt(); const r = await installPrompt.userChoice; if (r.outcome === "accepted") setInstallPrompt(null); } catch (e) {}
+  };
+  const dismiss = () => { setDismissed(true); setInstallPrompt(null); };
+
+  return { canInstall: !!installPrompt && !dismissed, install, dismiss };
+}
+
+function InstallBanner({ onInstall, onDismiss }) {
+  return (
+    <div style={{ background: C.accentDim, border: `1px solid ${C.accentBorder}`, borderRadius: T.radius.xl, padding: T.space.xl, display: "flex", alignItems: "center", gap: T.space.lg }}>
+      <div style={{ fontSize: T.fontSize.statMd }}>🟁</div>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontWeight: T.fontWeight.bold, fontSize: T.fontSize.bodySmall, color: C.text }}>Install Temple</div>
+        <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: T.space.xs }}>Add to home screen for the full app experience</div>
+      </div>
+      <div style={{ display: "flex", gap: T.space.sm, flexShrink: 0 }}>
+        <Btn variant="ghost" onClick={onDismiss} style={{ padding: "6px 10px", fontSize: T.fontSize.xs }}>Later</Btn>
+        <Btn onClick={onInstall} style={{ padding: "6px 12px", fontSize: T.fontSize.xs }}>Install</Btn>
+      </div>
+    </div>
+  );
+}
+
+// ─── Error Boundary ───
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { hasError: false, error: null }; }
+  static getDerivedStateFromError(error) { return { hasError: true, error }; }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ fontFamily: T.font.body, color: C.text, background: C.bg, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: T.space.xl }}>
+          <div style={{ textAlign: "center", maxWidth: 360 }}>
+            <div style={{ fontSize: T.fontSize.timer, marginBottom: T.space.lg }}>⚠️</div>
+            <div style={{ fontWeight: T.fontWeight.heavy, fontSize: T.fontSize.h2, marginBottom: T.space.base }}>Something went wrong</div>
+            <div style={{ fontSize: T.fontSize.caption, color: C.textDim, marginBottom: T.space.xl, lineHeight: 1.5 }}>{this.state.error?.message || "An unexpected error occurred."}</div>
+            <button onClick={() => this.setState({ hasError: false, error: null })} style={{ background: C.accent, color: C.textOnAccent, border: "none", borderRadius: T.radius.lg, padding: "12px 24px", fontSize: T.fontSize.body, fontWeight: T.fontWeight.bold, cursor: "pointer" }}>Try Again</button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+// ─── Data Integrity Tests ───
+function runDataTests(data) {
+  const results = [];
+  const pass = (name) => results.push({ name, ok: true });
+  const fail = (name, msg) => results.push({ name, ok: false, msg });
+
+  // Structure
+  if (Array.isArray(data?.exercises)) pass("exercises is array"); else fail("exercises is array", "Missing or invalid");
+  if (Array.isArray(data?.sets)) pass("sets is array"); else fail("sets is array", "Missing or invalid");
+  if (Array.isArray(data?.sessions)) pass("sessions is array"); else fail("sessions is array", "Missing or invalid");
+  if (data?.prs && typeof data.prs === "object") pass("prs is object"); else fail("prs is object", "Missing or invalid");
+  if (data?.settings && typeof data.settings === "object") pass("settings exists"); else fail("settings exists", "Missing");
+
+  // Exercise integrity
+  const exIds = new Set((data?.exercises || []).map(e => e.id));
+  let exOk = true;
+  (data?.exercises || []).forEach(e => {
+    if (!e.id || !e.name || !e.muscle) { exOk = false; fail("exercise fields", "Exercise missing id/name/muscle: " + JSON.stringify(e)); }
+  });
+  if (exOk) pass("all exercises have required fields");
+
+  // Sets reference valid exercises
+  let setOk = true;
+  (data?.sets || []).forEach(s => {
+    if (!s.id || !s.name || !Array.isArray(s.exerciseIds)) { setOk = false; fail("set fields", "Set missing fields: " + s.id); }
+    s.exerciseIds?.forEach(eid => { if (!exIds.has(eid)) { setOk = false; fail("set exercise ref", "Set '" + s.name + "' references unknown exercise: " + eid); } });
+  });
+  if (setOk) pass("all sets reference valid exercises");
+
+  // Sessions reference valid exercises
+  let sessOk = true;
+  (data?.sessions || []).forEach(s => {
+    if (!s.id || !s.date || !Array.isArray(s.entries)) { sessOk = false; return; }
+    s.entries.forEach(e => {
+      if (!exIds.has(e.exerciseId)) { sessOk = false; fail("session exercise ref", "Session references unknown exercise: " + e.exerciseId); }
+      e.sets?.forEach(st => {
+        if (typeof st.reps !== "number" || typeof st.weight !== "number") { sessOk = false; fail("set data types", "Non-numeric reps/weight in session " + s.id); }
+        if (st.reps < 0 || st.weight < 0) { sessOk = false; fail("set values", "Negative reps/weight in session " + s.id); }
+      });
+    });
+  });
+  if (sessOk) pass("all sessions have valid data");
+
+  // PR references
+  let prOk = true;
+  Object.keys(data?.prs || {}).forEach(eid => {
+    if (!exIds.has(eid)) { prOk = false; fail("orphaned PR", "PR references deleted exercise: " + eid); }
+  });
+  if (prOk) pass("no orphaned PRs");
+
+  // Unit setting
+  if (["kg", "lbs"].includes(data?.settings?.unit)) pass("valid unit setting"); else fail("valid unit setting", "Unknown unit: " + data?.settings?.unit);
+
+  return results;
+}
+
+// ─── App ───
+const GlobalStyles = () => (
+  <style>{`
+    @keyframes temple-logo-spin { 0% { transform: rotate(0deg) scale(0.8); opacity: 0; } 40% { opacity: 1; } 100% { transform: rotate(360deg) scale(1); opacity: 1; } }
+    @keyframes temple-text-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes temple-fade-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes temple-fade-out { from { opacity: 1; } to { opacity: 0; } }
+    @keyframes temple-pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+    @keyframes temple-scale-in { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+    .t-fade-in { animation: temple-fade-in 0.25s cubic-bezier(0, 0, 0.2, 1) both; }
+    .t-scale-in { animation: temple-scale-in 0.2s cubic-bezier(0, 0, 0.2, 1) both; }
+    .t-pulse { animation: temple-pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    .t-logo-spin { animation: temple-logo-spin 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+    .t-text-in { animation: temple-text-in 0.4s cubic-bezier(0, 0, 0.2, 1) both; }
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type="number"] { -moz-appearance: textfield; }
+    * { -webkit-tap-highlight-color: transparent; }
+  `}</style>
+);
+
+export default function Temple() {
+  const { data, loading, saving, save } = useAppData();
+  const [tab, setTab] = useState("sets");
+  const [activeSet, setActiveSet] = useState(null);
+  const pwa = usePWA();
+
+  const handleStartSession = (set) => { setActiveSet(set); setTab("session"); };
+
+  if (loading) return (
+    <div style={{ fontFamily: T.font.body, color: C.text, background: C.bg, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <GlobalStyles />
+      <div style={{ textAlign: "center" }}>
+        <div className="t-logo-spin" style={{ fontSize: T.fontSize.hero, marginBottom: T.space.xl, display: "inline-block" }}>🟁</div>
+        <div className="t-text-in" style={{ fontWeight: T.fontWeight.heavy, fontSize: T.fontSize.h1, color: C.accent, letterSpacing: T.letterSpacing.tight, animationDelay: "0.3s" }}>TEMPLE</div>
+      </div>
+    </div>
+  );
+
+  return (
+    <ErrorBoundary>
+      <GlobalStyles />
+      <div style={{ fontFamily: T.font.body, color: C.text, background: C.bg, minHeight: "100vh" }}>
+        <div style={{ padding: "16px 20px 8px", display: "flex", justifyContent: "center", alignItems: "center", position: "sticky", top: 0, background: C.bg, zIndex: T.z.header }}>
+          <div style={{ fontWeight: T.fontWeight.black, fontSize: T.fontSize.h2, letterSpacing: T.letterSpacing.tight, color: C.accent }}>🟁 TEMPLE</div>
+          {saving && <div style={{ position: "absolute", right: 20, fontSize: T.fontSize.xs, color: C.textDim, display: "flex", alignItems: "center", gap: T.space.sm }}>
+            <div className="t-pulse" style={{ width: 6, height: 6, borderRadius: "50%", background: C.accent }} />
+          </div>}
+        </div>
+        <div style={{ padding: "8px 16px 100px", maxWidth: T.size.maxWidth, margin: "0 auto" }}>
+          {pwa.canInstall && <div style={{ marginBottom: T.space.xl }}><InstallBanner onInstall={pwa.install} onDismiss={pwa.dismiss} /></div>}
+          {tab === "library" && <LibraryPage data={data} save={save} />}
+          {tab === "sets" && <SetsPage data={data} save={save} onStartSession={handleStartSession} />}
+          {tab === "session" && <SessionPage data={data} save={save} activeSet={activeSet} setActiveSet={setActiveSet} setTab={setTab} />}
+          {tab === "progress" && <ProgressPage data={data} onRepeatSession={handleStartSession} />}
+          {tab === "settings" && <SettingsPage data={data} save={save} />}
+        </div>
+        <Tabs active={tab} onChange={setTab} />
+      </div>
+    </ErrorBoundary>
+  );
+}
