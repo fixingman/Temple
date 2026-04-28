@@ -8,6 +8,7 @@ import {
   displayWeight, toKg, weightLabel, est1RM,
 } from "./data";
 import { useAppData, usePWA } from "./hooks";
+import { useGoogleDrive } from "./useGoogleDrive";
 
 // ─── Shared Components ───
 function Tabs({ active, onChange }) {
@@ -981,11 +982,12 @@ function ProgressPage({ data, onRepeatSession }) {
 }
 
 // ─── Settings Page ───
-function SettingsPage({ data, save }) {
+function SettingsPage({ data, save, drive }) {
   const [confirmReset, setConfirmReset] = useState(false);
   const [importText, setImportText] = useState("");
   const [importStatus, setImportStatus] = useState("");
   const [showImport, setShowImport] = useState(false);
+  const [confirmRestore, setConfirmRestore] = useState(false);
   const unit = data.settings?.unit || "kg";
 
   const setUnit = (u) => save({ ...data, settings: { ...data.settings, unit: u } });
@@ -1025,11 +1027,27 @@ function SettingsPage({ data, save }) {
     } catch (e) { setImportStatus("Invalid JSON. Paste the full contents of a Temple backup file."); }
   };
 
+  const doRestore = async () => {
+    setConfirmRestore(false);
+    const restored = await drive.restore();
+    if (restored) {
+      if (!restored.exercises || !restored.sets || !restored.sessions) return;
+      if (!restored.settings) restored.settings = DEFAULT_SETTINGS;
+      if (!restored.prs) restored.prs = {};
+      delete restored._backedUpAt;
+      save(restored);
+    }
+  };
+
   const resetAll = () => { save(mkDefault()); setConfirmReset(false); };
+
+  const driveReady = drive.status === "ready";
+  const driveBusy = drive.status === "syncing" || drive.status === "signing-in";
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: T.space.xl }}>
       {confirmReset && <ConfirmDialog message="Erase all data? This will delete all exercises, sets, sessions, and PRs. This cannot be undone." onConfirm={resetAll} onCancel={() => setConfirmReset(false)} />}
+      {confirmRestore && <ConfirmDialog message="Restore from Google Drive? This will replace all current data with the backup." onConfirm={doRestore} onCancel={() => setConfirmRestore(false)} />}
       <h2 style={{ fontSize: T.fontSize.h1, fontWeight: T.fontWeight.heavy, margin: 0 }}>Settings</h2>
 
       {/* Unit */}
@@ -1041,6 +1059,53 @@ function SettingsPage({ data, save }) {
           ))}
         </div>
         <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: T.space.base }}>All weights are stored in kg internally. Changing this only affects display.</div>
+      </Card>
+
+      {/* Google Drive Backup */}
+      <Card>
+        <div style={{ fontSize: T.fontSize.body, fontWeight: T.fontWeight.bold, marginBottom: T.space.sm }}>Google Drive Backup</div>
+        <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginBottom: T.space.lg, lineHeight: 1.5 }}>
+          Back up your workouts to Google Drive. Restore on any device, or protect against accidental data loss.
+        </div>
+
+        {!drive.user ? (
+          <Btn onClick={drive.signIn} disabled={driveBusy} style={{ width: "100%" }}>
+            {drive.status === "signing-in" ? "Signing in..." : "Connect Google Drive"}
+          </Btn>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: T.space.base }}>
+            {/* Connected user */}
+            <div style={{ display: "flex", alignItems: "center", gap: T.space.lg, padding: "10px 14px", background: C.accentDim, borderRadius: T.radius.lg, border: `1px solid ${C.accentBorder}` }}>
+              {drive.user.picture && (
+                <img src={drive.user.picture} alt="" style={{ width: 32, height: 32, borderRadius: "50%", flexShrink: 0 }} />
+              )}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: T.fontSize.bodySmall, fontWeight: T.fontWeight.bold, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{drive.user.name}</div>
+                <div style={{ fontSize: T.fontSize.xs, color: C.textDim, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{drive.user.email}</div>
+              </div>
+              <button onClick={drive.signOut} style={{ background: "none", border: "none", color: C.textDim, cursor: "pointer", fontSize: T.fontSize.xs, flexShrink: 0 }}>Disconnect</button>
+            </div>
+
+            {drive.lastSync && (
+              <div style={{ fontSize: T.fontSize.xs, color: C.textDim }}>Last backup: {drive.lastSync.toLocaleString()}</div>
+            )}
+
+            <div style={{ display: "flex", gap: T.space.base }}>
+              <Btn onClick={() => drive.backup(data)} disabled={driveBusy} style={{ flex: 1 }}>
+                {drive.status === "syncing" ? "Saving..." : "Back Up Now"}
+              </Btn>
+              <Btn variant="secondary" onClick={() => setConfirmRestore(true)} disabled={driveBusy} style={{ flex: 1 }}>
+                Restore
+              </Btn>
+            </div>
+          </div>
+        )}
+
+        {drive.message && (
+          <div style={{ fontSize: T.fontSize.small, color: drive.message.includes("fail") || drive.message.includes("failed") ? C.danger : C.accent, fontWeight: T.fontWeight.semi, marginTop: T.space.base }}>
+            {drive.message}
+          </div>
+        )}
       </Card>
 
       {/* Data Management */}
@@ -1076,7 +1141,7 @@ function SettingsPage({ data, save }) {
       <Card>
         <div style={{ fontSize: T.fontSize.body, fontWeight: T.fontWeight.bold, marginBottom: T.space.base }}>About</div>
         <div style={{ fontSize: T.fontSize.caption, color: C.textDim, lineHeight: 1.5 }}>
-          <strong style={{ color: C.accent }}>🟁 Temple v0.5</strong><br />
+          <strong style={{ color: C.accent }}>🟁 Temple v0.6</strong><br />
           Your body is a temple. Train it.<br /><br />
           Built to replace subscription-gated workout apps. Free, private, all data stays on your device.
         </div>
@@ -1204,6 +1269,7 @@ export default function Temple() {
   const [tab, setTab] = useState("sets");
   const [activeSet, setActiveSet] = useState(null);
   const pwa = usePWA();
+  const drive = useGoogleDrive();
 
   const handleStartSession = (set) => { setActiveSet(set); setTab("session"); };
 
@@ -1233,7 +1299,7 @@ export default function Temple() {
           {tab === "sets" && <SetsPage data={data} save={save} onStartSession={handleStartSession} />}
           {tab === "session" && <SessionPage data={data} save={save} activeSet={activeSet} setActiveSet={setActiveSet} setTab={setTab} />}
           {tab === "progress" && <ProgressPage data={data} onRepeatSession={handleStartSession} />}
-          {tab === "settings" && <SettingsPage data={data} save={save} />}
+          {tab === "settings" && <SettingsPage data={data} save={save} drive={drive} />}
         </div>
         <Tabs active={tab} onChange={setTab} />
       </div>

@@ -73,7 +73,7 @@ export const DEFAULT_REST = 90;
 export const uid = () => Math.random().toString(36).slice(2, 9);
 export const fmtDate = (d) => new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 export const fmtDateFull = (d) => new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-export const fmt = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+export const fmt = (s) => `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
 export const mkDefault = () => ({ exercises: DEFAULT_EXERCISES, sets: [], sessions: [], prs: {}, settings: DEFAULT_SETTINGS });
 
 export function displayWeight(kg, unit) {
