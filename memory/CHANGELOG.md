@@ -1,6 +1,35 @@
 # 🟁 Temple — Changelog
 
-## v0.5 (Current)
+## v0.6 (Current)
+
+### Google Drive Backup
+- Connect Google Drive from Settings (OAuth 2.0, drive.file scope only)
+- Back Up Now — writes `temple-backup.json` to user's Drive
+- Restore — reads backup and replaces local data (with confirm dialog)
+- Connected user card: avatar (photo or initial fallback), name, email
+- Disconnect button — revokes token, clears state
+- Status messages for all operations (saving, saved, failed, restored)
+- Graceful fallback if userinfo fetch blocked by ad blocker
+
+### Bug Fixes
+- Bodyweight exercises (Push-up, Pull-up, etc.) now hide weight input — reps only
+- Mobility exercises (Cat-Cow, Hip Stretch, etc.) show "Seconds" label, hide weight
+- Logged set display adapts: bodyweight "12 reps", mobility "30 sec", weighted "80 kg × 10 reps"
+- `canLogCurrent` allows weight=0 for bodyweight/mobility exercises
+- Timer format consistently zero-pads ("02:05" not "2:05")
+- Removed shadowed `fmt()` in SessionPage
+- manifest.json no longer 404s — removed PNG icon references
+- Removed dead `runDataTests()` function
+
+### Infrastructure
+- Split monolith → Vite project: tokens.js, data.js, hooks.js, useGoogleDrive.js, App.jsx, main.jsx
+- idb-keyval replaces window.storage (real IndexedDB, persists across deploys)
+- netlify.toml + public/_headers + public/_redirects
+- .gitignore: node_modules/, dist/, .DS_Store
+
+---
+
+## v0.5
 
 ### Training Flow
 - Pre-fill weight/reps from last session

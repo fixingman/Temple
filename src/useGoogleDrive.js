@@ -40,19 +40,19 @@ export function useGoogleDrive() {
             return;
           }
           setAccessToken(tokenResponse.access_token);
-          // Fetch user info
+          // Set connected immediately, then enrich with user info
+          setUser({ name: "", email: "", picture: "" });
+          setStatus("ready");
+          // Fetch user info (best-effort, may be blocked by ad blockers)
           fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
             headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
           })
             .then((r) => r.json())
             .then((info) => {
-              setUser({ name: info.name, email: info.email, picture: info.picture });
-              setStatus("ready");
-              setMessage("");
+              setUser({ name: info.name || "", email: info.email || "", picture: info.picture || "" });
             })
             .catch(() => {
-              setStatus("ready");
-              setMessage("");
+              // Stay connected, just without name/email/picture
             });
         },
       });

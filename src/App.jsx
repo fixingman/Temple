@@ -1075,15 +1075,18 @@ function SettingsPage({ data, save, drive }) {
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: T.space.base }}>
             {/* Connected user */}
-            <div style={{ display: "flex", alignItems: "center", gap: T.space.lg, padding: "10px 14px", background: C.accentDim, borderRadius: T.radius.lg, border: `1px solid ${C.accentBorder}` }}>
-              {drive.user.picture && (
-                <img src={drive.user.picture} alt="" style={{ width: 32, height: 32, borderRadius: "50%", flexShrink: 0 }} />
-              )}
+            <div style={{ display: "flex", alignItems: "center", gap: T.space.lg, padding: "12px 14px", background: C.accentDim, borderRadius: T.radius.lg, border: `1px solid ${C.accentBorder}` }}>
+              {drive.user.picture
+                ? <img src={drive.user.picture} alt="" style={{ width: 36, height: 36, borderRadius: "50%", flexShrink: 0 }} />
+                : <div style={{ width: 36, height: 36, borderRadius: "50%", background: C.accent, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: T.fontSize.body, fontWeight: T.fontWeight.bold, color: C.bg }}>
+                    {(drive.user.name || drive.user.email || "G")[0].toUpperCase()}
+                  </div>
+              }
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: T.fontSize.bodySmall, fontWeight: T.fontWeight.bold, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{drive.user.name}</div>
-                <div style={{ fontSize: T.fontSize.xs, color: C.textDim, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{drive.user.email}</div>
+                {drive.user.name && <div style={{ fontSize: T.fontSize.bodySmall, fontWeight: T.fontWeight.bold, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{drive.user.name}</div>}
+                {drive.user.email && <div style={{ fontSize: T.fontSize.xs, color: C.textDim, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{drive.user.email}</div>}
+                {!drive.user.name && !drive.user.email && <div style={{ fontSize: T.fontSize.bodySmall, color: C.accent, fontWeight: T.fontWeight.semi }}>Google Drive connected</div>}
               </div>
-              <button onClick={drive.signOut} style={{ background: "none", border: "none", color: C.textDim, cursor: "pointer", fontSize: T.fontSize.xs, flexShrink: 0 }}>Disconnect</button>
             </div>
 
             {drive.lastSync && (
@@ -1098,6 +1101,10 @@ function SettingsPage({ data, save, drive }) {
                 Restore
               </Btn>
             </div>
+
+            <Btn variant="danger" onClick={drive.signOut} style={{ width: "100%" }}>
+              Disconnect Google Drive
+            </Btn>
           </div>
         )}
 
@@ -1185,62 +1192,6 @@ class ErrorBoundary extends React.Component {
     }
     return this.props.children;
   }
-}
-
-// ─── Data Integrity Tests ───
-function runDataTests(data) {
-  const results = [];
-  const pass = (name) => results.push({ name, ok: true });
-  const fail = (name, msg) => results.push({ name, ok: false, msg });
-
-  // Structure
-  if (Array.isArray(data?.exercises)) pass("exercises is array"); else fail("exercises is array", "Missing or invalid");
-  if (Array.isArray(data?.sets)) pass("sets is array"); else fail("sets is array", "Missing or invalid");
-  if (Array.isArray(data?.sessions)) pass("sessions is array"); else fail("sessions is array", "Missing or invalid");
-  if (data?.prs && typeof data.prs === "object") pass("prs is object"); else fail("prs is object", "Missing or invalid");
-  if (data?.settings && typeof data.settings === "object") pass("settings exists"); else fail("settings exists", "Missing");
-
-  // Exercise integrity
-  const exIds = new Set((data?.exercises || []).map(e => e.id));
-  let exOk = true;
-  (data?.exercises || []).forEach(e => {
-    if (!e.id || !e.name || !e.muscle) { exOk = false; fail("exercise fields", "Exercise missing id/name/muscle: " + JSON.stringify(e)); }
-  });
-  if (exOk) pass("all exercises have required fields");
-
-  // Sets reference valid exercises
-  let setOk = true;
-  (data?.sets || []).forEach(s => {
-    if (!s.id || !s.name || !Array.isArray(s.exerciseIds)) { setOk = false; fail("set fields", "Set missing fields: " + s.id); }
-    s.exerciseIds?.forEach(eid => { if (!exIds.has(eid)) { setOk = false; fail("set exercise ref", "Set '" + s.name + "' references unknown exercise: " + eid); } });
-  });
-  if (setOk) pass("all sets reference valid exercises");
-
-  // Sessions reference valid exercises
-  let sessOk = true;
-  (data?.sessions || []).forEach(s => {
-    if (!s.id || !s.date || !Array.isArray(s.entries)) { sessOk = false; return; }
-    s.entries.forEach(e => {
-      if (!exIds.has(e.exerciseId)) { sessOk = false; fail("session exercise ref", "Session references unknown exercise: " + e.exerciseId); }
-      e.sets?.forEach(st => {
-        if (typeof st.reps !== "number" || typeof st.weight !== "number") { sessOk = false; fail("set data types", "Non-numeric reps/weight in session " + s.id); }
-        if (st.reps < 0 || st.weight < 0) { sessOk = false; fail("set values", "Negative reps/weight in session " + s.id); }
-      });
-    });
-  });
-  if (sessOk) pass("all sessions have valid data");
-
-  // PR references
-  let prOk = true;
-  Object.keys(data?.prs || {}).forEach(eid => {
-    if (!exIds.has(eid)) { prOk = false; fail("orphaned PR", "PR references deleted exercise: " + eid); }
-  });
-  if (prOk) pass("no orphaned PRs");
-
-  // Unit setting
-  if (["kg", "lbs"].includes(data?.settings?.unit)) pass("valid unit setting"); else fail("valid unit setting", "Unknown unit: " + data?.settings?.unit);
-
-  return results;
 }
 
 // ─── App ───

@@ -1,21 +1,38 @@
-# 🟁 Temple — Architecture (v0.5)
+# 🟁 Temple — Architecture (v0.6)
 
 ## Tech Stack
-- **Framework**: React 18 (JSX artifact, single-file)
+- **Framework**: React 18 (Vite project, deployed to Netlify)
 - **Charts**: recharts (LineChart, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid)
-- **Styling**: Inline styles via `T` token object + `C` color alias. CSS animations via injected `<style>` (GlobalStyles component).
-- **Storage**: `window.storage` API (persistent key-value, artifact runtime). Migration to IndexedDB via idb-keyval planned for Netlify deploy.
+- **Styling**: Inline styles via `T` token object + `C` color alias. CSS animations via `GlobalStyles` component.
+- **Storage**: `idb-keyval` (IndexedDB). Key: `temple-data`. Persists across deploys and page refreshes.
+- **Backup**: Google Drive via OAuth 2.0 (drive.file scope). Implemented in `useGoogleDrive.js`.
 
 ## File Structure
 ```
-temple.jsx              — Single-file React app (~1450 lines)
+index.html                — Entry point, PWA meta tags
+vite.config.js            — Vite + React plugin
+netlify.toml              — Build config + MIME type headers
+.gitignore                — node_modules/, dist/, .DS_Store
+public/
+  manifest.json           — PWA manifest (SVG icon only)
+  sw.js                   — Service worker (cache-first)
+  _headers                — MIME type overrides
+  _redirects              — SPA routing fallback
+  icon.svg                — App icon
+src/
+  main.jsx                — React root + SW registration (prod only)
+  tokens.js               — T and C design token exports
+  data.js                 — DEFAULT_EXERCISES, constants, utilities, est1RM, fmt
+  hooks.js                — useAppData (idb-keyval), usePWA
+  useGoogleDrive.js       — Google Drive backup/restore hook
+  App.jsx                 — All components, pages, and root (~1250 lines)
 memory/
-  PROJECT.md            — Project overview and current state
-  PRODUCT.md            — Feature documentation
-  DESIGN.md             — Design system (tokens, recipes, motion, quality principles)
-  ARCHITECTURE.md       — This file
-  CHANGELOG.md          — Version history
-  BACKLOG.md            — Remaining work and Big Three milestones
+  PRODUCT.md              — Philosophy + feature summary
+  ARCHITECTURE.md         — This file
+  DESIGN.md               — Token system, motion, quality principles
+  CHANGELOG.md            — Version history
+  BACKLOG.md              — Remaining work
+  HOUSEKEEPING.md         — Audit checklist + process
 ```
 
 ## Data Model

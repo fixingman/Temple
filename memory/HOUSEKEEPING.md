@@ -21,13 +21,13 @@ Run this checklist periodically (before deploys, after major feature work, or wh
 - [ ] No dead constants
 
 ## 4. Privacy
-- [ ] No `localStorage` usage (must use `window.storage` API)
-- [ ] No `fetch()` calls outside service worker cache handler
+- [ ] No `localStorage` usage (must use `idb-keyval`)
 - [ ] No `navigator.geolocation` or location access
-- [ ] No analytics, tracking pixels, or third-party scripts
-- [ ] No `sendBeacon` or external data transmission
+- [ ] No analytics, tracking pixels, or third-party scripts beyond Google APIs (Drive backup)
+- [ ] No `sendBeacon` or external data transmission beyond Google Drive backup
 - [ ] YouTube links only use search queries, no user data in URLs
 - [ ] Export/import only touches clipboard or local file download — never a server
+- [ ] Google Drive fetch calls only in `useGoogleDrive.js` — no other external fetch
 
 ## 5. Performance
 - [ ] No inline style objects created inside `.map()` renders (extract to variables or constants)
@@ -37,12 +37,12 @@ Run this checklist periodically (before deploys, after major feature work, or wh
 - [ ] No synchronous heavy computation in render path
 
 ## 6. Data Integrity
-- [ ] `runDataTests()` passes all checks (exercises, sets, sessions, PRs, settings)
 - [ ] Data migration handles missing `equipment`/`category` fields on load
 - [ ] Data migration merges new default exercises on load
 - [ ] Delete exercise cascades to sets (removes from exerciseIds) and PRs
 - [ ] Session with deleted exercises doesn't crash (filters invalid IDs)
 - [ ] Export produces valid JSON that can be re-imported
+- [ ] Google Drive backup/restore validates required fields before saving
 
 ## 7. Motion & Polish (per DESIGN.md Section 7.6)
 - [ ] No content shifting on expand/collapse
@@ -62,16 +62,12 @@ Run this in the repo to catch the mechanical issues:
 ```
 
 ## Last Run
-- **Date**: 2026-04-09
-- **Result**: 8 issues found, all fixed
+- **Date**: 2026-04-28
+- **Result**: 3 issues found, all fixed
 - **Fixes applied**:
-  - Duplicate exercise ID `e40` (Dead Hang + Pigeon Pose) → Pigeon Pose reassigned to `e50`
-  - Raw `margin: "4px 0 0"` in 2 locations → tokenised to `${T.space.sm}px 0 0`
-  - Unused variable `hasLoggedSets` → removed
-  - Unused token `surfaceHover` → removed from `T.color`
-  - `runDataTests` flagged as unused — kept intentionally (CI use at Netlify deploy)
-  - `transition.slow` / `duration.slow` flagged as unused — kept intentionally (scale token for future)
-  - `fetch()` in service worker — confirmed not a privacy leak (standard cache handler)
+  - `runDataTests()` still present in drive-session App.jsx — removed
+  - Privacy section referenced `window.storage` instead of `idb-keyval` — updated
+  - Privacy rule "no fetch outside SW" obsolete — updated to allow `useGoogleDrive.js`
 
 ---
 
