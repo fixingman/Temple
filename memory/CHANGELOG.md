@@ -1,13 +1,21 @@
 # 🟁 Temple — Changelog
 
-## v0.6 (Current)
-- Google Drive backup/restore (OAuth, drive.file scope, `useGoogleDrive.js`)
+## v0.7 (Current)
+- New icon: pyramid with T in negative space (triple reading: pyramid · barbell plates · T for Temple)
+- Google Drive connected user card: avatar, name, email, fallback initial, robust to ad blockers
+- Lean memory system: all 7 files rewritten compact (~320 lines / 14KB total)
+- RULES.md: start + end of session routines, standing rules, deployment, versioning
+- BACKLOG.md: shipped/tested tracking tags ([shipped] / [tested] / [wip])
+- HOUSEKEEPING.md: 5 smoke test scenarios added
+
+## v0.6
+- Google Drive backup/restore (OAuth 2.0, drive.file scope, useGoogleDrive.js)
 - Bodyweight exercises: hide weight input, reps only
 - Mobility exercises: "Seconds" label, hide weight
 - Timer format: consistent zero-padding ("02:05")
-- Removed shadowed `fmt()` in SessionPage
+- Removed shadowed fmt() in SessionPage
 - manifest.json: removed missing PNG icon refs
-- Removed dead `runDataTests()`
+- Removed dead runDataTests()
 - Vite project split: tokens.js · data.js · hooks.js · useGoogleDrive.js · App.jsx · main.jsx
 - idb-keyval replaces window.storage
 - netlify.toml + _headers + _redirects + .gitignore

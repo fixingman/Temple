@@ -2,39 +2,38 @@
 
 ## Start of Session
 1. Read RULES.md (this file)
-2. Read CHANGELOG.md → current version + what shipped
-3. Read BACKLOG.md → what's next
-4. `git clone https://github.com/fixingman/Temple.git`
-5. Check version string in App.jsx About card matches CHANGELOG
-6. Tell user: "On v[X]. Last shipped: [summary]. Next: [top backlog item]."
+2. Read CHANGELOG.md + BACKLOG.md
+3. `git clone https://github.com/fixingman/Temple.git`
+4. Check version string in App.jsx About card matches CHANGELOG
+5. Tell user: "On v[X]. Last: [summary]. Next: [top backlog item]. Open issues: [none/list]."
 
 ## End of Session
 1. Bump version in App.jsx About card + PRODUCT.md header
-2. CHANGELOG.md → new version at top, list everything shipped
-3. BACKLOG.md → remove completed, add discovered
+2. CHANGELOG.md → new version at top, list everything shipped + tested status
+3. BACKLOG.md → remove completed, add discovered, update tags
 4. ARCHITECTURE.md → update if structure/data model changed
-5. Housekeeping checks:
-   - No `window.storage` / `localStorage` / `runDataTests`
-   - No fetch outside `useGoogleDrive.js` + `sw.js`
-   - No `dangerouslySetInnerHTML`, `eval()`, `transition: all`
-   - No raw hex outside `tokens.js`, no dead functions
-   - Update "Last Run" date in HOUSEKEEPING.md
+5. Housekeeping checks (HOUSEKEEPING.md) — run all, update Last Run
 6. `npm run build` — must pass zero errors
 7. Commit: `"v0.X — one-line summary"`
-8. Push → confirm Netlify deploy → hard refresh + smoke test
-9. Update "Where We Left Off" below
+8. Push → confirm Netlify deploy → run smoke tests → update results
+9. **Update "Where We Left Off" below — mandatory**
 
-**Never close with:** stale memory files, failing build, uncommitted changes.
+**Never close with:** stale memory files · failing build · uncommitted changes · Where We Left Off not updated
+
+**Memory drift rule:** If any memory file is touched during a session, it must be committed in the same push as the code. Memory files are code.
 
 ---
 
 ## Where We Left Off
-**Version**: v0.6 — live at https://tmple.netlify.app
-**Repo**: https://github.com/fixingman/Temple.git · branch: `main`
-
-**Last shipped (v0.6):** Google Drive backup/restore · bodyweight/mobility session fixes · Vite project split · idb-keyval storage · netlify.toml/headers/redirects · removed runDataTests
-
-**Next:** Test app with real data · session detail view · custom rest timer · branding audit
+```
+Version:     v0.7
+Date:        2026-04-29
+Shipped:     New icon (pyramid + T negative space) · Google Drive UI fix · lean memory system · RULES.md
+Tested:      Not yet — needs real device smoke test
+Next:        Test with real data (5+ sessions) · session detail view · custom rest timer
+Open issues: Google OAuth still in testing mode (add users manually in Cloud Console)
+             Smoke tests not yet run on live site
+```
 
 ---
 
@@ -49,7 +48,7 @@ memory/   RULES.md · PRODUCT.md · ARCHITECTURE.md · DESIGN.md · CHANGELOG.md
 ---
 
 ## Versioning
-- **Patch** (0.6.1): bug fixes only · **Minor** (0.7): features · **Major** (1.0): rewrites
+- **Patch** (0.7.1): bug fixes · **Minor** (0.8): features · **Major** (1.0): rewrites
 - Commit format: `"v0.X — one-line summary"`
 
 ---
