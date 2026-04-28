@@ -28,5 +28,10 @@ Run before every deploy. Update "Last Run" when done.
 **Memory files:** All files reflect current code · CHANGELOG has "(Current)" on latest · no completed items in BACKLOG · total memory under 40KB
 
 ## Last Run
+- **Date**: 2026-04-29
+- **Smoke tests**: Not run — needs real device
+- **Code checks**: All clean — no window.storage, no fetch outside allowed files, no dead functions, build passes
+
+## Previous Run
 - **Date**: 2026-04-28
 - **Result**: 3 issues fixed — removed duplicate `runDataTests`, updated privacy rules (idb-keyval, fetch policy), updated architecture docs

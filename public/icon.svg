@@ -1,1 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="20" fill="#0a0a0f"/><text x="50" y="50" font-size="60" text-anchor="middle" dominant-baseline="central">🟁</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <rect width="100" height="100" rx="20" fill="#0a0a0f"/>
+  <!-- Bar 1 — top, split by T cut -->
+  <rect x="34" y="20" width="12" height="12" fill="#00e5c8"/>
+  <rect x="54" y="20" width="12" height="12" fill="#00e5c8"/>
+  <!-- Bar 2 — middle, split -->
+  <rect x="23" y="44" width="23" height="12" fill="#00e5c8"/>
+  <rect x="54" y="44" width="23" height="12" fill="#00e5c8"/>
+  <!-- Bar 3 — base, split -->
+  <rect x="12" y="68" width="34" height="12" fill="#00e5c8"/>
+  <rect x="54" y="68" width="34" height="12" fill="#00e5c8"/>
+</svg>
