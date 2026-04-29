@@ -4,7 +4,7 @@ Run before every deploy. Update "Last Run" when done.
 
 ## Checklist
 
-**Syntax:** No bare `catch{}` · default export present · no duplicate exercise IDs
+**Syntax:** No bare `catch{}` · default export present · no duplicate exercise IDs · SW cache names match current app version
 
 **Tokens:** No raw hex outside `tokens.js` · `T.space.*` for all spacing · no `transition: all` · no unused tokens
 

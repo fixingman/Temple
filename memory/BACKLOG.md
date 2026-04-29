@@ -11,13 +11,15 @@ Status tags: `[shipped]` = deployed untested · `[tested]` = verified on device 
 ## Recently Shipped
 | Feature | Status |
 |---------|--------|
+| Exercise search in set builder | `[shipped]` |
+| Alphabetical exercise sort | `[shipped]` |
+| SW black screen fix (network-first HTML) | `[shipped]` |
+| SW cache versioning | `[shipped]` |
 | New icon (pyramid + T negative space) | `[shipped]` |
-| Google Drive connected user card fix | `[shipped]` |
 | Google Drive backup/restore | `[shipped]` |
 | Bodyweight/mobility session handling | `[shipped]` |
 | Vite project split + idb-keyval | `[tested]` |
 | netlify.toml + MIME fix | `[tested]` |
-| Lean memory files + RULES.md | `[shipped]` |
 
 ## Feature Backlog
 | Feature | Priority | Status |
@@ -34,7 +36,7 @@ Status tags: `[shipped]` = deployed untested · `[tested]` = verified on device 
 | Light theme | Low | — |
 
 ## Technical Debt
-- App.jsx ~1250 lines — consider splitting pages into files
+- App.jsx ~1260 lines — consider splitting pages into files
 - Timezone-naive week calculation
 - No accessibility (aria, keyboard nav)
 - Google OAuth in testing mode — needs verification to go public

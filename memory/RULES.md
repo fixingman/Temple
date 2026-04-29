@@ -4,19 +4,20 @@
 1. Read RULES.md (this file)
 2. Read CHANGELOG.md + BACKLOG.md
 3. `git clone https://github.com/fixingman/Temple.git`
-4. Check version string in App.jsx About card matches CHANGELOG
+4. Check version string in App.jsx About card matches CHANGELOG + SW cache names match version
 5. Tell user: "On v[X]. Last: [summary]. Next: [top backlog item]. Open issues: [none/list]."
 
 ## End of Session
 1. Bump version in App.jsx About card + PRODUCT.md header
-2. CHANGELOG.md → new version at top, list everything shipped + tested status
-3. BACKLOG.md → remove completed, add discovered, update tags
-4. ARCHITECTURE.md → update if structure/data model changed
-5. Housekeeping checks (HOUSEKEEPING.md) — run all, update Last Run
-6. `npm run build` — must pass zero errors
-7. Commit: `"v0.X — one-line summary"`
-8. Push → confirm Netlify deploy → run smoke tests → update results
-9. **Update "Where We Left Off" below — mandatory**
+2. Bump SW cache names in `public/sw.js` to match (e.g. `temple-v0.8` + `temple-assets-v0.8`)
+3. CHANGELOG.md → new version at top, list everything shipped + tested status
+4. BACKLOG.md → remove completed, add discovered, update tags
+5. ARCHITECTURE.md → update if structure/data model changed
+6. Housekeeping checks (HOUSEKEEPING.md) — run all, update Last Run
+7. `npm run build` — must pass zero errors
+8. Commit: `"v0.X — one-line summary"`
+9. Push → confirm Netlify deploy → run smoke tests → update results
+10. **Update "Where We Left Off" below — mandatory**
 
 **Never close with:** stale memory files · failing build · uncommitted changes · Where We Left Off not updated
 
@@ -26,13 +27,13 @@
 
 ## Where We Left Off
 ```
-Version:     v0.7
+Version:     v0.7.1
 Date:        2026-04-29
-Shipped:     New icon (pyramid + T negative space) · Google Drive UI fix · lean memory system · RULES.md
+Shipped:     Exercise search + alpha sort in set builder · SW black screen fix · SW cache versioning
 Tested:      Not yet — needs real device smoke test
 Next:        Test with real data (5+ sessions) · session detail view · custom rest timer
 Open issues: Google OAuth still in testing mode (add users manually in Cloud Console)
-             Smoke tests not yet run on live site
+             All recent features [shipped] but none [tested] on real device
 ```
 
 ---
@@ -50,6 +51,7 @@ memory/   RULES.md · PRODUCT.md · ARCHITECTURE.md · DESIGN.md · CHANGELOG.md
 ## Versioning
 - **Patch** (0.7.1): bug fixes · **Minor** (0.8): features · **Major** (1.0): rewrites
 - Commit format: `"v0.X — one-line summary"`
+- SW cache names must always match the version — check both `CACHE` and `ASSETS_CACHE` in sw.js
 
 ---
 

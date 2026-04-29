@@ -248,11 +248,12 @@ function SetsPage({ data, save, onStartSession }) {
   const [name, setName] = useState("");
   const [selected, setSelected] = useState([]);
   const [muscleFilter, setMuscleFilter] = useState("All");
+  const [search, setSearch] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [error, setError] = useState("");
 
-  const startCreate = () => { setCreating(true); setEditingId(null); setName(""); setSelected([]); setMuscleFilter("All"); setError(""); };
-  const startEdit = (s) => { setCreating(true); setEditingId(s.id); setName(s.name); setSelected([...s.exerciseIds]); setMuscleFilter("All"); setError(""); };
+  const startCreate = () => { setCreating(true); setEditingId(null); setName(""); setSelected([]); setMuscleFilter("All"); setSearch(""); setError(""); };
+  const startEdit = (s) => { setCreating(true); setEditingId(s.id); setName(s.name); setSelected([...s.exerciseIds]); setMuscleFilter("All"); setSearch(""); setError(""); };
   const saveSet = () => {
     if (!name.trim() && selected.length === 0) { setError("Give your set a name and select at least one exercise."); return; }
     if (!name.trim()) { setError("Give your set a name."); return; }
@@ -284,7 +285,12 @@ function SetsPage({ data, save, onStartSession }) {
     setSelected(ns);
   };
   const removeFromSelected = (id) => { setSelected(s => s.filter(x => x !== id)); };
-  const filteredEx = data.exercises.filter(e => muscleFilter === "All" || e.muscle === muscleFilter);
+  const filteredEx = data.exercises
+    .filter(e => {
+      if (search.trim()) return e.name.toLowerCase().includes(search.trim().toLowerCase());
+      return muscleFilter === "All" || e.muscle === muscleFilter;
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   if (creating) {
     const selectedExercises = selected.map(id => data.exercises.find(e => e.id === id)).filter(Boolean);
@@ -352,9 +358,25 @@ function SetsPage({ data, save, onStartSession }) {
         <div>
           <label style={{ fontSize: T.fontSize.small, color: C.textDim, fontWeight: T.fontWeight.semi, textTransform: "uppercase", letterSpacing: T.letterSpacing.uppercase }}>Add Exercises</label>
           <div style={{ marginTop: T.space.base }}>
-            <PillFilter options={MUSCLE_GROUPS} active={muscleFilter} onChange={setMuscleFilter} small />
+            <input
+              type="text"
+              placeholder="Search exercises..."
+              value={search}
+              onChange={e => { setSearch(e.target.value); if (e.target.value) setMuscleFilter("All"); }}
+              style={{ width: "100%", boxSizing: "border-box", background: C.surface, border: `1px solid ${search ? C.accent : C.border}`, borderRadius: T.radius.lg, padding: "10px 14px", color: C.text, fontSize: T.fontSize.bodySmall, outline: "none", marginBottom: T.space.base, transition: `border-color ${T.transition.fast}` }}
+            />
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: T.space.md, marginTop: T.space.lg, maxHeight: T.size.scrollList, overflowY: "auto" }}>
+          {!search && (
+            <div style={{ marginBottom: T.space.base }}>
+              <PillFilter options={MUSCLE_GROUPS} active={muscleFilter} onChange={setMuscleFilter} small />
+            </div>
+          )}
+          <div style={{ display: "flex", flexDirection: "column", gap: T.space.md, marginTop: T.space.sm, maxHeight: T.size.scrollList, overflowY: "auto" }}>
+            {filteredEx.length === 0 && search && (
+              <div style={{ textAlign: "center", color: C.textDim, fontSize: T.fontSize.caption, padding: `${T.space["2xl"]}px 0` }}>
+                No exercises found for "{search}"
+              </div>
+            )}
             {filteredEx.map(ex => {
               const isSel = selected.includes(ex.id);
               return (
@@ -1148,7 +1170,7 @@ function SettingsPage({ data, save, drive }) {
       <Card>
         <div style={{ fontSize: T.fontSize.body, fontWeight: T.fontWeight.bold, marginBottom: T.space.base }}>About</div>
         <div style={{ fontSize: T.fontSize.caption, color: C.textDim, lineHeight: 1.5 }}>
-          <strong style={{ color: C.accent }}>🟁 Temple v0.7</strong><br />
+          <strong style={{ color: C.accent }}>🟁 Temple v0.7.1</strong><br />
           Your body is a temple. Train it.<br /><br />
           Built to replace subscription-gated workout apps. Free, private, all data stays on your device.
         </div>
