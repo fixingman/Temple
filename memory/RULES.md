@@ -9,7 +9,8 @@
 
 ## End of Session
 1. Bump version in App.jsx About card + PRODUCT.md header
-2. CHANGELOG.md → new version at top, list everything shipped + tested status
+2. Bump SW cache names in `public/sw.js` to match (e.g. `temple-v0.8` + `temple-assets-v0.8`)
+3. CHANGELOG.md → new version at top, list everything shipped + tested status
 3. BACKLOG.md → remove completed, add discovered, update tags
 4. ARCHITECTURE.md → update if structure/data model changed
 5. Housekeeping checks (HOUSEKEEPING.md) — run all, update Last Run
