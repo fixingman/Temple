@@ -1170,7 +1170,7 @@ function SettingsPage({ data, save, drive }) {
       <Card>
         <div style={{ fontSize: T.fontSize.body, fontWeight: T.fontWeight.bold, marginBottom: T.space.base }}>About</div>
         <div style={{ fontSize: T.fontSize.caption, color: C.textDim, lineHeight: 1.5 }}>
-          <strong style={{ color: C.accent }}>🟁 Temple v0.7</strong><br />
+          <strong style={{ color: C.accent }}>🟁 Temple v0.7.1</strong><br />
           Your body is a temple. Train it.<br /><br />
           Built to replace subscription-gated workout apps. Free, private, all data stays on your device.
         </div>
