@@ -65,7 +65,7 @@ export const MUSCLE_ICONS = { Chest: "🫁", Back: "🔙", Shoulders: "💪", Le
 export const EQUIPMENT_TYPES = ["Weighted", "Bodyweight"];
 export const CATEGORY_TYPES = ["Strength", "Mobility"];
 export const KG_TO_LBS = 2.20462;
-export const DEFAULT_SETTINGS = { unit: "kg" };
+export const DEFAULT_SETTINGS = { unit: "kg", anthropicKey: "" };
 export const STORAGE_KEY = "temple-data";
 export const DEFAULT_REST = 90;
 
