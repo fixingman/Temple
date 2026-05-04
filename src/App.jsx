@@ -41,10 +41,11 @@ function Btn({ children, variant = "primary", style, disabled, onClick, ...props
 }
 
 function Input({ label, ...props }) {
+  const [focused, setFocused] = useState(false);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: T.space.sm }}>
       {label && <label style={{ fontSize: T.fontSize.small, color: C.textDim, fontWeight: T.fontWeight.semi, textTransform: "uppercase", letterSpacing: T.letterSpacing.uppercase }}>{label}</label>}
-      <input {...props} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: "10px 12px", color: C.text, fontSize: T.fontSize.body, outline: "none", ...props.style }} />
+      <input {...props} onFocus={e => { setFocused(true); props.onFocus?.(e); }} onBlur={e => { setFocused(false); props.onBlur?.(e); }} style={{ background: C.bg, border: `1px solid ${focused ? C.accent : C.border}`, borderRadius: T.radius.lg, padding: "10px 12px", color: C.text, fontSize: T.fontSize.body, outline: "none", transition: `border-color ${T.transition.fast}`, ...props.style }} />
     </div>
   );
 }
@@ -101,14 +102,208 @@ function VideoSheet({ query, label, onClose }) {
     </div>
   );
 }
+function ApiKeyInput({ value, onChange }) {
+  const [show, setShow] = useState(false);
+  const [draft, setDraft] = useState(value);
+  const [saved, setSaved] = useState(false);
+  const dirty = draft !== value;
+
+  const save = () => {
+    onChange(draft.trim());
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+  const clear = () => { setDraft(""); onChange(""); };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: T.space.base }}>
+      <div style={{ display: "flex", gap: T.space.base }}>
+        <input
+          type={show ? "text" : "password"}
+          value={draft}
+          onChange={e => { setDraft(e.target.value); setSaved(false); }}
+          placeholder="sk-ant-..."
+          style={{ flex: 1, background: C.bg, border: `1px solid ${draft ? C.accentBorder : C.border}`, borderRadius: T.radius.lg, padding: "10px 12px", color: C.text, fontSize: T.fontSize.bodySmall, outline: "none", fontFamily: T.font.mono, transition: `border-color ${T.transition.fast}` }}
+        />
+        <button onClick={() => setShow(s => !s)} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, color: C.textDim, cursor: "pointer", padding: "10px 12px", fontSize: T.fontSize.small, flexShrink: 0 }}>{show ? "Hide" : "Show"}</button>
+      </div>
+      <div style={{ display: "flex", gap: T.space.base }}>
+        <Btn onClick={save} disabled={!dirty || !draft.trim()} style={{ flex: 1 }}>
+          {saved ? "Saved" : "Save Key"}
+        </Btn>
+        {value && <Btn variant="danger" onClick={clear} style={{ flex: 1 }}>Remove</Btn>}
+      </div>
+      {value && !dirty && (
+        <div style={{ fontSize: T.fontSize.xs, color: C.accent, fontWeight: T.fontWeight.semi }}>
+          ✓ Key saved · {value.slice(0, 8)}...{value.slice(-4)}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function PRBadge() { return <span style={{ background: C.prDim, color: C.pr, fontSize: T.fontSize.xxs, fontWeight: T.fontWeight.heavy, padding: "2px 8px", borderRadius: T.radius.full, letterSpacing: T.letterSpacing.uppercase }}>🏆 PR</span>; }
 
-function ConfirmDialog({ message, onConfirm, onCancel }) {
+// ─── Recovery / Body Check Sheet ───
+const BODY_AREAS = [
+  "Neck", "Shoulder", "Upper back", "Lower back",
+  "Chest", "Elbow", "Wrist", "Hip",
+  "Glute", "Quad", "Hamstring", "Knee", "Calf", "Ankle",
+];
+
+function RecoverySheet({ onClose, recentExercises = [], apiKey = "" }) {
+  const [area, setArea] = useState("");
+  const [description, setDescription] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState("");
+  const [error, setError] = useState("");
+
+  const consult = async () => {
+    if (!area || !description.trim()) return;
+    setLoading(true); setError(""); setResult("");
+    const exerciseContext = recentExercises.length
+      ? `The user's most recent workout included: ${recentExercises.join(", ")}.`
+      : "No recent workout data available.";
+    const prompt = `You are a knowledgeable fitness recovery assistant. A user is reporting post-workout discomfort.
+
+${exerciseContext}
+
+Body area: ${area}
+User's description: ${description}
+
+Provide a structured, practical response with these sections:
+1. **What's likely happening** — 2-3 sentences explaining the probable cause, connecting it to their workout if relevant.
+2. **Severity check** — Is this normal DOMS/fatigue, or does it sound like something that needs attention? Be direct.
+3. **What to do now** — 3-4 concrete immediate actions (rest, ice, stretch, etc.)
+4. **This week** — How to adjust training. What to avoid, what's still fine.
+5. **See a professional if** — Clear red flags that mean they should stop and get checked.
+
+Keep it concise, practical, and honest. Don't over-reassure. Don't diagnose. Use plain language.
+End with a one-line reminder that this is general guidance and not a substitute for professional medical advice.`;
+
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+          "anthropic-dangerous-client-side-api-key-unsafe": "true",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "claude-opus-4-5",
+          max_tokens: 800,
+          messages: [{ role: "user", content: prompt }],
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        if (res.status === 401) setError("Invalid API key. Check your key in Settings.");
+        else setError(data.error?.message || "Something went wrong. Try again.");
+      } else {
+        setResult(data.content?.[0]?.text || "");
+      }
+    } catch {
+      setError("Could not connect. Check your internet and try again.");
+    }
+    setLoading(false);
+  };
+
+  const renderResult = (text) => text.split("\n").map((line, i) => {
+    const bold = line.replace(/\*\*(.*?)\*\*/g, (_, m) => `<strong>${m}</strong>`);
+    return <p key={i} style={{ margin: `0 0 ${T.space.base}px`, lineHeight: 1.6, fontSize: T.fontSize.bodySmall }} dangerouslySetInnerHTML={{ __html: bold }} />;
+  });
+
+  const noKey = !apiKey?.trim();
+
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: C.overlay, zIndex: T.z.modal + 10, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+      <div className="t-slide-up" onClick={e => e.stopPropagation()} style={{ background: C.surface, borderRadius: `${T.radius.xl}px ${T.radius.xl}px 0 0`, maxHeight: "92vh", display: "flex", flexDirection: "column" }}>
+
+        {/* Header */}
+        <div style={{ padding: `${T.space.xl}px ${T.space.xl}px ${T.space.base}px`, borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <div>
+              <div style={{ fontSize: T.fontSize.body, fontWeight: T.fontWeight.bold }}>Body Check</div>
+              <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: 2 }}>Post-training discomfort guidance</div>
+            </div>
+            <button onClick={onClose} style={{ background: C.bg, border: "none", color: C.textDim, cursor: "pointer", borderRadius: T.radius.full, width: 28, height: 28, fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div style={{ flex: 1, overflowY: "auto", padding: T.space.xl }}>
+          {noKey ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: T.space.xl, paddingTop: T.space.xl }}>
+              <div style={{ background: C.bg, borderRadius: T.radius.xl, padding: T.space["2xl"], textAlign: "center" }}>
+                <div style={{ fontSize: T.fontSize.h3, fontWeight: T.fontWeight.bold, marginBottom: T.space.base }}>API Key Required</div>
+                <div style={{ fontSize: T.fontSize.bodySmall, color: C.textDim, lineHeight: 1.6, marginBottom: T.space.xl }}>
+                  Body Check uses Claude AI. Add your own Anthropic API key in Settings — your key stays on your device and is sent directly to Anthropic.
+                </div>
+                <Btn variant="secondary" onClick={onClose} style={{ width: "100%" }}>Go to Settings to add key</Btn>
+              </div>
+              <a href="https://console.anthropic.com" target="_blank" rel="noopener noreferrer" style={{ textAlign: "center", fontSize: T.fontSize.xs, color: C.textDim, textDecoration: "none" }}>
+                Get a free API key at console.anthropic.com →
+              </a>
+            </div>
+          ) : !result ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: T.space.xl }}>
+              <div>
+                <label style={{ fontSize: T.fontSize.small, color: C.textDim, fontWeight: T.fontWeight.semi, textTransform: "uppercase", letterSpacing: T.letterSpacing.uppercase, display: "block", marginBottom: T.space.base }}>Where does it hurt?</label>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: T.space.sm }}>
+                  {BODY_AREAS.map(a => (
+                    <button key={a} onClick={() => setArea(a)} style={{ border: `1px solid ${area === a ? C.accent : C.border}`, borderRadius: T.radius.full, padding: "6px 14px", fontSize: T.fontSize.small, fontWeight: T.fontWeight.semi, cursor: "pointer", background: area === a ? C.accentDim : "transparent", color: area === a ? C.accent : C.textDim, transition: `all ${T.transition.fast}` }}>{a}</button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: T.fontSize.small, color: C.textDim, fontWeight: T.fontWeight.semi, textTransform: "uppercase", letterSpacing: T.letterSpacing.uppercase, display: "block", marginBottom: T.space.base }}>Describe what you're feeling</label>
+                <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="e.g. sharp pain when I extend my arm, started during the last set of bench press..." rows={4}
+                  style={{ width: "100%", boxSizing: "border-box", background: C.bg, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: "12px 14px", color: C.text, fontSize: T.fontSize.bodySmall, outline: "none", resize: "none", fontFamily: "inherit", lineHeight: 1.5 }} />
+              </div>
+
+              {recentExercises.length > 0 && (
+                <div style={{ background: C.bg, borderRadius: T.radius.lg, padding: "10px 14px" }}>
+                  <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginBottom: T.space.xs }}>From your last session</div>
+                  <div style={{ fontSize: T.fontSize.small, color: C.textDim }}>{recentExercises.join(", ")}</div>
+                </div>
+              )}
+
+              {error && <div style={{ background: C.dangerDim, border: `1px solid ${C.dangerBorder}`, borderRadius: T.radius.lg, padding: "10px 14px", fontSize: T.fontSize.small, color: C.danger }}>{error}</div>}
+
+              <Btn onClick={consult} disabled={!area || !description.trim() || loading} style={{ width: "100%", padding: 14 }}>
+                {loading ? "Getting guidance..." : "Get Guidance"}
+              </Btn>
+
+              <p style={{ fontSize: T.fontSize.xs, color: C.textDim, textAlign: "center", margin: 0, lineHeight: 1.5 }}>
+                General fitness guidance only — not medical advice. For serious pain, see a professional.
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: T.space.xl }}>
+              <div style={{ background: C.bg, borderRadius: T.radius.lg, padding: "10px 14px", display: "flex", gap: T.space.base }}>
+                <span style={{ fontSize: T.fontSize.small, color: C.textDim }}>Area:</span>
+                <span style={{ fontSize: T.fontSize.small, fontWeight: T.fontWeight.semi, color: C.accent }}>{area}</span>
+              </div>
+              <div style={{ color: C.text }}>{renderResult(result)}</div>
+              <Btn variant="secondary" onClick={() => { setResult(""); setError(""); }} style={{ width: "100%" }}>Ask about another issue</Btn>
+            </div>
+          )}
+        </div>
+
+        <div style={{ height: "env(safe-area-inset-bottom)", background: C.surface, flexShrink: 0 }} />
+      </div>
+    </div>
+  );
+}
+
+function ConfirmDialog({ message, onConfirm, onCancel, confirmLabel = "Delete", cancelLabel = "Cancel" }) {
   return (
     <div className="t-fade-in" style={{ position: "fixed", inset: 0, background: C.overlay, display: "flex", alignItems: "center", justifyContent: "center", zIndex: T.z.modal, padding: T.space.xl }}>
       <div className="t-scale-in" style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: T.radius.xl, padding: T.space["2xl"], maxWidth: 320, width: "100%" }}>
         <div style={{ fontSize: T.fontSize.body, fontWeight: T.fontWeight.semi, marginBottom: T.space.xl, color: C.text, lineHeight: 1.5 }}>{message}</div>
-        <div style={{ display: "flex", gap: T.space.base }}><Btn variant="ghost" onClick={onCancel} style={{ flex: 1 }}>No</Btn><Btn variant="danger" onClick={onConfirm} style={{ flex: 1 }}>Yes</Btn></div>
+        <div style={{ display: "flex", gap: T.space.base }}><Btn variant="ghost" onClick={onCancel} style={{ flex: 1 }}>{cancelLabel}</Btn><Btn variant="danger" onClick={onConfirm} style={{ flex: 1 }}>{confirmLabel}</Btn></div>
       </div>
     </div>
   );
@@ -257,7 +452,7 @@ function LibraryPage({ data, save }) {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
           <h2 style={{ fontSize: T.fontSize.h1, fontWeight: T.fontWeight.heavy, margin: 0, letterSpacing: T.letterSpacing.tight }}>Exercise Library</h2>
-          <p style={{ color: C.textDim, fontSize: T.fontSize.caption, margin: `${T.space.sm}px 0 0` }}>{data.exercises.length} exercises</p>
+          <p style={{ color: C.textDim, fontSize: T.fontSize.caption, margin: `${T.space.sm}px 0 0` }}>{filtered.length} of {data.exercises.length} exercises</p>
         </div>
         <Btn onClick={startNew}>+ New</Btn>
       </div>
@@ -265,13 +460,13 @@ function LibraryPage({ data, save }) {
       <FilterBar muscle={filter} onMuscle={setFilter} equipment={eqFilter} onEquipment={setEqFilter} category={catFilter} onCategory={setCatFilter} small />
       <div style={{ display: "flex", flexDirection: "column", gap: T.space.base }}>
         {filtered.map(ex => (
-          <Card key={ex.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <Card key={ex.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${T.space.lg}px ${T.space.xl}px` }}>
             <div style={{ flex: 1, minWidth: 0, marginRight: T.space.base }}>
               <div style={{ fontWeight: T.fontWeight.bold, fontSize: T.fontSize.body }}>{ex.name}</div>
               <div style={{ display: "flex", gap: T.space.base, alignItems: "center", marginTop: T.space.xs }}>
                 <span style={{ fontSize: T.fontSize.small, color: C.textDim }}>{MUSCLE_ICONS[ex.muscle] || ""} {ex.muscle}</span>
                 {(ex.equipment === "bodyweight" || ex.category === "mobility") && (
-                  <span style={{ fontSize: T.fontSize.micro, color: C.textDim, background: C.bg, padding: "2px 6px", borderRadius: T.radius.base }}>
+                  <span style={{ fontSize: T.fontSize.xs, color: C.textDim, background: C.bg, padding: "2px 8px", borderRadius: T.radius.base }}>
                     {ex.equipment === "bodyweight" ? "BW" : ""}{ex.equipment === "bodyweight" && ex.category === "mobility" ? " · " : ""}{ex.category === "mobility" ? "MOB" : ""}
                   </span>
                 )}
@@ -279,8 +474,8 @@ function LibraryPage({ data, save }) {
             </div>
             <div style={{ display: "flex", gap: T.space.sm, alignItems: "center" }}>
               <YTButton query={ex.yt} label={ex.name} />
-              <button onClick={() => startEdit(ex)} style={{ background: "none", border: "none", color: C.textDim, cursor: "pointer", fontSize: T.fontSize.bodySmall, padding: "4px" }}>✎</button>
-              <button onClick={() => setConfirmDelete(ex.id)} style={{ background: "none", border: "none", color: C.danger, cursor: "pointer", fontSize: T.fontSize.bodySmall, padding: "4px" }}>✕</button>
+              <button onClick={() => startEdit(ex)} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: T.radius.md, color: C.textDim, cursor: "pointer", fontSize: T.fontSize.body, padding: "6px 10px", lineHeight: 1 }}>✎</button>
+              <button onClick={() => setConfirmDelete(ex.id)} style={{ background: C.dangerDim, border: `1px solid ${C.dangerBorder}`, borderRadius: T.radius.md, color: C.danger, cursor: "pointer", fontSize: T.fontSize.body, padding: "6px 10px", lineHeight: 1 }}>✕</button>
             </div>
           </Card>
         ))}
@@ -487,7 +682,7 @@ function SetsPage({ data, save, onStartSession }) {
 
 // ─── Session Page (redesigned training flow) ───
 
-function SessionPage({ data, save, activeSet, setActiveSet, setTab }) {
+function SessionPage({ data, save, activeSet, setActiveSet, setTab, apiKey }) {
   const [sessionData, setSessionData] = useState(null);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [currentSetIdx, setCurrentSetIdx] = useState(0);
@@ -593,10 +788,15 @@ function SessionPage({ data, save, activeSet, setActiveSet, setTab }) {
     const totalSets = sessionData.reduce((a, e) => a + e.logged.length, 0);
     const totalVol = sessionData.reduce((a, e) => a + e.logged.reduce((b, s) => b + (Number(s.reps) || 0) * (Number(s.weight) || 0), 0), 0);
     const volDisplay = displayWeight(totalVol, unit);
+    const completedExercises = sessionData
+      .filter(e => e.logged.length > 0)
+      .map(e => data.exercises.find(ex => ex.id === e.exerciseId)?.name)
+      .filter(Boolean);
+    const [showRecovery, setShowRecovery] = useState(false);
     return (
       <div className="t-fade-in" style={{ display: "flex", flexDirection: "column", gap: T.space.xl }}>
+        {showRecovery && <RecoverySheet onClose={() => setShowRecovery(false)} recentExercises={completedExercises} apiKey={apiKey} />}
         <div style={{ textAlign: "center", padding: `${T.space["2xl"]}px 0` }}>
-          <div style={{ fontSize: T.fontSize.hero, marginBottom: T.space.base }}>🎉</div>
           <h2 style={{ fontSize: T.fontSize.statMd, fontWeight: T.fontWeight.heavy, margin: 0, color: C.accent }}>Workout Complete</h2>
           <p style={{ color: C.textDim, marginTop: T.space.sm }}>{activeSet.name} · {fmt(timer)}</p>
         </div>
@@ -612,6 +812,7 @@ function SessionPage({ data, save, activeSet, setActiveSet, setTab }) {
         )}
         <Btn onClick={() => { setActiveSet(null); setTab("progress"); }} style={{ width: "100%", padding: 18 }}>View Progress</Btn>
         <Btn variant="secondary" onClick={() => setActiveSet(null)} style={{ width: "100%" }}>Done</Btn>
+        <button onClick={() => setShowRecovery(true)} style={{ background: "none", border: "none", color: C.textDim, fontSize: T.fontSize.small, cursor: "pointer", padding: `${T.space.sm}px 0`, textAlign: "center" }}>Feeling pain or discomfort? →</button>
       </div>
     );
   }
@@ -620,6 +821,8 @@ function SessionPage({ data, save, activeSet, setActiveSet, setTab }) {
   const entry = sessionData[currentIdx];
   const exercise = data.exercises.find(e => e.id === entry.exerciseId);
   const prData = data.prs[entry.exerciseId];
+  const isBodyweight = exercise?.equipment === "bodyweight";
+  const isMobility = exercise?.category === "mobility";
 
   // Current set being edited (the pending one)
   const currentSet = currentSetIdx < entry.sets.length
@@ -632,7 +835,6 @@ function SessionPage({ data, save, activeSet, setActiveSet, setTab }) {
     if (currentSetIdx < entry.sets.length) {
       nd[currentIdx] = { ...nd[currentIdx], sets: nd[currentIdx].sets.map((s, i) => i === currentSetIdx ? { ...s, [field]: val } : s) };
     } else {
-      // Editing beyond pre-filled sets — extend
       const newSets = [...nd[currentIdx].sets, { ...currentSet, [field]: val }];
       nd[currentIdx] = { ...nd[currentIdx], sets: newSets };
     }
@@ -642,13 +844,15 @@ function SessionPage({ data, save, activeSet, setActiveSet, setTab }) {
   const logSet = () => {
     const w = Number(currentSet.weight);
     const r = Number(currentSet.reps);
-    if (!w || !r) return;
+    if (isBodyweight || isMobility) {
+      if (!r || r <= 0) return;
+    } else {
+      if (!w || w <= 0 || !r || r <= 0) return;
+    }
     const nd = [...sessionData];
     nd[currentIdx] = { ...nd[currentIdx], logged: [...nd[currentIdx].logged, { weight: w, reps: r }] };
     setSessionData(nd);
-    // Move to next pre-filled set or auto-create
     setCurrentSetIdx(prev => prev + 1);
-    // Auto-start rest
     setRestTimer(DEFAULT_REST);
     setResting(true);
     setRestDone(false);
@@ -684,12 +888,20 @@ function SessionPage({ data, save, activeSet, setActiveSet, setTab }) {
   };
 
   const isLastExercise = currentIdx >= sessionData.length - 1;
-  const canLogCurrent = Number(currentSet.weight) > 0 && Number(currentSet.reps) > 0;
+  const canLogCurrent = (isBodyweight || isMobility)
+    ? Number(currentSet.reps) > 0
+    : Number(currentSet.weight) > 0 && Number(currentSet.reps) > 0;
 
   // ── Training UI ──
+  const [showRecoveryMid, setShowRecoveryMid] = useState(false);
+  const midSessionExercises = sessionData
+    .map(e => data.exercises.find(ex => ex.id === e.exerciseId)?.name)
+    .filter(Boolean);
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: T.space.xl }}>
-      {confirmCancel && <ConfirmDialog message="Cancel this workout? All progress will be lost." onConfirm={() => { setActiveSet(null); setConfirmCancel(false); }} onCancel={() => setConfirmCancel(false)} />}
+      {showRecoveryMid && <RecoverySheet onClose={() => setShowRecoveryMid(false)} recentExercises={midSessionExercises} apiKey={apiKey} />}
+      {confirmCancel && <ConfirmDialog message="Cancel this workout? All progress will be lost." onConfirm={() => { setActiveSet(null); setConfirmCancel(false); }} onCancel={() => setConfirmCancel(false)} confirmLabel="Cancel workout" cancelLabel="Keep going" />}
 
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -718,10 +930,12 @@ function SessionPage({ data, save, activeSet, setActiveSet, setTab }) {
       {/* Rest Timer */}
       {resting && (
         <Card className="t-fade-in" style={{ textAlign: "center", border: `1px solid ${C.accent}`, background: C.accentDim }}>
-          <div style={{ fontSize: T.fontSize.xs, color: C.accent, fontWeight: T.fontWeight.bold, textTransform: "uppercase", letterSpacing: T.letterSpacing.uppercase }}>Resting</div>
+          <div style={{ fontSize: T.fontSize.xs, color: C.accent, fontWeight: T.fontWeight.bold, textTransform: "uppercase", letterSpacing: T.letterSpacing.uppercase }}>Rest</div>
           <div style={{ fontSize: T.fontSize.timer, fontWeight: T.fontWeight.heavy, fontFamily: T.font.mono, color: C.accent, margin: `${T.space.base}px 0` }}>{fmt(restTimer)}</div>
-          <div style={{ display: "flex", gap: T.space.base, justifyContent: "center" }}>
-            <Btn variant="ghost" onClick={() => { setResting(false); setRestTimer(0); setRestDone(false); }} style={{ color: C.textDim, fontSize: T.fontSize.small, padding: "8px 16px" }}>Skip Rest</Btn>
+          <div style={{ display: "flex", gap: T.space.base, justifyContent: "center", alignItems: "center" }}>
+            <button onClick={() => setRestTimer(t => Math.max(0, t - 30))} style={{ background: "none", border: `1px solid ${C.accentBorder}`, borderRadius: T.radius.md, color: C.accent, cursor: "pointer", fontSize: T.fontSize.small, padding: "6px 12px" }}>−30s</button>
+            <Btn variant="ghost" onClick={() => { setResting(false); setRestTimer(0); setRestDone(false); }} style={{ color: C.textDim, fontSize: T.fontSize.small, padding: "8px 16px" }}>Skip</Btn>
+            <button onClick={() => setRestTimer(t => t + 30)} style={{ background: "none", border: `1px solid ${C.accentBorder}`, borderRadius: T.radius.md, color: C.accent, cursor: "pointer", fontSize: T.fontSize.small, padding: "6px 12px" }}>+30s</button>
           </div>
         </Card>
       )}
@@ -763,13 +977,15 @@ function SessionPage({ data, save, activeSet, setActiveSet, setTab }) {
           <div>
             <div style={{ fontSize: T.fontSize.xs, color: C.accent, fontWeight: T.fontWeight.semi, textTransform: "uppercase", letterSpacing: T.letterSpacing.uppercase, marginBottom: T.space.lg }}>Set {entry.logged.length + 1}</div>
             <div style={{ display: "flex", gap: T.space.lg }}>
+              {!isBodyweight && !isMobility && (
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: T.fontSize.xs, color: C.textDim, fontWeight: T.fontWeight.semi, textTransform: "uppercase", marginBottom: T.space.sm, display: "block" }}>Weight ({wl})</label>
+                  <input type="number" inputMode="decimal" min="0" value={currentSet.weight} onChange={e => updateCurrentSet("weight", e.target.value)} placeholder="0"
+                    style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: "14px 16px", color: C.text, fontSize: T.fontSize.h2, fontWeight: T.fontWeight.bold, outline: "none", width: "100%", boxSizing: "border-box", textAlign: "center" }} />
+                </div>
+              )}
               <div style={{ flex: 1 }}>
-                <label style={{ fontSize: T.fontSize.xs, color: C.textDim, fontWeight: T.fontWeight.semi, textTransform: "uppercase", marginBottom: T.space.sm, display: "block" }}>Weight ({wl})</label>
-                <input type="number" inputMode="decimal" min="0" value={currentSet.weight} onChange={e => updateCurrentSet("weight", e.target.value)} placeholder="0"
-                  style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: "14px 16px", color: C.text, fontSize: T.fontSize.h2, fontWeight: T.fontWeight.bold, outline: "none", width: "100%", boxSizing: "border-box", textAlign: "center" }} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <label style={{ fontSize: T.fontSize.xs, color: C.textDim, fontWeight: T.fontWeight.semi, textTransform: "uppercase", marginBottom: T.space.sm, display: "block" }}>Reps</label>
+                <label style={{ fontSize: T.fontSize.xs, color: C.textDim, fontWeight: T.fontWeight.semi, textTransform: "uppercase", marginBottom: T.space.sm, display: "block" }}>{isMobility ? "Seconds" : "Reps"}</label>
                 <input type="number" inputMode="numeric" min="0" value={currentSet.reps} onChange={e => updateCurrentSet("reps", e.target.value)} placeholder="0"
                   style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: "14px 16px", color: C.text, fontSize: T.fontSize.h2, fontWeight: T.fontWeight.bold, outline: "none", width: "100%", boxSizing: "border-box", textAlign: "center" }} />
               </div>
@@ -777,22 +993,39 @@ function SessionPage({ data, save, activeSet, setActiveSet, setTab }) {
 
             {/* Log Set — the primary action */}
             <Btn onClick={logSet} disabled={!canLogCurrent} style={{ width: "100%", padding: 18, fontSize: T.fontSize.body, marginTop: T.space.xl }}>
-              ✓ Log Set {entry.logged.length + 1}
+              Log Set {entry.logged.length + 1}
             </Btn>
           </div>
         )}
       </Card>
 
+      {/* Remaining exercises */}
+      {sessionData.length > 1 && (
+        <div style={{ display: "flex", gap: T.space.sm, flexWrap: "wrap" }}>
+          {sessionData.map((e, i) => {
+            const ex = data.exercises.find(ex => ex.id === e.exerciseId);
+            const done = e.logged.length > 0;
+            const active = i === currentIdx;
+            return (
+              <div key={e.exerciseId} style={{ fontSize: T.fontSize.xs, padding: "4px 10px", borderRadius: T.radius.full, fontWeight: T.fontWeight.semi, background: active ? C.accentDim : done ? C.bg : C.bg, color: active ? C.accent : done ? C.textDim : C.border, border: `1px solid ${active ? C.accent : done ? C.border : C.border}`, textDecoration: done && !active ? "line-through" : "none" }}>
+                {ex?.name || "?"}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {/* Exercise Navigation */}
       <div style={{ display: "flex", gap: T.space.base }}>
         <Btn variant="ghost" onClick={() => { setCurrentIdx(i => Math.max(0, i - 1)); setCurrentSetIdx(0); setResting(false); setRestTimer(0); }} disabled={currentIdx === 0} style={{ flex: 1, padding: 16, opacity: currentIdx === 0 ? T.opacity.disabled : 1 }}>← Prev</Btn>
         {isLastExercise ? (
-          <Btn onClick={finishSession} disabled={sessionData.every(e => e.logged.length === 0)} style={{ flex: 2, padding: 16, fontSize: T.fontSize.body }}>✓ Finish Workout</Btn>
+          <Btn onClick={finishSession} disabled={sessionData.every(e => e.logged.length === 0)} style={{ flex: 2, padding: 16, fontSize: T.fontSize.body }}>Finish Workout</Btn>
         ) : (
-          <Btn variant="secondary" onClick={goNextExercise} style={{ flex: 1, padding: 16 }}>Next Exercise →</Btn>
+          <Btn variant="secondary" onClick={goNextExercise} style={{ flex: 1, padding: 16 }}>Next →</Btn>
         )}
       </div>
-      <Btn variant="danger" onClick={() => setConfirmCancel(true)} style={{ fontSize: T.fontSize.small, padding: 14 }}>Cancel Workout</Btn>
+      <button onClick={() => setConfirmCancel(true)} style={{ background: "none", border: "none", color: C.textDim, fontSize: T.fontSize.small, padding: `${T.space.sm}px 0`, cursor: "pointer", textAlign: "center", opacity: 0.6 }}>Cancel workout</button>
+      <button onClick={() => setShowRecoveryMid(true)} style={{ background: "none", border: "none", color: C.textDim, fontSize: T.fontSize.small, padding: `${T.space.sm}px 0 ${T.space.xl}px`, cursor: "pointer", textAlign: "center", opacity: 0.5 }}>Feeling pain? Body check →</button>
     </div>
   );
 }
@@ -1180,6 +1413,21 @@ function SettingsPage({ data, save, drive }) {
         )}
       </Card>
 
+      {/* AI Features */}
+      <Card>
+        <div style={{ fontSize: T.fontSize.body, fontWeight: T.fontWeight.bold, marginBottom: T.space.sm }}>AI Features</div>
+        <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginBottom: T.space.lg, lineHeight: 1.5 }}>
+          Used for Body Check — post-workout pain guidance. Your key is stored on this device only and sent directly to Anthropic.
+        </div>
+        <ApiKeyInput
+          value={data.settings?.anthropicKey || ""}
+          onChange={key => save({ ...data, settings: { ...data.settings, anthropicKey: key } })}
+        />
+        <a href="https://console.anthropic.com" target="_blank" rel="noopener noreferrer" style={{ display: "block", marginTop: T.space.lg, fontSize: T.fontSize.xs, color: C.textDim, textDecoration: "none" }}>
+          Get a free API key at console.anthropic.com →
+        </a>
+      </Card>
+
       {/* Data Management */}
       <Card>
         <div style={{ fontSize: T.fontSize.body, fontWeight: T.fontWeight.bold, marginBottom: T.space.lg }}>Data Management</div>
@@ -1314,7 +1562,7 @@ export default function Temple() {
           {pwa.canInstall && <div style={{ marginBottom: T.space.xl }}><InstallBanner onInstall={pwa.install} onDismiss={pwa.dismiss} /></div>}
           {tab === "library" && <LibraryPage data={data} save={save} />}
           {tab === "sets" && <SetsPage data={data} save={save} onStartSession={handleStartSession} />}
-          {tab === "session" && <SessionPage data={data} save={save} activeSet={activeSet} setActiveSet={setActiveSet} setTab={setTab} />}
+          {tab === "session" && <SessionPage data={data} save={save} activeSet={activeSet} setActiveSet={setActiveSet} setTab={setTab} apiKey={data.settings?.anthropicKey || ""} />}
           {tab === "progress" && <ProgressPage data={data} onRepeatSession={handleStartSession} />}
           {tab === "settings" && <SettingsPage data={data} save={save} drive={drive} />}
         </div>
