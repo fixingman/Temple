@@ -49,8 +49,57 @@ function Input({ label, ...props }) {
   );
 }
 
-function YTButton({ query }) {
-  return <a href={`https://www.youtube.com/results?search_query=${query}`} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: T.space.sm, background: C.youtubeDim, color: C.youtube, border: "none", borderRadius: T.radius.md, padding: "5px 10px", fontSize: T.fontSize.xs, fontWeight: T.fontWeight.bold, textDecoration: "none", cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>▶ YouTube</a>;
+function YTButton({ query, label }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button onClick={() => setOpen(true)} style={{ display: "inline-flex", alignItems: "center", gap: T.space.sm, background: C.youtubeDim, color: C.youtube, border: "none", borderRadius: T.radius.md, padding: "5px 10px", fontSize: T.fontSize.xs, fontWeight: T.fontWeight.bold, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>▶ Form</button>
+      {open && <VideoSheet query={query} label={label} onClose={() => setOpen(false)} />}
+    </>
+  );
+}
+
+function VideoSheet({ query, label, onClose }) {
+  const src = `https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(query)}&rel=0&modestbranding=1`;
+  return (
+    <div
+      onClick={onClose}
+      style={{ position: "fixed", inset: 0, background: C.overlay, zIndex: T.z.modal + 10, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}
+    >
+      <div
+        className="t-slide-up"
+        onClick={e => e.stopPropagation()}
+        style={{ background: C.surface, borderRadius: `${T.radius.xl}px ${T.radius.xl}px 0 0`, overflow: "hidden", maxHeight: "85vh", display: "flex", flexDirection: "column" }}
+      >
+        {/* Handle + header */}
+        <div style={{ padding: `${T.space.lg}px ${T.space.xl}px ${T.space.base}px`, display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
+          <div>
+            <div style={{ width: 36, height: 4, borderRadius: 2, background: C.border, margin: "0 auto 12px", position: "absolute", left: "50%", top: 12, transform: "translateX(-50%)" }} />
+            <div style={{ fontSize: T.fontSize.bodySmall, fontWeight: T.fontWeight.bold, color: C.text }}>{label || "Form Guide"}</div>
+            <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: 2 }}>YouTube · tap a video to play</div>
+          </div>
+          <div style={{ display: "flex", gap: T.space.base, alignItems: "center" }}>
+            <a href={`https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: T.fontSize.xs, color: C.textDim, textDecoration: "none" }}>Open in app</a>
+            <button onClick={onClose} style={{ background: C.bg, border: "none", color: C.textDim, cursor: "pointer", borderRadius: T.radius.full, width: 28, height: 28, fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+          </div>
+        </div>
+
+        {/* YouTube embed */}
+        <div style={{ flex: 1, minHeight: 0, position: "relative", background: "#000" }}>
+          <iframe
+            src={src}
+            style={{ width: "100%", height: "100%", border: "none", minHeight: 420 }}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            title={label || "Form guide"}
+          />
+        </div>
+
+        {/* Safe area bottom padding */}
+        <div style={{ height: "env(safe-area-inset-bottom)", background: C.surface, flexShrink: 0 }} />
+      </div>
+    </div>
+  );
 }
 function PRBadge() { return <span style={{ background: C.prDim, color: C.pr, fontSize: T.fontSize.xxs, fontWeight: T.fontWeight.heavy, padding: "2px 8px", borderRadius: T.radius.full, letterSpacing: T.letterSpacing.uppercase }}>🏆 PR</span>; }
 
@@ -229,7 +278,7 @@ function LibraryPage({ data, save }) {
               </div>
             </div>
             <div style={{ display: "flex", gap: T.space.sm, alignItems: "center" }}>
-              <YTButton query={ex.yt} />
+              <YTButton query={ex.yt} label={ex.name} />
               <button onClick={() => startEdit(ex)} style={{ background: "none", border: "none", color: C.textDim, cursor: "pointer", fontSize: T.fontSize.bodySmall, padding: "4px" }}>✎</button>
               <button onClick={() => setConfirmDelete(ex.id)} style={{ background: "none", border: "none", color: C.danger, cursor: "pointer", fontSize: T.fontSize.bodySmall, padding: "4px" }}>✕</button>
             </div>
@@ -294,94 +343,87 @@ function SetsPage({ data, save, onStartSession }) {
 
   if (creating) {
     const selectedExercises = selected.map(id => data.exercises.find(e => e.id === id)).filter(Boolean);
+    const muscles = {};
+    selectedExercises.forEach(ex => { muscles[ex.muscle] = (muscles[ex.muscle] || 0) + 1; });
+
     return (
-      <div style={{ display: "flex", flexDirection: "column", gap: T.space.xl }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: T.space.lg }}>
+
+        {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <h2 style={{ fontSize: T.fontSize.h1, fontWeight: T.fontWeight.heavy, margin: 0 }}>{editingId ? "Edit" : "New"} Workout Set</h2>
+          <h2 style={{ fontSize: T.fontSize.h1, fontWeight: T.fontWeight.heavy, margin: 0 }}>{editingId ? "Edit" : "New"} Set</h2>
           <Btn variant="ghost" onClick={() => setCreating(false)}>Cancel</Btn>
         </div>
+
+        {/* Name input */}
         <Input label="Set Name" placeholder="e.g. Push Day" value={name} onChange={e => { setName(e.target.value); setError(""); }} />
 
-        {/* Muscle activation summary */}
-        {selected.length > 0 && (() => {
-          const muscles = {};
-          selectedExercises.forEach(ex => { muscles[ex.muscle] = (muscles[ex.muscle] || 0) + 1; });
-          const allMuscles = MUSCLE_GROUPS_NO_ALL;
-          return (
+        {/* Selected summary — fixed height, never shifts layout */}
+        <div style={{ background: C.surface, border: `1px solid ${selected.length > 0 ? C.accentBorder : C.border}`, borderRadius: T.radius.xl, padding: `${T.space.lg}px ${T.space.xl}px`, minHeight: 64, transition: `border-color ${T.transition.fast}` }}>
+          {selected.length === 0 ? (
+            <div style={{ color: C.textDim, fontSize: T.fontSize.caption, lineHeight: 1.5 }}>
+              No exercises selected yet. Search or browse below.
+            </div>
+          ) : (
             <div>
-              <label style={{ fontSize: T.fontSize.small, color: C.textDim, fontWeight: T.fontWeight.semi, textTransform: "uppercase", letterSpacing: T.letterSpacing.uppercase }}>Muscles Targeted</label>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: T.space.md, marginTop: T.space.base }}>
-                {allMuscles.map(m => {
-                  const count = muscles[m] || 0;
-                  const active = count > 0;
-                  return (
-                    <div key={m} style={{
-                      padding: "6px 12px", borderRadius: T.radius.full, fontSize: T.fontSize.xs, fontWeight: T.fontWeight.semi,
-                      background: active ? C.accentDim : C.bg,
-                      color: active ? C.accent : C.border,
-                      border: `1px solid ${active ? C.accent : C.border}`,
-                      transition: `background ${T.transition.fast}, color ${T.transition.fast}, border-color ${T.transition.fast}`,
-                    }}>
-                      {MUSCLE_ICONS[m] || ""} {m}{count > 1 ? ` ×${count}` : ""}
+              {/* Muscle chips row */}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: T.space.sm, marginBottom: T.space.base }}>
+                {Object.entries(muscles).map(([m, count]) => (
+                  <div key={m} style={{ padding: "3px 10px", borderRadius: T.radius.full, fontSize: T.fontSize.xs, fontWeight: T.fontWeight.semi, background: C.accentDim, color: C.accent, border: `1px solid ${C.accentBorder}` }}>
+                    {m}{count > 1 ? ` ×${count}` : ""}
+                  </div>
+                ))}
+              </div>
+              {/* Selected exercise rows with reorder + remove */}
+              <div style={{ display: "flex", flexDirection: "column", gap: T.space.sm }}>
+                {selectedExercises.map((ex, idx) => (
+                  <div key={ex.id} style={{ display: "flex", alignItems: "center", gap: T.space.base }}>
+                    <span style={{ fontSize: T.fontSize.xs, color: C.accent, fontWeight: T.fontWeight.bold, width: 16, textAlign: "center", flexShrink: 0 }}>{idx + 1}</span>
+                    <div style={{ flex: 1, fontSize: T.fontSize.bodySmall, fontWeight: T.fontWeight.semi }}>{ex.name}</div>
+                    <div style={{ display: "flex", gap: 2, flexShrink: 0 }}>
+                      <button onClick={() => moveUp(ex.id)} disabled={idx === 0} style={{ background: "none", border: "none", color: idx === 0 ? C.border : C.textDim, cursor: idx === 0 ? "default" : "pointer", fontSize: 13, padding: "2px 5px", lineHeight: 1 }}>▲</button>
+                      <button onClick={() => moveDown(ex.id)} disabled={idx === selected.length - 1} style={{ background: "none", border: "none", color: idx === selected.length - 1 ? C.border : C.textDim, cursor: idx === selected.length - 1 ? "default" : "pointer", fontSize: 13, padding: "2px 5px", lineHeight: 1 }}>▼</button>
+                      <button onClick={() => removeFromSelected(ex.id)} style={{ background: "none", border: "none", color: C.danger, cursor: "pointer", fontSize: 13, padding: "2px 5px", lineHeight: 1 }}>✕</button>
                     </div>
-                  );
-                })}
+                  </div>
+                ))}
               </div>
             </div>
-          );
-        })()}
-
-        {/* Selected exercises with reorder */}
-        {selected.length > 0 && (
-          <div>
-            <label style={{ fontSize: T.fontSize.small, color: C.textDim, fontWeight: T.fontWeight.semi, textTransform: "uppercase", letterSpacing: T.letterSpacing.uppercase }}>Order ({selected.length} selected)</label>
-            <div style={{ display: "flex", flexDirection: "column", gap: T.space.sm, marginTop: T.space.base }}>
-              {selectedExercises.map((ex, idx) => (
-                <div key={ex.id} style={{ display: "flex", alignItems: "center", gap: T.space.base, padding: "8px 10px", borderRadius: T.radius.lg, background: C.accentDim, border: `1px solid ${C.accent}` }}>
-                  <span style={{ fontSize: T.fontSize.caption, fontWeight: T.fontWeight.bold, color: C.accent, width: 20, textAlign: "center" }}>{idx + 1}</span>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: T.fontWeight.semi, fontSize: T.fontSize.bodySmall }}>{ex.name}</div>
-                    <div style={{ fontSize: T.fontSize.xs, color: C.textDim }}>{ex.muscle}</div>
-                  </div>
-                  <div style={{ display: "flex", gap: T.space.xs }}>
-                    <button onClick={() => moveUp(ex.id)} disabled={idx === 0} style={{ background: "none", border: "none", color: idx === 0 ? C.border : C.textDim, cursor: "pointer", fontSize: T.fontSize.bodySmall, padding: "2px 6px" }}>▲</button>
-                    <button onClick={() => moveDown(ex.id)} disabled={idx === selected.length - 1} style={{ background: "none", border: "none", color: idx === selected.length - 1 ? C.border : C.textDim, cursor: "pointer", fontSize: T.fontSize.bodySmall, padding: "2px 6px" }}>▼</button>
-                    <button onClick={() => removeFromSelected(ex.id)} style={{ background: "none", border: "none", color: C.danger, cursor: "pointer", fontSize: T.fontSize.bodySmall, padding: "2px 6px" }}>✕</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Exercise picker */}
-        <div>
-          <label style={{ fontSize: T.fontSize.small, color: C.textDim, fontWeight: T.fontWeight.semi, textTransform: "uppercase", letterSpacing: T.letterSpacing.uppercase }}>Add Exercises</label>
-          <div style={{ marginTop: T.space.base }}>
-            <input
-              type="text"
-              placeholder="Search exercises..."
-              value={search}
-              onChange={e => { setSearch(e.target.value); if (e.target.value) setMuscleFilter("All"); }}
-              style={{ width: "100%", boxSizing: "border-box", background: C.surface, border: `1px solid ${search ? C.accent : C.border}`, borderRadius: T.radius.lg, padding: "10px 14px", color: C.text, fontSize: T.fontSize.bodySmall, outline: "none", marginBottom: T.space.base, transition: `border-color ${T.transition.fast}` }}
-            />
-          </div>
-          {!search && (
-            <div style={{ marginBottom: T.space.base }}>
-              <PillFilter options={MUSCLE_GROUPS} active={muscleFilter} onChange={setMuscleFilter} small />
-            </div>
           )}
-          <div style={{ display: "flex", flexDirection: "column", gap: T.space.md, marginTop: T.space.sm, maxHeight: T.size.scrollList, overflowY: "auto" }}>
-            {filteredEx.length === 0 && search && (
+        </div>
+
+        {/* Picker — stable, never moves */}
+        <div>
+          <label style={{ fontSize: T.fontSize.small, color: C.textDim, fontWeight: T.fontWeight.semi, textTransform: "uppercase", letterSpacing: T.letterSpacing.uppercase }}>
+            Add Exercises {selected.length > 0 && <span style={{ color: C.accent }}>· {selected.length} selected</span>}
+          </label>
+
+          {/* Search */}
+          <input
+            type="text"
+            placeholder="Search exercises..."
+            value={search}
+            onChange={e => { setSearch(e.target.value); if (e.target.value) setMuscleFilter("All"); }}
+            style={{ width: "100%", boxSizing: "border-box", background: C.surface, border: `1px solid ${search ? C.accent : C.border}`, borderRadius: T.radius.lg, padding: "10px 14px", color: C.text, fontSize: T.fontSize.bodySmall, outline: "none", marginTop: T.space.base, marginBottom: T.space.base, transition: `border-color ${T.transition.fast}` }}
+          />
+
+          {/* Muscle filter — always reserves same space */}
+          <div style={{ marginBottom: T.space.base, opacity: search ? 0.3 : 1, pointerEvents: search ? "none" : "auto", transition: `opacity ${T.transition.fast}` }}>
+            <PillFilter options={MUSCLE_GROUPS} active={muscleFilter} onChange={setMuscleFilter} small />
+          </div>
+
+          {/* Exercise list — fixed scroll container, never changes height */}
+          <div style={{ display: "flex", flexDirection: "column", gap: T.space.sm, maxHeight: 320, overflowY: "auto" }}>
+            {filteredEx.length === 0 && (
               <div style={{ textAlign: "center", color: C.textDim, fontSize: T.fontSize.caption, padding: `${T.space["2xl"]}px 0` }}>
-                No exercises found for "{search}"
+                {search ? `No exercises found for "${search}"` : "No exercises in this category."}
               </div>
             )}
             {filteredEx.map(ex => {
               const isSel = selected.includes(ex.id);
               return (
-                <div key={ex.id} onClick={() => toggle(ex.id)} style={{ display: "flex", alignItems: "center", gap: T.space.lg, padding: "10px 12px", borderRadius: T.radius.lg, background: isSel ? C.accentDim : C.surface, border: `1px solid ${isSel ? C.accent : C.border}`, cursor: "pointer", transition: `background ${T.transition.fast}, color ${T.transition.fast}, border-color ${T.transition.fast}` }}>
-                  <div style={{ width: T.size.checkbox, height: T.size.checkbox, borderRadius: T.radius.base, border: `2px solid ${isSel ? C.accent : C.textDim}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, background: isSel ? C.accent : "transparent", color: C.textOnAccent, fontSize: T.fontSize.small, fontWeight: T.fontWeight.black }}>{isSel ? "✓" : ""}</div>
+                <div key={ex.id} onClick={() => toggle(ex.id)} style={{ display: "flex", alignItems: "center", gap: T.space.lg, padding: "10px 12px", borderRadius: T.radius.lg, background: isSel ? C.accentDim : C.surface, border: `1px solid ${isSel ? C.accent : C.border}`, cursor: "pointer", transition: `background ${T.transition.fast}, border-color ${T.transition.fast}` }}>
+                  <div style={{ width: 20, height: 20, borderRadius: T.radius.base, border: `2px solid ${isSel ? C.accent : C.textDim}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, background: isSel ? C.accent : "transparent", color: C.textOnAccent, fontSize: T.fontSize.small, fontWeight: T.fontWeight.black, transition: `background ${T.transition.fast}, border-color ${T.transition.fast}` }}>{isSel ? "✓" : ""}</div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: T.fontWeight.semi, fontSize: T.fontSize.bodySmall }}>{ex.name}</div>
                     <div style={{ fontSize: T.fontSize.xs, color: C.textDim }}>{ex.muscle}</div>
@@ -391,9 +433,10 @@ function SetsPage({ data, save, onStartSession }) {
             })}
           </div>
         </div>
+
         <ErrorBanner message={error} />
         <Btn onClick={saveSet} style={{ width: "100%", padding: 14 }}>
-          {editingId ? "Update" : "Create"} Set{selected.length > 0 ? ` (${selected.length} exercises)` : ""}
+          {editingId ? "Update" : "Create"} Set{selected.length > 0 ? ` (${selected.length})` : ""}
         </Btn>
       </div>
     );
@@ -690,7 +733,7 @@ function SessionPage({ data, save, activeSet, setActiveSet, setTab }) {
             <div style={{ fontWeight: T.fontWeight.heavy, fontSize: T.fontSize.h2 }}>{exercise?.name}</div>
             <div style={{ fontSize: T.fontSize.small, color: C.textDim }}>{exercise?.muscle}</div>
           </div>
-          <YTButton query={exercise?.yt} />
+          <YTButton query={exercise?.yt} label={exercise?.name} />
         </div>
 
         {/* PR reference */}
@@ -1225,9 +1268,10 @@ const GlobalStyles = () => (
     @keyframes temple-fade-out { from { opacity: 1; } to { opacity: 0; } }
     @keyframes temple-pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
     @keyframes temple-scale-in { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+    @keyframes temple-slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
     .t-fade-in { animation: temple-fade-in 0.25s cubic-bezier(0, 0, 0.2, 1) both; }
     .t-scale-in { animation: temple-scale-in 0.2s cubic-bezier(0, 0, 0.2, 1) both; }
-    .t-pulse { animation: temple-pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    .t-slide-up { animation: temple-slide-up 0.32s cubic-bezier(0.34, 1.56, 0.64, 1) both; }    .t-pulse { animation: temple-pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
     .t-logo-spin { animation: temple-logo-spin 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
     .t-text-in { animation: temple-text-in 0.4s cubic-bezier(0, 0, 0.2, 1) both; }
     input[type="number"]::-webkit-inner-spin-button,
