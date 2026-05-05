@@ -9,6 +9,7 @@ import {
 } from "./data";
 import { useAppData, usePWA } from "./hooks";
 import { useGoogleDrive } from "./useGoogleDrive";
+import { useCoach, coachError, prompts } from "./useCoach";
 
 // ─── Shared Components ───
 function Tabs({ active, onChange }) {
@@ -151,7 +152,7 @@ const BODY_AREAS = [
   "Glute", "Quad", "Hamstring", "Knee", "Calf", "Ankle",
 ];
 
-function RecoverySheet({ onClose, recentExercises = [], apiKey = "" }) {
+function RecoverySheet({ onClose, recentExercises = [], coach }) {
   const [area, setArea] = useState("");
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
@@ -161,60 +162,21 @@ function RecoverySheet({ onClose, recentExercises = [], apiKey = "" }) {
   const consult = async () => {
     if (!area || !description.trim()) return;
     setLoading(true); setError(""); setResult("");
-    const exerciseContext = recentExercises.length
-      ? `The user's most recent workout included: ${recentExercises.join(", ")}.`
-      : "No recent workout data available.";
-    const prompt = `You are a knowledgeable fitness recovery assistant. A user is reporting post-workout discomfort.
-
-${exerciseContext}
-
-Body area: ${area}
-User's description: ${description}
-
-Provide a structured, practical response with these sections:
-1. **What's likely happening** — 2-3 sentences explaining the probable cause, connecting it to their workout if relevant.
-2. **Severity check** — Is this normal DOMS/fatigue, or does it sound like something that needs attention? Be direct.
-3. **What to do now** — 3-4 concrete immediate actions (rest, ice, stretch, etc.)
-4. **This week** — How to adjust training. What to avoid, what's still fine.
-5. **See a professional if** — Clear red flags that mean they should stop and get checked.
-
-Keep it concise, practical, and honest. Don't over-reassure. Don't diagnose. Use plain language.
-End with a one-line reminder that this is general guidance and not a substitute for professional medical advice.`;
-
-    try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
-          "anthropic-dangerous-client-side-api-key-unsafe": "true",
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "claude-opus-4-5",
-          max_tokens: 800,
-          messages: [{ role: "user", content: prompt }],
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        if (res.status === 401) setError("Invalid API key. Check your key in Settings.");
-        else setError(data.error?.message || "Something went wrong. Try again.");
-      } else {
-        setResult(data.content?.[0]?.text || "");
-      }
-    } catch {
-      setError("Could not connect. Check your internet and try again.");
-    }
+    const { text, error: err } = await coach.ask(
+      prompts.bodyCheck(area, description.trim(), recentExercises),
+      { maxTokens: 800, model: "claude-sonnet-4-6" }
+    );
+    if (err) setError(coachError(err));
+    else setResult(text);
     setLoading(false);
   };
 
   const renderResult = (text) => text.split("\n").map((line, i) => {
-    const bold = line.replace(/\*\*(.*?)\*\*/g, (_, m) => `<strong>${m}</strong>`);
-    return <p key={i} style={{ margin: `0 0 ${T.space.base}px`, lineHeight: 1.6, fontSize: T.fontSize.bodySmall }} dangerouslySetInnerHTML={{ __html: bold }} />;
+    const html = line.replace(/\*\*(.*?)\*\*/g, (_, m) => `<strong>${m}</strong>`);
+    return <p key={i} style={{ margin: `0 0 ${T.space.base}px`, lineHeight: 1.6, fontSize: T.fontSize.bodySmall }} dangerouslySetInnerHTML={{ __html: html }} />;
   });
 
-  const noKey = !apiKey?.trim();
+  const noKey = !coach.hasKey;
 
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: C.overlay, zIndex: T.z.modal + 10, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
@@ -486,7 +448,7 @@ function LibraryPage({ data, save }) {
 }
 
 // ─── Sets Page (with reordering) ───
-function SetsPage({ data, save, onStartSession }) {
+function SetsPage({ data, save, onStartSession, coach }) {
   const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [name, setName] = useState("");
@@ -495,6 +457,8 @@ function SetsPage({ data, save, onStartSession }) {
   const [search, setSearch] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [error, setError] = useState("");
+  const [orderLoading, setOrderLoading] = useState(false);
+  const [orderError, setOrderError] = useState("");
 
   const startCreate = () => { setCreating(true); setEditingId(null); setName(""); setSelected([]); setMuscleFilter("All"); setSearch(""); setError(""); };
   const startEdit = (s) => { setCreating(true); setEditingId(s.id); setName(s.name); setSelected([...s.exerciseIds]); setMuscleFilter("All"); setSearch(""); setError(""); };
@@ -513,6 +477,35 @@ function SetsPage({ data, save, onStartSession }) {
   const toggle = (id) => {
     setSelected(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id]);
     setError("");
+  };
+
+  const suggestOrder = async () => {
+    if (selected.length < 2) return;
+    setOrderLoading(true); setOrderError("");
+    const exercises = selected.map(id => data.exercises.find(e => e.id === id)).filter(Boolean);
+    const { text, error: err } = await coach.ask(
+      prompts.exerciseOrder(exercises),
+      { maxTokens: 300, model: "claude-haiku-4-5-20251001" }
+    );
+    if (err) { setOrderError(coachError(err)); setOrderLoading(false); return; }
+    try {
+      // Parse JSON array of names from response
+      const match = text.match(/\[[\s\S]*?\]/);
+      if (!match) throw new Error("no json");
+      const names = JSON.parse(match[0]);
+      // Reorder selected to match suggested order
+      const nameToId = {};
+      exercises.forEach(e => { nameToId[e.name.toLowerCase()] = e.id; });
+      const reordered = names
+        .map(n => nameToId[n.toLowerCase()])
+        .filter(Boolean);
+      // Add any exercises not in the suggestion at the end
+      const missing = selected.filter(id => !reordered.includes(id));
+      setSelected([...reordered, ...missing]);
+    } catch {
+      setOrderError("Could not parse suggestion. Try again.");
+    }
+    setOrderLoading(false);
   };
   const moveUp = (id) => {
     const idx = selected.indexOf(id);
@@ -561,14 +554,26 @@ function SetsPage({ data, save, onStartSession }) {
             </div>
           ) : (
             <div>
-              {/* Muscle chips row */}
-              <div style={{ display: "flex", flexWrap: "wrap", gap: T.space.sm, marginBottom: T.space.base }}>
-                {Object.entries(muscles).map(([m, count]) => (
-                  <div key={m} style={{ padding: "3px 10px", borderRadius: T.radius.full, fontSize: T.fontSize.xs, fontWeight: T.fontWeight.semi, background: C.accentDim, color: C.accent, border: `1px solid ${C.accentBorder}` }}>
-                    {m}{count > 1 ? ` ×${count}` : ""}
-                  </div>
-                ))}
+              {/* Muscle chips + suggest button */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: T.space.base }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: T.space.sm, flex: 1 }}>
+                  {Object.entries(muscles).map(([m, count]) => (
+                    <div key={m} style={{ padding: "3px 10px", borderRadius: T.radius.full, fontSize: T.fontSize.xs, fontWeight: T.fontWeight.semi, background: C.accentDim, color: C.accent, border: `1px solid ${C.accentBorder}` }}>
+                      {m}{count > 1 ? ` ×${count}` : ""}
+                    </div>
+                  ))}
+                </div>
+                {coach.hasKey && selected.length >= 2 && (
+                  <button
+                    onClick={suggestOrder}
+                    disabled={orderLoading}
+                    style={{ flexShrink: 0, marginLeft: T.space.base, background: "none", border: `1px solid ${C.border}`, borderRadius: T.radius.md, color: orderLoading ? C.textDim : C.accent, cursor: orderLoading ? "default" : "pointer", fontSize: T.fontSize.xs, fontWeight: T.fontWeight.semi, padding: "5px 10px", whiteSpace: "nowrap", transition: `color ${T.transition.fast}` }}
+                  >
+                    {orderLoading ? "Ordering..." : "✦ Suggest order"}
+                  </button>
+                )}
               </div>
+              {orderError && <div style={{ fontSize: T.fontSize.xs, color: C.danger, marginBottom: T.space.base }}>{orderError}</div>}
               {/* Selected exercise rows with reorder + remove */}
               <div style={{ display: "flex", flexDirection: "column", gap: T.space.sm }}>
                 {selectedExercises.map((ex, idx) => (
@@ -682,7 +687,7 @@ function SetsPage({ data, save, onStartSession }) {
 
 // ─── Session Page (redesigned training flow) ───
 
-function SessionPage({ data, save, activeSet, setActiveSet, setTab, apiKey }) {
+function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach }) {
   const [sessionData, setSessionData] = useState(null);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [currentSetIdx, setCurrentSetIdx] = useState(0);
@@ -795,7 +800,7 @@ function SessionPage({ data, save, activeSet, setActiveSet, setTab, apiKey }) {
     const [showRecovery, setShowRecovery] = useState(false);
     return (
       <div className="t-fade-in" style={{ display: "flex", flexDirection: "column", gap: T.space.xl }}>
-        {showRecovery && <RecoverySheet onClose={() => setShowRecovery(false)} recentExercises={completedExercises} apiKey={apiKey} />}
+        {showRecovery && <RecoverySheet onClose={() => setShowRecovery(false)} recentExercises={completedExercises} coach={coach} />}
         <div style={{ textAlign: "center", padding: `${T.space["2xl"]}px 0` }}>
           <h2 style={{ fontSize: T.fontSize.statMd, fontWeight: T.fontWeight.heavy, margin: 0, color: C.accent }}>Workout Complete</h2>
           <p style={{ color: C.textDim, marginTop: T.space.sm }}>{activeSet.name} · {fmt(timer)}</p>
@@ -900,7 +905,7 @@ function SessionPage({ data, save, activeSet, setActiveSet, setTab, apiKey }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: T.space.xl }}>
-      {showRecoveryMid && <RecoverySheet onClose={() => setShowRecoveryMid(false)} recentExercises={midSessionExercises} apiKey={apiKey} />}
+      {showRecoveryMid && <RecoverySheet onClose={() => setShowRecoveryMid(false)} recentExercises={midSessionExercises} coach={coach} />}
       {confirmCancel && <ConfirmDialog message="Cancel this workout? All progress will be lost." onConfirm={() => { setActiveSet(null); setConfirmCancel(false); }} onCancel={() => setConfirmCancel(false)} confirmLabel="Cancel workout" cancelLabel="Keep going" />}
 
       {/* Header */}
@@ -1535,6 +1540,7 @@ export default function Temple() {
   const [activeSet, setActiveSet] = useState(null);
   const pwa = usePWA();
   const drive = useGoogleDrive();
+  const coach = useCoach(data?.settings?.anthropicKey || "");
 
   const handleStartSession = (set) => { setActiveSet(set); setTab("session"); };
 
@@ -1561,8 +1567,8 @@ export default function Temple() {
         <div style={{ padding: "8px 16px 100px", maxWidth: T.size.maxWidth, margin: "0 auto" }}>
           {pwa.canInstall && <div style={{ marginBottom: T.space.xl }}><InstallBanner onInstall={pwa.install} onDismiss={pwa.dismiss} /></div>}
           {tab === "library" && <LibraryPage data={data} save={save} />}
-          {tab === "sets" && <SetsPage data={data} save={save} onStartSession={handleStartSession} />}
-          {tab === "session" && <SessionPage data={data} save={save} activeSet={activeSet} setActiveSet={setActiveSet} setTab={setTab} apiKey={data.settings?.anthropicKey || ""} />}
+          {tab === "sets" && <SetsPage data={data} save={save} onStartSession={handleStartSession} coach={coach} />}
+          {tab === "session" && <SessionPage data={data} save={save} activeSet={activeSet} setActiveSet={setActiveSet} setTab={setTab} coach={coach} />}
           {tab === "progress" && <ProgressPage data={data} onRepeatSession={handleStartSession} />}
           {tab === "settings" && <SettingsPage data={data} save={save} drive={drive} />}
         </div>
