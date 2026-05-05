@@ -2,13 +2,14 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { T, C } from "./tokens";
 import {
-  DEFAULT_EXERCISES, MUSCLE_GROUPS, MUSCLE_GROUPS_NO_ALL, MUSCLE_ICONS,
+  MUSCLE_GROUPS, MUSCLE_GROUPS_NO_ALL, MUSCLE_ICONS,
   EQUIPMENT_TYPES, CATEGORY_TYPES, DEFAULT_REST, DEFAULT_SETTINGS,
   uid, fmtDate, fmtDateFull, fmt, mkDefault,
   displayWeight, toKg, weightLabel, est1RM,
 } from "./data";
 import { useAppData, usePWA } from "./hooks";
 import { useGoogleDrive } from "./useGoogleDrive";
+import { useCoach, coachError, prompts } from "./useCoach";
 
 // ─── Shared Components ───
 function Tabs({ active, onChange }) {
@@ -70,12 +71,13 @@ function VideoSheet({ query, label, onClose }) {
       <div
         className="t-slide-up"
         onClick={e => e.stopPropagation()}
-        style={{ background: C.surface, borderRadius: `${T.radius.xl}px ${T.radius.xl}px 0 0`, overflow: "hidden", maxHeight: "85vh", display: "flex", flexDirection: "column" }}
+        style={{ background: C.surface, borderRadius: `${T.radius.xl}px ${T.radius.xl}px 0 0`, overflow: "hidden", maxHeight: "85vh", display: "flex", flexDirection: "column", position: "relative" }}
       >
-        {/* Handle + header */}
-        <div style={{ padding: `${T.space.lg}px ${T.space.xl}px ${T.space.base}px`, display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
+        {/* Drag handle */}
+        <div style={{ width: 36, height: 4, borderRadius: T.radius.sm, background: C.border, margin: `${T.space.base}px auto ${T.space.sm}px`, flexShrink: 0 }} />
+        {/* Header */}
+        <div style={{ padding: `0 ${T.space.xl}px ${T.space.base}px`, display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
           <div>
-            <div style={{ width: 36, height: 4, borderRadius: 2, background: C.border, margin: "0 auto 12px", position: "absolute", left: "50%", top: 12, transform: "translateX(-50%)" }} />
             <div style={{ fontSize: T.fontSize.bodySmall, fontWeight: T.fontWeight.bold, color: C.text }}>{label || "Form Guide"}</div>
             <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: 2 }}>YouTube · tap a video to play</div>
           </div>
@@ -86,7 +88,7 @@ function VideoSheet({ query, label, onClose }) {
         </div>
 
         {/* YouTube embed */}
-        <div style={{ flex: 1, minHeight: 0, position: "relative", background: "#000" }}>
+        <div style={{ flex: 1, minHeight: 0, position: "relative", background: C.bg }}>
           <iframe
             src={src}
             style={{ width: "100%", height: "100%", border: "none", minHeight: 420 }}
@@ -96,7 +98,6 @@ function VideoSheet({ query, label, onClose }) {
           />
         </div>
 
-        {/* Safe area bottom padding */}
         <div style={{ height: "env(safe-area-inset-bottom)", background: C.surface, flexShrink: 0 }} />
       </div>
     </div>
@@ -107,6 +108,9 @@ function ApiKeyInput({ value, onChange }) {
   const [draft, setDraft] = useState(value);
   const [saved, setSaved] = useState(false);
   const dirty = draft !== value;
+
+  // Sync if value changes externally (import/restore)
+  useEffect(() => { setDraft(value); setSaved(false); }, [value]);
 
   const save = () => {
     onChange(draft.trim());
@@ -151,70 +155,33 @@ const BODY_AREAS = [
   "Glute", "Quad", "Hamstring", "Knee", "Calf", "Ankle",
 ];
 
-function RecoverySheet({ onClose, recentExercises = [], apiKey = "" }) {
+function RecoverySheet({ onClose, recentExercises = [], coach, onGoToSettings }) {
   const [area, setArea] = useState("");
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState("");
   const [error, setError] = useState("");
 
-  const consult = async () => {
+  const consult = useCallback(async () => {
     if (!area || !description.trim()) return;
     setLoading(true); setError(""); setResult("");
-    const exerciseContext = recentExercises.length
-      ? `The user's most recent workout included: ${recentExercises.join(", ")}.`
-      : "No recent workout data available.";
-    const prompt = `You are a knowledgeable fitness recovery assistant. A user is reporting post-workout discomfort.
-
-${exerciseContext}
-
-Body area: ${area}
-User's description: ${description}
-
-Provide a structured, practical response with these sections:
-1. **What's likely happening** — 2-3 sentences explaining the probable cause, connecting it to their workout if relevant.
-2. **Severity check** — Is this normal DOMS/fatigue, or does it sound like something that needs attention? Be direct.
-3. **What to do now** — 3-4 concrete immediate actions (rest, ice, stretch, etc.)
-4. **This week** — How to adjust training. What to avoid, what's still fine.
-5. **See a professional if** — Clear red flags that mean they should stop and get checked.
-
-Keep it concise, practical, and honest. Don't over-reassure. Don't diagnose. Use plain language.
-End with a one-line reminder that this is general guidance and not a substitute for professional medical advice.`;
-
-    try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
-          "anthropic-dangerous-client-side-api-key-unsafe": "true",
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "claude-opus-4-5",
-          max_tokens: 800,
-          messages: [{ role: "user", content: prompt }],
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        if (res.status === 401) setError("Invalid API key. Check your key in Settings.");
-        else setError(data.error?.message || "Something went wrong. Try again.");
-      } else {
-        setResult(data.content?.[0]?.text || "");
-      }
-    } catch {
-      setError("Could not connect. Check your internet and try again.");
-    }
+    const { text, error: err } = await coach.ask(
+      prompts.bodyCheck(area, description.trim(), recentExercises),
+      { maxTokens: 800, model: "claude-sonnet-4-6" }
+    );
+    if (err) setError(coachError(err));
+    else setResult(text);
     setLoading(false);
-  };
+  }, [area, description, coach, recentExercises]);
 
   const renderResult = (text) => text.split("\n").map((line, i) => {
-    const bold = line.replace(/\*\*(.*?)\*\*/g, (_, m) => `<strong>${m}</strong>`);
-    return <p key={i} style={{ margin: `0 0 ${T.space.base}px`, lineHeight: 1.6, fontSize: T.fontSize.bodySmall }} dangerouslySetInnerHTML={{ __html: bold }} />;
+    // Strip any real HTML tags first, then apply our safe bold replacement
+    const safe = line.replace(/<[^>]*>/g, "");
+    const html = safe.replace(/\*\*(.*?)\*\*/g, (_, m) => `<strong>${m}</strong>`);
+    return <p key={i} style={{ margin: `0 0 ${T.space.base}px`, lineHeight: 1.6, fontSize: T.fontSize.bodySmall }} dangerouslySetInnerHTML={{ __html: html }} />;
   });
 
-  const noKey = !apiKey?.trim();
+  const noKey = !coach.hasKey;
 
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: C.overlay, zIndex: T.z.modal + 10, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
@@ -240,7 +207,7 @@ End with a one-line reminder that this is general guidance and not a substitute 
                 <div style={{ fontSize: T.fontSize.bodySmall, color: C.textDim, lineHeight: 1.6, marginBottom: T.space.xl }}>
                   Body Check uses Claude AI. Add your own Anthropic API key in Settings — your key stays on your device and is sent directly to Anthropic.
                 </div>
-                <Btn variant="secondary" onClick={onClose} style={{ width: "100%" }}>Go to Settings to add key</Btn>
+                <Btn variant="secondary" onClick={() => { onClose(); onGoToSettings?.(); }} style={{ width: "100%" }}>Go to Settings to add key</Btn>
               </div>
               <a href="https://console.anthropic.com" target="_blank" rel="noopener noreferrer" style={{ textAlign: "center", fontSize: T.fontSize.xs, color: C.textDim, textDecoration: "none" }}>
                 Get a free API key at console.anthropic.com →
@@ -486,7 +453,7 @@ function LibraryPage({ data, save }) {
 }
 
 // ─── Sets Page (with reordering) ───
-function SetsPage({ data, save, onStartSession }) {
+function SetsPage({ data, save, onStartSession, coach }) {
   const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [name, setName] = useState("");
@@ -495,6 +462,8 @@ function SetsPage({ data, save, onStartSession }) {
   const [search, setSearch] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [error, setError] = useState("");
+  const [orderLoading, setOrderLoading] = useState(false);
+  const [orderError, setOrderError] = useState("");
 
   const startCreate = () => { setCreating(true); setEditingId(null); setName(""); setSelected([]); setMuscleFilter("All"); setSearch(""); setError(""); };
   const startEdit = (s) => { setCreating(true); setEditingId(s.id); setName(s.name); setSelected([...s.exerciseIds]); setMuscleFilter("All"); setSearch(""); setError(""); };
@@ -513,6 +482,35 @@ function SetsPage({ data, save, onStartSession }) {
   const toggle = (id) => {
     setSelected(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id]);
     setError("");
+  };
+
+  const suggestOrder = async () => {
+    if (selected.length < 2) return;
+    setOrderLoading(true); setOrderError("");
+    const exercises = selected.map(id => data.exercises.find(e => e.id === id)).filter(Boolean);
+    const { text, error: err } = await coach.ask(
+      prompts.exerciseOrder(exercises),
+      { maxTokens: 300, model: "claude-haiku-4-5-20251001" }
+    );
+    if (err) { setOrderError(coachError(err)); setOrderLoading(false); return; }
+    try {
+      // Parse JSON array of names from response
+      const match = text.match(/\[[\s\S]*?\]/);
+      if (!match) throw new Error("no json");
+      const names = JSON.parse(match[0]);
+      // Reorder selected to match suggested order
+      const nameToId = {};
+      exercises.forEach(e => { nameToId[e.name.toLowerCase()] = e.id; });
+      const reordered = names
+        .map(n => nameToId[n.toLowerCase()])
+        .filter(Boolean);
+      // Add any exercises not in the suggestion at the end
+      const missing = selected.filter(id => !reordered.includes(id));
+      setSelected([...reordered, ...missing]);
+    } catch {
+      setOrderError("Could not parse suggestion. Try again.");
+    }
+    setOrderLoading(false);
   };
   const moveUp = (id) => {
     const idx = selected.indexOf(id);
@@ -561,14 +559,26 @@ function SetsPage({ data, save, onStartSession }) {
             </div>
           ) : (
             <div>
-              {/* Muscle chips row */}
-              <div style={{ display: "flex", flexWrap: "wrap", gap: T.space.sm, marginBottom: T.space.base }}>
-                {Object.entries(muscles).map(([m, count]) => (
-                  <div key={m} style={{ padding: "3px 10px", borderRadius: T.radius.full, fontSize: T.fontSize.xs, fontWeight: T.fontWeight.semi, background: C.accentDim, color: C.accent, border: `1px solid ${C.accentBorder}` }}>
-                    {m}{count > 1 ? ` ×${count}` : ""}
-                  </div>
-                ))}
+              {/* Muscle chips + suggest button */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: T.space.base }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: T.space.sm, flex: 1 }}>
+                  {Object.entries(muscles).map(([m, count]) => (
+                    <div key={m} style={{ padding: "3px 10px", borderRadius: T.radius.full, fontSize: T.fontSize.xs, fontWeight: T.fontWeight.semi, background: C.accentDim, color: C.accent, border: `1px solid ${C.accentBorder}` }}>
+                      {m}{count > 1 ? ` ×${count}` : ""}
+                    </div>
+                  ))}
+                </div>
+                {coach.hasKey && selected.length >= 2 && (
+                  <button
+                    onClick={suggestOrder}
+                    disabled={orderLoading}
+                    style={{ flexShrink: 0, marginLeft: T.space.base, background: "none", border: `1px solid ${C.border}`, borderRadius: T.radius.md, color: orderLoading ? C.textDim : C.accent, cursor: orderLoading ? "default" : "pointer", fontSize: T.fontSize.xs, fontWeight: T.fontWeight.semi, padding: "5px 10px", whiteSpace: "nowrap", transition: `color ${T.transition.fast}` }}
+                  >
+                    {orderLoading ? "Ordering..." : "✦ Suggest order"}
+                  </button>
+                )}
               </div>
+              {orderError && <div style={{ fontSize: T.fontSize.xs, color: C.danger, marginBottom: T.space.base }}>{orderError}</div>}
               {/* Selected exercise rows with reorder + remove */}
               <div style={{ display: "flex", flexDirection: "column", gap: T.space.sm }}>
                 {selectedExercises.map((ex, idx) => (
@@ -576,9 +586,9 @@ function SetsPage({ data, save, onStartSession }) {
                     <span style={{ fontSize: T.fontSize.xs, color: C.accent, fontWeight: T.fontWeight.bold, width: 16, textAlign: "center", flexShrink: 0 }}>{idx + 1}</span>
                     <div style={{ flex: 1, fontSize: T.fontSize.bodySmall, fontWeight: T.fontWeight.semi }}>{ex.name}</div>
                     <div style={{ display: "flex", gap: 2, flexShrink: 0 }}>
-                      <button onClick={() => moveUp(ex.id)} disabled={idx === 0} style={{ background: "none", border: "none", color: idx === 0 ? C.border : C.textDim, cursor: idx === 0 ? "default" : "pointer", fontSize: 13, padding: "2px 5px", lineHeight: 1 }}>▲</button>
-                      <button onClick={() => moveDown(ex.id)} disabled={idx === selected.length - 1} style={{ background: "none", border: "none", color: idx === selected.length - 1 ? C.border : C.textDim, cursor: idx === selected.length - 1 ? "default" : "pointer", fontSize: 13, padding: "2px 5px", lineHeight: 1 }}>▼</button>
-                      <button onClick={() => removeFromSelected(ex.id)} style={{ background: "none", border: "none", color: C.danger, cursor: "pointer", fontSize: 13, padding: "2px 5px", lineHeight: 1 }}>✕</button>
+                      <button onClick={() => moveUp(ex.id)} disabled={idx === 0} style={{ background: "none", border: "none", color: idx === 0 ? C.border : C.textDim, cursor: idx === 0 ? "default" : "pointer", fontSize: T.fontSize.caption, padding: `${T.space.xs}px ${T.space.sm}px`, lineHeight: 1 }}>▲</button>
+                      <button onClick={() => moveDown(ex.id)} disabled={idx === selected.length - 1} style={{ background: "none", border: "none", color: idx === selected.length - 1 ? C.border : C.textDim, cursor: idx === selected.length - 1 ? "default" : "pointer", fontSize: T.fontSize.caption, padding: `${T.space.xs}px ${T.space.sm}px`, lineHeight: 1 }}>▼</button>
+                      <button onClick={() => removeFromSelected(ex.id)} style={{ background: "none", border: "none", color: C.danger, cursor: "pointer", fontSize: T.fontSize.caption, padding: `${T.space.xs}px ${T.space.sm}px`, lineHeight: 1 }}>✕</button>
                     </div>
                   </div>
                 ))}
@@ -657,6 +667,7 @@ function SetsPage({ data, save, onStartSession }) {
       )}
       {data.sets.map(s => {
         const exNames = s.exerciseIds.map(id => data.exercises.find(e => e.id === id)?.name).filter(Boolean);
+        const validCount = s.exerciseIds.filter(eid => data.exercises.some(e => e.id === eid)).length;
         const sessionCount = data.sessions.filter(ss => ss.setId === s.id).length;
         return (
           <Card key={s.id}>
@@ -669,7 +680,7 @@ function SetsPage({ data, save, onStartSession }) {
               {exNames.length > 5 && <span style={{ fontSize: T.fontSize.xs, color: C.textDim, padding: "3px 4px" }}>+{exNames.length - 5} more</span>}
             </div>
             <div style={{ display: "flex", gap: T.space.base }}>
-              <Btn variant="primary" onClick={() => onStartSession(s)} style={{ flex: 1 }}>▶ Start</Btn>
+              <Btn variant="primary" onClick={() => onStartSession(s)} disabled={validCount === 0} style={{ flex: 1 }}>▶ Start</Btn>
               <Btn variant="secondary" onClick={() => startEdit(s)}>Edit</Btn>
               <Btn variant="danger" onClick={() => setConfirmDelete(s.id)}>✕</Btn>
             </div>
@@ -682,7 +693,7 @@ function SetsPage({ data, save, onStartSession }) {
 
 // ─── Session Page (redesigned training flow) ───
 
-function SessionPage({ data, save, activeSet, setActiveSet, setTab, apiKey }) {
+function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach }) {
   const [sessionData, setSessionData] = useState(null);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [currentSetIdx, setCurrentSetIdx] = useState(0);
@@ -694,6 +705,8 @@ function SessionPage({ data, save, activeSet, setActiveSet, setTab, apiKey }) {
   const [finished, setFinished] = useState(false);
   const [newPRs, setNewPRs] = useState([]);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [showRecovery, setShowRecovery] = useState(false);
+  const [showRecoveryMid, setShowRecoveryMid] = useState(false);
   const intervalRef = useRef(null);
   const restRef = useRef(null);
   const unit = data.settings?.unit || "kg";
@@ -757,8 +770,6 @@ function SessionPage({ data, save, activeSet, setActiveSet, setTab, apiKey }) {
     }
   }, [restDone]);
 
-  const fmt = (s) => `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
-
   // ── Empty state ──
   if (!activeSet) {
     return (
@@ -792,10 +803,9 @@ function SessionPage({ data, save, activeSet, setActiveSet, setTab, apiKey }) {
       .filter(e => e.logged.length > 0)
       .map(e => data.exercises.find(ex => ex.id === e.exerciseId)?.name)
       .filter(Boolean);
-    const [showRecovery, setShowRecovery] = useState(false);
     return (
       <div className="t-fade-in" style={{ display: "flex", flexDirection: "column", gap: T.space.xl }}>
-        {showRecovery && <RecoverySheet onClose={() => setShowRecovery(false)} recentExercises={completedExercises} apiKey={apiKey} />}
+        {showRecovery && <RecoverySheet onClose={() => setShowRecovery(false)} recentExercises={completedExercises} coach={coach} onGoToSettings={() => { setActiveSet(null); setTab("settings"); }} />}
         <div style={{ textAlign: "center", padding: `${T.space["2xl"]}px 0` }}>
           <h2 style={{ fontSize: T.fontSize.statMd, fontWeight: T.fontWeight.heavy, margin: 0, color: C.accent }}>Workout Complete</h2>
           <p style={{ color: C.textDim, marginTop: T.space.sm }}>{activeSet.name} · {fmt(timer)}</p>
@@ -893,14 +903,13 @@ function SessionPage({ data, save, activeSet, setActiveSet, setTab, apiKey }) {
     : Number(currentSet.weight) > 0 && Number(currentSet.reps) > 0;
 
   // ── Training UI ──
-  const [showRecoveryMid, setShowRecoveryMid] = useState(false);
   const midSessionExercises = sessionData
     .map(e => data.exercises.find(ex => ex.id === e.exerciseId)?.name)
     .filter(Boolean);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: T.space.xl }}>
-      {showRecoveryMid && <RecoverySheet onClose={() => setShowRecoveryMid(false)} recentExercises={midSessionExercises} apiKey={apiKey} />}
+      {showRecoveryMid && <RecoverySheet onClose={() => setShowRecoveryMid(false)} recentExercises={midSessionExercises} coach={coach} onGoToSettings={() => setTab("settings")} />}
       {confirmCancel && <ConfirmDialog message="Cancel this workout? All progress will be lost." onConfirm={() => { setActiveSet(null); setConfirmCancel(false); }} onCancel={() => setConfirmCancel(false)} confirmLabel="Cancel workout" cancelLabel="Keep going" />}
 
       {/* Header */}
@@ -933,9 +942,9 @@ function SessionPage({ data, save, activeSet, setActiveSet, setTab, apiKey }) {
           <div style={{ fontSize: T.fontSize.xs, color: C.accent, fontWeight: T.fontWeight.bold, textTransform: "uppercase", letterSpacing: T.letterSpacing.uppercase }}>Rest</div>
           <div style={{ fontSize: T.fontSize.timer, fontWeight: T.fontWeight.heavy, fontFamily: T.font.mono, color: C.accent, margin: `${T.space.base}px 0` }}>{fmt(restTimer)}</div>
           <div style={{ display: "flex", gap: T.space.base, justifyContent: "center", alignItems: "center" }}>
-            <button onClick={() => setRestTimer(t => Math.max(0, t - 30))} style={{ background: "none", border: `1px solid ${C.accentBorder}`, borderRadius: T.radius.md, color: C.accent, cursor: "pointer", fontSize: T.fontSize.small, padding: "6px 12px" }}>−30s</button>
+            <button onClick={() => setRestTimer(t => Math.max(0, t - 30))} style={{ background: "none", border: `1px solid ${C.accentBorder}`, borderRadius: T.radius.md, color: C.accent, cursor: "pointer", fontSize: T.fontSize.small, padding: `${T.space.md}px ${T.space.lg}px` }}>−30s</button>
             <Btn variant="ghost" onClick={() => { setResting(false); setRestTimer(0); setRestDone(false); }} style={{ color: C.textDim, fontSize: T.fontSize.small, padding: "8px 16px" }}>Skip</Btn>
-            <button onClick={() => setRestTimer(t => t + 30)} style={{ background: "none", border: `1px solid ${C.accentBorder}`, borderRadius: T.radius.md, color: C.accent, cursor: "pointer", fontSize: T.fontSize.small, padding: "6px 12px" }}>+30s</button>
+            <button onClick={() => setRestTimer(t => t + 30)} style={{ background: "none", border: `1px solid ${C.accentBorder}`, borderRadius: T.radius.md, color: C.accent, cursor: "pointer", fontSize: T.fontSize.small, padding: `${T.space.md}px ${T.space.lg}px` }}>+30s</button>
           </div>
         </Card>
       )}
@@ -965,8 +974,8 @@ function SessionPage({ data, save, activeSet, setActiveSet, setTab, apiKey }) {
             {entry.logged.map((s, i) => (
               <div key={i} style={{ display: "flex", gap: T.space.xl, padding: "6px 0", borderBottom: `1px solid ${C.border}`, fontSize: T.fontSize.bodySmall, color: C.textDim }}>
                 <span style={{ color: C.accent, fontWeight: T.fontWeight.bold, width: 28 }}>#{i + 1}</span>
-                <span>{s.weight} {wl} × {s.reps} reps</span>
-                <span style={{ color: C.textDim, marginLeft: "auto" }}>{s.weight * s.reps} {wl}</span>
+                <span>{isBodyweight || isMobility ? `${s.reps} ${isMobility ? "sec" : "reps"}` : `${s.weight} ${wl} × ${s.reps} reps`}</span>
+                {!isBodyweight && !isMobility && <span style={{ color: C.textDim, marginLeft: "auto" }}>{s.weight * s.reps} {wl}</span>}
               </div>
             ))}
           </div>
@@ -1031,13 +1040,13 @@ function SessionPage({ data, save, activeSet, setActiveSet, setTab, apiKey }) {
 }
 
 // ─── Progress Page ───
-function MuscleBar({ label, value, max, icon, unit: wl }) {
+function MuscleBar({ label, value, max, icon, unit }) {
   const pct = max > 0 ? Math.round((value / max) * 100) : 0;
   return (
     <div style={{ marginBottom: T.space.lg }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: T.space.sm }}>
         <span style={{ fontSize: T.fontSize.bodySmall, fontWeight: T.fontWeight.semi }}>{icon} {label}</span>
-        <span style={{ fontSize: T.fontSize.small, color: C.accent, fontWeight: T.fontWeight.bold }}>{displayWeight(value, wl).toLocaleString()} {weightLabel(wl)}</span>
+        <span style={{ fontSize: T.fontSize.small, color: C.accent, fontWeight: T.fontWeight.bold }}>{displayWeight(value, unit).toLocaleString()} {weightLabel(unit)}</span>
       </div>
       <div style={{ height: 8, background: C.bg, borderRadius: T.radius.base, overflow: "hidden" }}>
         <div style={{ height: "100%", background: C.accent, width: `${pct}%`, borderRadius: T.radius.base, transition: `width ${T.duration.medium} ${T.easing.enter}` }} />
@@ -1051,39 +1060,46 @@ function ProgressPage({ data, onRepeatSession }) {
   const [selectedExId, setSelectedExId] = useState(null);
   const unit = data.settings?.unit || "kg";
   const wl = weightLabel(unit);
-  const prEntries = Object.entries(data.prs).map(([eid, pr]) => { const ex = data.exercises.find(e => e.id === eid); return { ...pr, exerciseId: eid, exerciseName: ex?.name || "Unknown", muscle: ex?.muscle || "" }; }).sort((a, b) => (b.date || 0) - (a.date || 0));
-  const totalSessions = data.sessions.length;
-  const totalVol = data.sessions.reduce((a, s) => a + s.entries.reduce((b, e) => b + e.sets.reduce((c, st) => c + st.reps * st.weight, 0), 0), 0);
 
-  // Weekly consistency: how many of the last 4 weeks had at least 1 session
-  const now = new Date();
-  const weekStart = (weeksAgo) => {
-    const d = new Date(now); d.setHours(0, 0, 0, 0);
-    d.setDate(d.getDate() - d.getDay() + 1 - (weeksAgo * 7)); // Monday
-    return d.getTime();
-  };
-  let thisWeekSessions = 0;
-  let weeksActive = 0;
-  for (let w = 0; w < 4; w++) {
-    const start = weekStart(w);
-    const end = w === 0 ? Date.now() : weekStart(w - 1);
-    const count = data.sessions.filter(s => s.date >= start && s.date < end).length;
-    if (count > 0) weeksActive++;
-    if (w === 0) thisWeekSessions = count;
-  }
+  const { prEntries, totalSessions, totalVol, weeksActive, thisWeekSessions, muscleEntries } = React.useMemo(() => {
+    const prEntries = Object.entries(data.prs).map(([eid, pr]) => {
+      const ex = data.exercises.find(e => e.id === eid);
+      return { ...pr, exerciseId: eid, exerciseName: ex?.name || "Unknown", muscle: ex?.muscle || "" };
+    }).sort((a, b) => (b.date || 0) - (a.date || 0));
 
-  // Muscle volume breakdown
-  const muscleVol = {};
-  data.sessions.forEach(s => {
-    s.entries.forEach(e => {
-      const ex = data.exercises.find(x => x.id === e.exerciseId);
-      if (!ex) return;
-      const vol = e.sets.reduce((a, st) => a + st.reps * st.weight, 0);
-      muscleVol[ex.muscle] = (muscleVol[ex.muscle] || 0) + vol;
+    const totalSessions = data.sessions.length;
+    const totalVol = data.sessions.reduce((a, s) => a + s.entries.reduce((b, e) => b + e.sets.reduce((c, st) => c + st.reps * st.weight, 0), 0), 0);
+
+    const now = new Date();
+    const weekStart = (weeksAgo) => {
+      const d = new Date(now); d.setHours(0, 0, 0, 0);
+      d.setDate(d.getDate() - d.getDay() + 1 - (weeksAgo * 7));
+      return d.getTime();
+    };
+    let thisWeekSessions = 0, weeksActive = 0;
+    for (let w = 0; w < 4; w++) {
+      const start = weekStart(w);
+      const end = w === 0 ? Date.now() : weekStart(w - 1);
+      const count = data.sessions.filter(s => s.date >= start && s.date < end).length;
+      if (count > 0) weeksActive++;
+      if (w === 0) thisWeekSessions = count;
+    }
+
+    const muscleVol = {};
+    data.sessions.forEach(s => {
+      s.entries.forEach(e => {
+        const ex = data.exercises.find(x => x.id === e.exerciseId);
+        if (!ex) return;
+        const vol = e.sets.reduce((a, st) => a + st.reps * st.weight, 0);
+        muscleVol[ex.muscle] = (muscleVol[ex.muscle] || 0) + vol;
+      });
     });
-  });
-  const maxMuscleVol = Math.max(...Object.values(muscleVol), 1);
-  const muscleEntries = Object.entries(muscleVol).sort((a, b) => b[1] - a[1]);
+    const muscleEntries = Object.entries(muscleVol).sort((a, b) => b[1] - a[1]);
+
+    return { prEntries, totalSessions, totalVol, weeksActive, thisWeekSessions, muscleEntries };
+  }, [data.sessions, data.prs, data.exercises]);
+
+  const maxMuscleVol = Math.max(...muscleEntries.map(([, v]) => v), 1);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: T.space.xl }}>
@@ -1104,7 +1120,7 @@ function ProgressPage({ data, onRepeatSession }) {
       {totalSessions >= 20 && weeksActive < 3 && <Card style={{ background: C.prDim, border: `1px solid ${C.prBorder}`, padding: 14 }}><div style={{ fontSize: T.fontSize.bodySmall, fontWeight: T.fontWeight.bold, color: C.pr }}>{totalSessions} sessions</div><div style={{ fontSize: T.fontSize.small, color: C.textDim, marginTop: T.space.xs }}>That's real commitment. Your body knows.</div></Card>}
 
       {/* Tab switcher */}
-      <div style={{ display: "flex", gap: T.space.sm, background: C.surface, borderRadius: T.radius.lg, padding: 3 }}>
+      <div style={{ display: "flex", gap: T.space.sm, background: C.surface, borderRadius: T.radius.lg, padding: T.space.xs }}>
         {[["prs", "🏆 PRs"], ["muscles", "💪 Muscles"], ["history", "📅 History"]].map(([v, l]) => (
           <button key={v} onClick={() => setView(v)} style={{ flex: 1, border: "none", borderRadius: T.radius.md, padding: "8px 0", fontSize: T.fontSize.caption, fontWeight: T.fontWeight.semi, cursor: "pointer", background: view === v ? C.bg : "transparent", color: view === v ? C.text : C.textDim, transition: `background ${T.transition.fast}, color ${T.transition.fast}, border-color ${T.transition.fast}` }}>{l}</button>
         ))}
@@ -1461,7 +1477,7 @@ function SettingsPage({ data, save, drive }) {
       <Card>
         <div style={{ fontSize: T.fontSize.body, fontWeight: T.fontWeight.bold, marginBottom: T.space.base }}>About</div>
         <div style={{ fontSize: T.fontSize.caption, color: C.textDim, lineHeight: 1.5 }}>
-          <strong style={{ color: C.accent }}>🟁 Temple v0.7.1</strong><br />
+          <strong style={{ color: C.accent }}>🟁 Temple v0.8.2</strong><br />
           Your body is a temple. Train it.<br /><br />
           Built to replace subscription-gated workout apps. Free, private, all data stays on your device.
         </div>
@@ -1535,6 +1551,7 @@ export default function Temple() {
   const [activeSet, setActiveSet] = useState(null);
   const pwa = usePWA();
   const drive = useGoogleDrive();
+  const coach = useCoach(data?.settings?.anthropicKey || "");
 
   const handleStartSession = (set) => { setActiveSet(set); setTab("session"); };
 
@@ -1561,8 +1578,8 @@ export default function Temple() {
         <div style={{ padding: "8px 16px 100px", maxWidth: T.size.maxWidth, margin: "0 auto" }}>
           {pwa.canInstall && <div style={{ marginBottom: T.space.xl }}><InstallBanner onInstall={pwa.install} onDismiss={pwa.dismiss} /></div>}
           {tab === "library" && <LibraryPage data={data} save={save} />}
-          {tab === "sets" && <SetsPage data={data} save={save} onStartSession={handleStartSession} />}
-          {tab === "session" && <SessionPage data={data} save={save} activeSet={activeSet} setActiveSet={setActiveSet} setTab={setTab} apiKey={data.settings?.anthropicKey || ""} />}
+          {tab === "sets" && <SetsPage data={data} save={save} onStartSession={handleStartSession} coach={coach} />}
+          {tab === "session" && <SessionPage data={data} save={save} activeSet={activeSet} setActiveSet={setActiveSet} setTab={setTab} coach={coach} />}
           {tab === "progress" && <ProgressPage data={data} onRepeatSession={handleStartSession} />}
           {tab === "settings" && <SettingsPage data={data} save={save} drive={drive} />}
         </div>

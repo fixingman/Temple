@@ -16,6 +16,10 @@ export function useAppData() {
         if (raw) {
           const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
           if (!parsed.settings) parsed.settings = DEFAULT_SETTINGS;
+          // Backfill any missing settings keys
+          Object.keys(DEFAULT_SETTINGS).forEach(k => {
+            if (parsed.settings[k] === undefined) parsed.settings[k] = DEFAULT_SETTINGS[k];
+          });
           // Migrate: backfill equipment/category
           const defaultMap = {};
           DEFAULT_EXERCISES.forEach(e => { defaultMap[e.id] = e; });
