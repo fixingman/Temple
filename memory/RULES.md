@@ -2,7 +2,7 @@
 
 ## Start of Session
 1. Read RULES.md (this file)
-2. Read CHANGELOG.md + BACKLOG.md
+2. Read CHANGELOG.md + BACKLOG.md + BUGS.md
 3. `git clone https://github.com/fixingman/Temple.git`
 4. Check version in App.jsx About card + SW cache names both match CHANGELOG
 5. Tell user: "On v[X]. Last: [summary]. Next: [top backlog item]. Open issues: [none/list]."
@@ -12,12 +12,13 @@
 2. Bump SW cache names in `public/sw.js` (`temple-vX.X` + `temple-assets-vX.X`)
 3. CHANGELOG.md → new version at top, list everything shipped + tested status
 4. BACKLOG.md → remove completed, add discovered, update tags
-5. ARCHITECTURE.md → update if structure/data model/files changed
-6. Housekeeping checks (HOUSEKEEPING.md) — run all, update Last Run
-7. `npm run build` — must pass zero errors
-8. Commit: `"vX.X — one-line summary"`
-9. Push → confirm Netlify deploy → run smoke tests → update results
-10. **Update "Where We Left Off" below — mandatory**
+5. BUGS.md → move fixed bugs to Fixed table, add newly discovered bugs
+6. ARCHITECTURE.md → update if structure/data model/files changed
+7. Housekeeping checks (HOUSEKEEPING.md) — run all, update Last Run
+8. `npm run build` — must pass zero errors
+9. Commit: `"vX.X — one-line summary"`
+10. Push → confirm Netlify deploy → run smoke tests → update results
+11. **Update "Where We Left Off" below — mandatory**
 
 **Never close with:** stale memory files · failing build · uncommitted changes · Where We Left Off not updated
 
@@ -49,7 +50,7 @@ public/   manifest.json · sw.js · icon.svg · _headers · _redirects
 src/      main.jsx · tokens.js · data.js · hooks.js
           useGoogleDrive.js · useCoach.js · App.jsx
 memory/   RULES.md · PRODUCT.md · ARCHITECTURE.md · DESIGN.md
-          CHANGELOG.md · BACKLOG.md · HOUSEKEEPING.md
+          CHANGELOG.md · BACKLOG.md · BUGS.md · HOUSEKEEPING.md
 ```
 
 ---
