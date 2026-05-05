@@ -17,6 +17,17 @@ Add new bugs at the top. Move to Fixed when done — don't delete, keeps history
 
 | # | Severity | Description | Fixed in |
 |---|----------|-------------|----------|
+| B21 | `[crit]` | `showRecoveryMid` useState declared after early returns in SessionPage — React hooks violation | v0.8.2 |
+| B22 | `[med]` | Logged sets in session showed `0kg × N reps` for bodyweight exercises instead of just reps | v0.8.2 |
+| B23 | `[low]` | `DEFAULT_EXERCISES` imported but never used in App.jsx — dead import | v0.8.2 |
+| B24 | `[low]` | `MuscleBar` prop `unit: wl` renamed wl locally, causing displayWeight to receive string not unit value — silent wrong calculation | v0.8.2 |
+
+---
+
+## Fixed (this version)
+
+| # | Severity | Description | Fixed in |
+|---|----------|-------------|----------|
 | B01 | `[crit]` | `MAX_TOKENS` undefined in useCoach — crashed every AI call | v0.8.1 |
 | B02 | `[crit]` | `useState` called conditionally in completion screen — React hooks violation | v0.8.1 |
 | B03 | `[high]` | Bodyweight/mobility exercises showed weight input and blocked logging with weight=0 | v0.8 |

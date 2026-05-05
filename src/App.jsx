@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { T, C } from "./tokens";
 import {
-  DEFAULT_EXERCISES, MUSCLE_GROUPS, MUSCLE_GROUPS_NO_ALL, MUSCLE_ICONS,
+  MUSCLE_GROUPS, MUSCLE_GROUPS_NO_ALL, MUSCLE_ICONS,
   EQUIPMENT_TYPES, CATEGORY_TYPES, DEFAULT_REST, DEFAULT_SETTINGS,
   uid, fmtDate, fmtDateFull, fmt, mkDefault,
   displayWeight, toKg, weightLabel, est1RM,
@@ -706,6 +706,7 @@ function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach }) {
   const [newPRs, setNewPRs] = useState([]);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [showRecovery, setShowRecovery] = useState(false);
+  const [showRecoveryMid, setShowRecoveryMid] = useState(false);
   const intervalRef = useRef(null);
   const restRef = useRef(null);
   const unit = data.settings?.unit || "kg";
@@ -902,7 +903,6 @@ function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach }) {
     : Number(currentSet.weight) > 0 && Number(currentSet.reps) > 0;
 
   // ── Training UI ──
-  const [showRecoveryMid, setShowRecoveryMid] = useState(false);
   const midSessionExercises = sessionData
     .map(e => data.exercises.find(ex => ex.id === e.exerciseId)?.name)
     .filter(Boolean);
@@ -974,8 +974,8 @@ function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach }) {
             {entry.logged.map((s, i) => (
               <div key={i} style={{ display: "flex", gap: T.space.xl, padding: "6px 0", borderBottom: `1px solid ${C.border}`, fontSize: T.fontSize.bodySmall, color: C.textDim }}>
                 <span style={{ color: C.accent, fontWeight: T.fontWeight.bold, width: 28 }}>#{i + 1}</span>
-                <span>{s.weight} {wl} × {s.reps} reps</span>
-                <span style={{ color: C.textDim, marginLeft: "auto" }}>{s.weight * s.reps} {wl}</span>
+                <span>{isBodyweight || isMobility ? `${s.reps} ${isMobility ? "sec" : "reps"}` : `${s.weight} ${wl} × ${s.reps} reps`}</span>
+                {!isBodyweight && !isMobility && <span style={{ color: C.textDim, marginLeft: "auto" }}>{s.weight * s.reps} {wl}</span>}
               </div>
             ))}
           </div>
@@ -1040,13 +1040,13 @@ function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach }) {
 }
 
 // ─── Progress Page ───
-function MuscleBar({ label, value, max, icon, unit: wl }) {
+function MuscleBar({ label, value, max, icon, unit }) {
   const pct = max > 0 ? Math.round((value / max) * 100) : 0;
   return (
     <div style={{ marginBottom: T.space.lg }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: T.space.sm }}>
         <span style={{ fontSize: T.fontSize.bodySmall, fontWeight: T.fontWeight.semi }}>{icon} {label}</span>
-        <span style={{ fontSize: T.fontSize.small, color: C.accent, fontWeight: T.fontWeight.bold }}>{displayWeight(value, wl).toLocaleString()} {weightLabel(wl)}</span>
+        <span style={{ fontSize: T.fontSize.small, color: C.accent, fontWeight: T.fontWeight.bold }}>{displayWeight(value, unit).toLocaleString()} {weightLabel(unit)}</span>
       </div>
       <div style={{ height: 8, background: C.bg, borderRadius: T.radius.base, overflow: "hidden" }}>
         <div style={{ height: "100%", background: C.accent, width: `${pct}%`, borderRadius: T.radius.base, transition: `width ${T.duration.medium} ${T.easing.enter}` }} />
