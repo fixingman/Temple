@@ -46,7 +46,7 @@ function Input({ label, ...props }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: T.space.sm }}>
       {label && <label style={{ fontSize: T.fontSize.small, color: C.textDim, fontWeight: T.fontWeight.semi, textTransform: "uppercase", letterSpacing: T.letterSpacing.uppercase }}>{label}</label>}
-      <input {...props} onFocus={e => { setFocused(true); props.onFocus?.(e); }} onBlur={e => { setFocused(false); props.onBlur?.(e); }} style={{ background: C.bg, border: `1px solid ${focused ? C.accent : C.border}`, borderRadius: T.radius.lg, padding: "10px 12px", color: C.text, fontSize: T.fontSize.body, outline: "none", transition: `border-color ${T.transition.fast}`, ...props.style }} />
+      <input {...props} onFocus={e => { setFocused(true); props.onFocus?.(e); }} onBlur={e => { setFocused(false); props.onBlur?.(e); }} style={{ background: C.bg, border: `1px solid ${focused ? C.accent : C.border}`, borderRadius: T.radius.lg, padding: "10px 12px", color: C.text, fontSize: T.fontSize.h3, outline: "none", transition: `border-color ${T.transition.fast}`, ...props.style }} />
     </div>
   );
 }
@@ -62,43 +62,136 @@ function YTButton({ query, label }) {
 }
 
 function VideoSheet({ query, label, onClose }) {
-  const src = `https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(query)}&rel=0&modestbranding=1`;
+  const [videos, setVideos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [selectedIndex, setSelectedIndex] = useState(null);
+  const selectedVideo = selectedIndex !== null ? videos[selectedIndex] : null;
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true); setError(""); setVideos([]);
+    fetch(`/api/youtube?q=${encodeURIComponent(query)}`)
+      .then(r => r.json())
+      .then(data => {
+        if (cancelled) return;
+        if (data.error) { setError(data.error); }
+        else { setVideos(data.videos || []); }
+        setLoading(false);
+      })
+      .catch(() => {
+        if (!cancelled) { setError("Could not load videos. Check your connection."); setLoading(false); }
+      });
+    return () => { cancelled = true; };
+  }, [query]);
+
+  const fallbackUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
+
   return (
-    <div
-      onClick={onClose}
-      style={{ position: "fixed", inset: 0, background: C.overlay, zIndex: T.z.modal + 10, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}
-    >
-      <div
-        className="t-slide-up"
-        onClick={e => e.stopPropagation()}
-        style={{ background: C.surface, borderRadius: `${T.radius.xl}px ${T.radius.xl}px 0 0`, overflow: "hidden", maxHeight: "85vh", display: "flex", flexDirection: "column", position: "relative" }}
-      >
-        {/* Drag handle */}
-        <div style={{ width: 36, height: 4, borderRadius: T.radius.sm, background: C.border, margin: `${T.space.base}px auto ${T.space.sm}px`, flexShrink: 0 }} />
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: C.overlay, zIndex: T.z.modal + 10, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+      <div className="t-slide-up" onClick={e => e.stopPropagation()} style={{ background: C.surface, borderRadius: `${T.radius.xl}px ${T.radius.xl}px 0 0`, maxHeight: "92vh", display: "flex", flexDirection: "column" }}>
+
+        {/* Handle */}
+        <div style={{ width: 36, height: 4, borderRadius: T.radius.sm, background: C.border, margin: `${T.space.base}px auto ${T.space.base}px`, flexShrink: 0 }} />
+
         {/* Header */}
-        <div style={{ padding: `0 ${T.space.xl}px ${T.space.base}px`, display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
+        <div style={{ padding: `0 ${T.space.xl}px ${T.space.base}px`, display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
           <div>
-            <div style={{ fontSize: T.fontSize.bodySmall, fontWeight: T.fontWeight.bold, color: C.text }}>{label || "Form Guide"}</div>
-            <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: 2 }}>YouTube · tap a video to play</div>
+            <div style={{ fontSize: T.fontSize.h3, fontWeight: T.fontWeight.bold }}>{label || "Form Guide"}</div>
+            <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: 2 }}>
+              {selectedIndex !== null ? `${selectedIndex + 1} of ${videos.length}` : `${videos.length > 0 ? videos.length : ""} results`}
+            </div>
           </div>
           <div style={{ display: "flex", gap: T.space.base, alignItems: "center" }}>
-            <a href={`https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: T.fontSize.xs, color: C.textDim, textDecoration: "none" }}>Open in app</a>
+            {selectedIndex !== null && (
+              <button onClick={() => setSelectedIndex(null)} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: T.radius.md, color: C.textDim, cursor: "pointer", padding: `${T.space.sm}px ${T.space.lg}px`, fontSize: T.fontSize.small }}>← List</button>
+            )}
             <button onClick={onClose} style={{ background: C.bg, border: "none", color: C.textDim, cursor: "pointer", borderRadius: T.radius.full, width: 28, height: 28, fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
           </div>
         </div>
 
-        {/* YouTube embed */}
-        <div style={{ flex: 1, minHeight: 0, position: "relative", background: C.bg }}>
-          <iframe
-            src={src}
-            style={{ width: "100%", height: "100%", border: "none", minHeight: 420 }}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-            title={label || "Form guide"}
-          />
-        </div>
+        {/* Content */}
+        {selectedIndex !== null ? (
+          /* Video player with prev/next */
+          <div style={{ flex: 1, background: "#000", display: "flex", flexDirection: "column" }}>
+            <iframe
+              key={selectedVideo?.id}
+              src={`https://www.youtube.com/embed/${selectedVideo?.id}?autoplay=1&rel=0&modestbranding=1`}
+              style={{ flex: 1, width: "100%", border: "none", minHeight: 260 }}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              title={selectedVideo?.title || label}
+            />
+            {/* Title + nav */}
+            <div style={{ background: C.surface, padding: `${T.space.lg}px ${T.space.xl}px`, display: "flex", flexDirection: "column", gap: T.space.base }}>
+              <div style={{ fontSize: T.fontSize.small, fontWeight: T.fontWeight.semi, color: C.text, lineHeight: 1.4 }}>{selectedVideo?.title}</div>
+              <div style={{ fontSize: T.fontSize.xs, color: C.textDim }}>{selectedVideo?.channel}</div>
+              <div style={{ display: "flex", gap: T.space.base }}>
+                <button
+                  onClick={() => setSelectedIndex(i => Math.max(0, i - 1))}
+                  disabled={selectedIndex === 0}
+                  style={{ flex: 1, background: C.bg, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: "12px", color: selectedIndex === 0 ? C.border : C.text, cursor: selectedIndex === 0 ? "default" : "pointer", fontSize: T.fontSize.body, fontWeight: T.fontWeight.bold }}
+                >← Prev</button>
+                <button
+                  onClick={() => setSelectedIndex(i => Math.min(videos.length - 1, i + 1))}
+                  disabled={selectedIndex === videos.length - 1}
+                  style={{ flex: 1, background: C.bg, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: "12px", color: selectedIndex === videos.length - 1 ? C.border : C.accent, cursor: selectedIndex === videos.length - 1 ? "default" : "pointer", fontSize: T.fontSize.body, fontWeight: T.fontWeight.bold }}
+                >Next →</button>
+              </div>
+            </div>
+            <div style={{ height: "env(safe-area-inset-bottom)", background: C.surface }} />
+          </div>
+        ) : (
+          /* Search results list */
+          <div style={{ flex: 1, overflowY: "auto", padding: T.space.base }}>
+            {loading && (
+              <div style={{ display: "flex", flexDirection: "column", gap: T.space.base, padding: T.space.base }}>
+                {[1,2,3,4].map(i => (
+                  <div key={i} style={{ display: "flex", gap: T.space.lg, alignItems: "center" }}>
+                    <div style={{ width: 120, height: 68, borderRadius: T.radius.md, background: C.border, flexShrink: 0 }} />
+                    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: T.space.sm }}>
+                      <div style={{ height: 14, background: C.border, borderRadius: T.radius.sm, width: "80%" }} />
+                      <div style={{ height: 12, background: C.border, borderRadius: T.radius.sm, width: "50%" }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
 
-        <div style={{ height: "env(safe-area-inset-bottom)", background: C.surface, flexShrink: 0 }} />
+            {error && (
+              <div style={{ padding: T.space.xl, textAlign: "center" }}>
+                <div style={{ color: C.danger, fontSize: T.fontSize.small, marginBottom: T.space.xl }}>{error}</div>
+                <a href={fallbackUrl} target="_blank" rel="noopener noreferrer" style={{ color: C.accent, fontSize: T.fontSize.small }}>Open YouTube instead →</a>
+              </div>
+            )}
+
+            {!loading && !error && videos.map((v, i) => (
+              <button key={v.id} onClick={() => setSelectedIndex(i)} style={{ width: "100%", background: selectedIndex === i ? C.accentDim : "none", border: `1px solid ${selectedIndex === i ? C.accentBorder : "transparent"}`, display: "flex", gap: T.space.lg, alignItems: "center", padding: `${T.space.base}px ${T.space.sm}px`, borderRadius: T.radius.lg, cursor: "pointer", textAlign: "left", marginBottom: T.space.sm }}>
+                <div style={{ position: "relative", flexShrink: 0 }}>
+                  <img src={v.thumbnail} alt="" style={{ width: 120, height: 68, borderRadius: T.radius.md, objectFit: "cover", display: "block", background: C.border }} />
+                  <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <div style={{ width: 28, height: 28, background: "rgba(0,0,0,0.7)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <span style={{ color: "#fff", fontSize: 10, paddingLeft: 2 }}>▶</span>
+                    </div>
+                  </div>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: T.fontSize.small, fontWeight: T.fontWeight.semi, color: C.text, lineHeight: 1.4, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{v.title}</div>
+                  <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: T.space.xs }}>{v.channel}</div>
+                </div>
+              </button>
+            ))}
+
+            {!loading && !error && videos.length === 0 && (
+              <div style={{ padding: T.space.xl, textAlign: "center" }}>
+                <div style={{ color: C.textDim, fontSize: T.fontSize.small, marginBottom: T.space.xl }}>No videos found.</div>
+                <a href={fallbackUrl} target="_blank" rel="noopener noreferrer" style={{ color: C.accent, fontSize: T.fontSize.small }}>Search on YouTube →</a>
+              </div>
+            )}
+
+            <div style={{ height: "env(safe-area-inset-bottom)", flexShrink: 0 }} />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -106,18 +199,15 @@ function VideoSheet({ query, label, onClose }) {
 function ApiKeyInput({ value, onChange }) {
   const [show, setShow] = useState(false);
   const [draft, setDraft] = useState(value);
-  const [saved, setSaved] = useState(false);
   const dirty = draft !== value;
 
   // Sync if value changes externally (import/restore)
-  useEffect(() => { setDraft(value); setSaved(false); }, [value]);
+  useEffect(() => { setDraft(value); }, [value]);
 
-  const save = () => {
-    onChange(draft.trim());
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  };
+  const save = () => onChange(draft.trim());
   const clear = () => { setDraft(""); onChange(""); };
+
+  const isSaved = value && !dirty;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: T.space.base }}>
@@ -125,22 +215,30 @@ function ApiKeyInput({ value, onChange }) {
         <input
           type={show ? "text" : "password"}
           value={draft}
-          onChange={e => { setDraft(e.target.value); setSaved(false); }}
+          onChange={e => setDraft(e.target.value)}
           placeholder="sk-ant-..."
-          style={{ flex: 1, background: C.bg, border: `1px solid ${draft ? C.accentBorder : C.border}`, borderRadius: T.radius.lg, padding: "10px 12px", color: C.text, fontSize: T.fontSize.bodySmall, outline: "none", fontFamily: T.font.mono, transition: `border-color ${T.transition.fast}` }}
+          style={{ flex: 1, background: C.bg, border: `1px solid ${isSaved ? C.accentBorder : draft ? C.border : C.border}`, borderRadius: T.radius.lg, padding: "10px 12px", color: C.text, fontSize: T.fontSize.h3, outline: "none", fontFamily: T.font.mono, transition: `border-color ${T.transition.fast}` }}
         />
         <button onClick={() => setShow(s => !s)} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, color: C.textDim, cursor: "pointer", padding: "10px 12px", fontSize: T.fontSize.small, flexShrink: 0 }}>{show ? "Hide" : "Show"}</button>
       </div>
-      <div style={{ display: "flex", gap: T.space.base }}>
-        <Btn onClick={save} disabled={!dirty || !draft.trim()} style={{ flex: 1 }}>
-          {saved ? "Saved" : "Save Key"}
-        </Btn>
-        {value && <Btn variant="danger" onClick={clear} style={{ flex: 1 }}>Remove</Btn>}
-      </div>
-      {value && !dirty && (
-        <div style={{ fontSize: T.fontSize.xs, color: C.accent, fontWeight: T.fontWeight.semi }}>
-          ✓ Key saved · {value.slice(0, 8)}...{value.slice(-4)}
+
+      {isSaved ? (
+        /* Key is saved and unchanged — show confirmation state */
+        <div style={{ display: "flex", gap: T.space.base, alignItems: "center" }}>
+          <div style={{ flex: 1, display: "flex", alignItems: "center", gap: T.space.base, padding: "12px 16px", background: C.accentDim, border: `1px solid ${C.accentBorder}`, borderRadius: T.radius.lg }}>
+            <span style={{ color: C.accent, fontWeight: T.fontWeight.bold, fontSize: T.fontSize.body }}>✓</span>
+            <div>
+              <div style={{ fontSize: T.fontSize.small, color: C.accent, fontWeight: T.fontWeight.semi }}>Key saved</div>
+              <div style={{ fontSize: T.fontSize.xs, color: C.textDim, fontFamily: T.font.mono }}>{value.slice(0, 10)}···{value.slice(-4)}</div>
+            </div>
+          </div>
+          <Btn variant="danger" onClick={clear}>Remove</Btn>
         </div>
+      ) : (
+        /* Unsaved or dirty — show save button */
+        <Btn onClick={save} disabled={!dirty || !draft.trim()} style={{ width: "100%" }}>
+          Save Key
+        </Btn>
       )}
     </div>
   );
@@ -227,7 +325,7 @@ function RecoverySheet({ onClose, recentExercises = [], coach, onGoToSettings })
               <div>
                 <label style={{ fontSize: T.fontSize.small, color: C.textDim, fontWeight: T.fontWeight.semi, textTransform: "uppercase", letterSpacing: T.letterSpacing.uppercase, display: "block", marginBottom: T.space.base }}>Describe what you're feeling</label>
                 <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="e.g. sharp pain when I extend my arm, started during the last set of bench press..." rows={4}
-                  style={{ width: "100%", boxSizing: "border-box", background: C.bg, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: "12px 14px", color: C.text, fontSize: T.fontSize.bodySmall, outline: "none", resize: "none", fontFamily: "inherit", lineHeight: 1.5 }} />
+                  style={{ width: "100%", boxSizing: "border-box", background: C.bg, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: "12px 14px", color: C.text, fontSize: T.fontSize.h3, outline: "none", resize: "none", fontFamily: "inherit", lineHeight: 1.5 }} />
               </div>
 
               {recentExercises.length > 0 && (
@@ -463,10 +561,39 @@ function SetsPage({ data, save, onStartSession, coach }) {
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [error, setError] = useState("");
   const [orderLoading, setOrderLoading] = useState(false);
-  const [orderError, setOrderError] = useState("");
+  const [orderSuggested, setOrderSuggested] = useState(false);
 
-  const startCreate = () => { setCreating(true); setEditingId(null); setName(""); setSelected([]); setMuscleFilter("All"); setSearch(""); setError(""); };
-  const startEdit = (s) => { setCreating(true); setEditingId(s.id); setName(s.name); setSelected([...s.exerciseIds]); setMuscleFilter("All"); setSearch(""); setError(""); };
+  const startCreate = () => { setCreating(true); setEditingId(null); setName(""); setSelected([]); setMuscleFilter("All"); setSearch(""); setError(""); setOrderSuggested(false); };
+  const startEdit = (s) => { setCreating(true); setEditingId(s.id); setName(s.name); setSelected([...s.exerciseIds]); setMuscleFilter("All"); setSearch(""); setError(""); setOrderSuggested(true); };
+
+  // Auto-suggest order: fires 1.2s after selection reaches 2+ exercises
+  useEffect(() => {
+    if (!coach.hasKey || selected.length < 2 || orderSuggested || orderLoading) return;
+    const run = async () => {
+      setOrderLoading(true);
+      const exercises = selected.map(id => data.exercises.find(e => e.id === id)).filter(Boolean);
+      const { text, error: err } = await coach.ask(
+        prompts.exerciseOrder(exercises),
+        { maxTokens: 300, model: "claude-haiku-4-5-20251001" }
+      );
+      if (!err) {
+        try {
+          const match = text.match(/\[[\s\S]*?\]/);
+          if (!match) throw new Error("no match");
+          const names = JSON.parse(match[0]);
+          const nameToId = {};
+          exercises.forEach(e => { nameToId[e.name.toLowerCase()] = e.id; });
+          const reordered = names.map(n => nameToId[n.toLowerCase()]).filter(Boolean);
+          const missing = selected.filter(id => !reordered.includes(id));
+          setSelected([...reordered, ...missing]);
+          setOrderSuggested(true);
+        } catch (parseErr) { /* ignore silently */ }
+      }
+      setOrderLoading(false);
+    };
+    const t = setTimeout(run, 1200);
+    return () => clearTimeout(t);
+  }, [selected.length, orderSuggested, orderLoading]);
   const saveSet = () => {
     if (!name.trim() && selected.length === 0) { setError("Give your set a name and select at least one exercise."); return; }
     if (!name.trim()) { setError("Give your set a name."); return; }
@@ -481,37 +608,10 @@ function SetsPage({ data, save, onStartSession, coach }) {
   const deleteSet = (id) => { save({ ...data, sets: data.sets.filter(s => s.id !== id) }); setConfirmDelete(null); };
   const toggle = (id) => {
     setSelected(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id]);
+    setOrderSuggested(false);
     setError("");
   };
 
-  const suggestOrder = async () => {
-    if (selected.length < 2) return;
-    setOrderLoading(true); setOrderError("");
-    const exercises = selected.map(id => data.exercises.find(e => e.id === id)).filter(Boolean);
-    const { text, error: err } = await coach.ask(
-      prompts.exerciseOrder(exercises),
-      { maxTokens: 300, model: "claude-haiku-4-5-20251001" }
-    );
-    if (err) { setOrderError(coachError(err)); setOrderLoading(false); return; }
-    try {
-      // Parse JSON array of names from response
-      const match = text.match(/\[[\s\S]*?\]/);
-      if (!match) throw new Error("no json");
-      const names = JSON.parse(match[0]);
-      // Reorder selected to match suggested order
-      const nameToId = {};
-      exercises.forEach(e => { nameToId[e.name.toLowerCase()] = e.id; });
-      const reordered = names
-        .map(n => nameToId[n.toLowerCase()])
-        .filter(Boolean);
-      // Add any exercises not in the suggestion at the end
-      const missing = selected.filter(id => !reordered.includes(id));
-      setSelected([...reordered, ...missing]);
-    } catch {
-      setOrderError("Could not parse suggestion. Try again.");
-    }
-    setOrderLoading(false);
-  };
   const moveUp = (id) => {
     const idx = selected.indexOf(id);
     if (idx <= 0) return;
@@ -569,16 +669,11 @@ function SetsPage({ data, save, onStartSession, coach }) {
                   ))}
                 </div>
                 {coach.hasKey && selected.length >= 2 && (
-                  <button
-                    onClick={suggestOrder}
-                    disabled={orderLoading}
-                    style={{ flexShrink: 0, marginLeft: T.space.base, background: "none", border: `1px solid ${C.border}`, borderRadius: T.radius.md, color: orderLoading ? C.textDim : C.accent, cursor: orderLoading ? "default" : "pointer", fontSize: T.fontSize.xs, fontWeight: T.fontWeight.semi, padding: "5px 10px", whiteSpace: "nowrap", transition: `color ${T.transition.fast}` }}
-                  >
-                    {orderLoading ? "Ordering..." : "✦ Suggest order"}
-                  </button>
+                  <div style={{ flexShrink: 0, marginLeft: T.space.base, fontSize: T.fontSize.xs, color: orderLoading ? C.accent : C.textDim, display: "flex", alignItems: "center", gap: T.space.xs }}>
+                    {orderLoading ? <><span className="t-pulse" style={{ display: "inline-block" }}>✦</span> Ordering...</> : orderSuggested ? <>✦ AI ordered</> : null}
+                  </div>
                 )}
               </div>
-              {orderError && <div style={{ fontSize: T.fontSize.xs, color: C.danger, marginBottom: T.space.base }}>{orderError}</div>}
               {/* Selected exercise rows with reorder + remove */}
               <div style={{ display: "flex", flexDirection: "column", gap: T.space.sm }}>
                 {selectedExercises.map((ex, idx) => (
@@ -609,7 +704,7 @@ function SetsPage({ data, save, onStartSession, coach }) {
             placeholder="Search exercises..."
             value={search}
             onChange={e => { setSearch(e.target.value); if (e.target.value) setMuscleFilter("All"); }}
-            style={{ width: "100%", boxSizing: "border-box", background: C.surface, border: `1px solid ${search ? C.accent : C.border}`, borderRadius: T.radius.lg, padding: "10px 14px", color: C.text, fontSize: T.fontSize.bodySmall, outline: "none", marginTop: T.space.base, marginBottom: T.space.base, transition: `border-color ${T.transition.fast}` }}
+            style={{ width: "100%", boxSizing: "border-box", background: C.surface, border: `1px solid ${search ? C.accent : C.border}`, borderRadius: T.radius.lg, padding: "10px 14px", color: C.text, fontSize: T.fontSize.h3, outline: "none", marginTop: T.space.base, marginBottom: T.space.base, transition: `border-color ${T.transition.fast}` }}
           />
 
           {/* Muscle filter — always reserves same space */}
@@ -1453,7 +1548,7 @@ function SettingsPage({ data, save, drive }) {
           <Btn variant="secondary" onClick={() => setShowImport(!showImport)} style={{ width: "100%" }}>{showImport ? "Cancel Import" : "Import Data"}</Btn>
           {showImport && (
             <div style={{ display: "flex", flexDirection: "column", gap: T.space.base }}>
-              <textarea value={importText} onChange={e => { setImportText(e.target.value); setImportStatus(""); }} placeholder="Paste your Temple backup JSON here..." rows={6} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: "10px 12px", color: C.text, fontSize: T.fontSize.caption, outline: "none", resize: "vertical", fontFamily: T.font.mono }} />
+              <textarea value={importText} onChange={e => { setImportText(e.target.value); setImportStatus(""); }} placeholder="Paste your Temple backup JSON here..." rows={6} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: "10px 12px", color: C.text, fontSize: T.fontSize.h3, outline: "none", resize: "vertical", fontFamily: T.font.mono }} />
               {importStatus && <ErrorBanner message={importStatus} />}
               <Btn onClick={doImport} disabled={!importText.trim()}>Import & Replace All Data</Btn>
             </div>
@@ -1553,7 +1648,51 @@ export default function Temple() {
   const drive = useGoogleDrive();
   const coach = useCoach(data?.settings?.anthropicKey || "");
 
+  // ── Pull-to-refresh ──
+  const [pullY, setPullY] = useState(0);
+  const [pulling, setPulling] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const touchStartY = useRef(null);
+  const scrollRef = useRef(null);
+  const THRESHOLD = 72;
+
+  const onTouchStart = useCallback((e) => {
+    if (scrollRef.current?.scrollTop === 0) {
+      touchStartY.current = e.touches[0].clientY;
+    }
+  }, []);
+
+  const onTouchMove = useCallback((e) => {
+    if (touchStartY.current === null || refreshing) return;
+    if (scrollRef.current?.scrollTop > 0) { touchStartY.current = null; return; }
+    const dy = e.touches[0].clientY - touchStartY.current;
+    if (dy > 0) {
+      e.preventDefault();
+      const damped = dy < 40 ? dy : 40 + (dy - 40) * 0.3;
+      setPullY(Math.min(damped, THRESHOLD + 20));
+      setPulling(true);
+    }
+  }, [refreshing]);
+
+  const onTouchEnd = useCallback(() => {
+    if (!pulling) return;
+    if (pullY >= THRESHOLD) {
+      setRefreshing(true);
+      setPullY(0);
+      setTimeout(() => window.location.reload(), 600);
+    } else {
+      setPullY(0);
+    }
+    setPulling(false);
+    touchStartY.current = null;
+  }, [pulling, pullY]);
+
   const handleStartSession = (set) => { setActiveSet(set); setTab("session"); };
+
+  const pullProgress = Math.min(pullY / THRESHOLD, 1);
+  const logoRotate = pulling ? pullProgress * 180 : 0;
+  const logoScale = 1 + pullProgress * 0.35;
+  const logoOpacity = 0.5 + pullProgress * 0.5;
 
   if (loading) return (
     <div style={{ fontFamily: T.font.body, color: C.text, background: C.bg, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -1568,21 +1707,71 @@ export default function Temple() {
   return (
     <ErrorBoundary>
       <GlobalStyles />
-      <div style={{ fontFamily: T.font.body, color: C.text, background: C.bg, minHeight: "100vh" }}>
-        <div style={{ padding: "16px 20px 8px", display: "flex", justifyContent: "center", alignItems: "center", position: "sticky", top: 0, background: C.bg, zIndex: T.z.header }}>
-          <div style={{ fontWeight: T.fontWeight.black, fontSize: T.fontSize.h2, letterSpacing: T.letterSpacing.tight, color: C.accent }}>🟁 TEMPLE</div>
-          {saving && <div style={{ position: "absolute", right: 20, fontSize: T.fontSize.xs, color: C.textDim, display: "flex", alignItems: "center", gap: T.space.sm }}>
-            <div className="t-pulse" style={{ width: 6, height: 6, borderRadius: "50%", background: C.accent }} />
-          </div>}
+      <div
+        style={{ fontFamily: T.font.body, color: C.text, background: C.bg, height: "100vh", overflow: "hidden", display: "flex", flexDirection: "column" }}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+      >
+        {/* Header — safe-area aware, logo animates on pull */}
+        <div style={{
+          paddingTop: "calc(env(safe-area-inset-top) + 12px)",
+          paddingBottom: T.space.base,
+          paddingLeft: T.space.xl,
+          paddingRight: T.space.xl,
+          display: "flex", justifyContent: "center", alignItems: "center",
+          background: C.bg, zIndex: T.z.header, flexShrink: 0,
+          transform: pullY > 0 ? `translateY(${pullY * 0.4}px)` : "none",
+          transition: pulling ? "none" : `transform 0.35s ${T.easing.spring}`,
+          position: "relative",
+        }}>
+          <div style={{ fontWeight: T.fontWeight.black, fontSize: T.fontSize.h2, letterSpacing: T.letterSpacing.tight, color: C.accent, display: "flex", alignItems: "center", gap: T.space.sm, userSelect: "none" }}>
+            <span style={{
+              display: "inline-block",
+              transform: refreshing ? "scale(1.3)" : `rotate(${logoRotate}deg) scale(${pulling ? logoScale : 1})`,
+              opacity: pulling ? logoOpacity : 1,
+              transition: pulling ? "none" : `transform 0.4s ${T.easing.spring}, opacity 0.25s`,
+              animation: refreshing ? "temple-logo-spin 0.6s cubic-bezier(0.34,1.56,0.64,1) forwards" : "none",
+            }}>🟁</span>
+            TEMPLE
+          </div>
+
+          {/* Pull hint */}
+          {pulling && pullY > 8 && (
+            <div style={{ position: "absolute", bottom: -T.space.lg, fontSize: T.fontSize.xs, color: C.textDim, opacity: pullProgress, letterSpacing: T.letterSpacing.label, textTransform: "uppercase" }}>
+              {pullY >= THRESHOLD ? "Release" : "Pull to refresh"}
+            </div>
+          )}
+
+          {saving && (
+            <div style={{ position: "absolute", right: T.space.xl, display: "flex", alignItems: "center", gap: T.space.sm }}>
+              <div className="t-pulse" style={{ width: 6, height: 6, borderRadius: "50%", background: C.accent }} />
+            </div>
+          )}
         </div>
-        <div style={{ padding: "8px 16px 100px", maxWidth: T.size.maxWidth, margin: "0 auto" }}>
-          {pwa.canInstall && <div style={{ marginBottom: T.space.xl }}><InstallBanner onInstall={pwa.install} onDismiss={pwa.dismiss} /></div>}
-          {tab === "library" && <LibraryPage data={data} save={save} />}
-          {tab === "sets" && <SetsPage data={data} save={save} onStartSession={handleStartSession} coach={coach} />}
-          {tab === "session" && <SessionPage data={data} save={save} activeSet={activeSet} setActiveSet={setActiveSet} setTab={setTab} coach={coach} />}
-          {tab === "progress" && <ProgressPage data={data} onRepeatSession={handleStartSession} />}
-          {tab === "settings" && <SettingsPage data={data} save={save} drive={drive} />}
+
+        {/* Scrollable content */}
+        <div
+          ref={scrollRef}
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            overflowX: "hidden",
+            WebkitOverflowScrolling: "touch",
+            transform: pullY > 0 ? `translateY(${pullY * 0.6}px)` : "none",
+            transition: pulling ? "none" : `transform 0.35s ${T.easing.spring}`,
+          }}
+        >
+          <div style={{ padding: `${T.space.base}px ${T.space.xl}px`, paddingBottom: "calc(env(safe-area-inset-bottom) + 90px)", maxWidth: T.size.maxWidth, margin: "0 auto" }}>
+            {pwa.canInstall && <div style={{ marginBottom: T.space.xl }}><InstallBanner onInstall={pwa.install} onDismiss={pwa.dismiss} /></div>}
+            {tab === "library" && <LibraryPage data={data} save={save} />}
+            {tab === "sets" && <SetsPage data={data} save={save} onStartSession={handleStartSession} coach={coach} />}
+            {tab === "session" && <SessionPage data={data} save={save} activeSet={activeSet} setActiveSet={setActiveSet} setTab={setTab} coach={coach} />}
+            {tab === "progress" && <ProgressPage data={data} onRepeatSession={handleStartSession} />}
+            {tab === "settings" && <SettingsPage data={data} save={save} drive={drive} />}
+          </div>
         </div>
+
         <Tabs active={tab} onChange={setTab} />
       </div>
     </ErrorBoundary>
