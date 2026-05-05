@@ -5,6 +5,8 @@ export const MODELS = {
   smart:   "claude-sonnet-4-6",            // nuanced tasks: body check, gap analysis
 };
 
+const DEFAULT_MAX_TOKENS = 800;
+
 /**
  * useCoach — Temple's AI layer.
  *
@@ -31,7 +33,7 @@ export function useCoach(apiKey = "") {
         },
         body: JSON.stringify({
           model: opts.model || MODELS.fast,
-          max_tokens: opts.maxTokens || MAX_TOKENS,
+          max_tokens: opts.maxTokens || DEFAULT_MAX_TOKENS,
           system: opts.system || "You are Temple Coach, a concise, knowledgeable personal training assistant. You give practical, specific advice. No fluff. No disclaimers unless safety is at risk.",
           messages: [{ role: "user", content: prompt }],
         }),
