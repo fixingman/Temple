@@ -65,7 +65,8 @@ function VideoSheet({ query, label, onClose }) {
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [selectedId, setSelectedId] = useState(null);
+  const [selectedIndex, setSelectedIndex] = useState(null);
+  const selectedVideo = selectedIndex !== null ? videos[selectedIndex] : null;
 
   useEffect(() => {
     let cancelled = false;
@@ -96,31 +97,49 @@ function VideoSheet({ query, label, onClose }) {
         {/* Header */}
         <div style={{ padding: `0 ${T.space.xl}px ${T.space.base}px`, display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
           <div>
-            <div style={{ fontSize: T.fontSize.h3, fontWeight: T.fontWeight.bold }}>{selectedId ? label || "Form Guide" : label || "Form Guide"}</div>
+            <div style={{ fontSize: T.fontSize.h3, fontWeight: T.fontWeight.bold }}>{label || "Form Guide"}</div>
             <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: 2 }}>
-              {selectedId ? "Tap outside video to go back" : `${videos.length > 0 ? videos.length : ""} results`}
+              {selectedIndex !== null ? `${selectedIndex + 1} of ${videos.length}` : `${videos.length > 0 ? videos.length : ""} results`}
             </div>
           </div>
           <div style={{ display: "flex", gap: T.space.base, alignItems: "center" }}>
-            {selectedId && (
-              <button onClick={() => setSelectedId(null)} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: T.radius.md, color: C.textDim, cursor: "pointer", padding: `${T.space.sm}px ${T.space.lg}px`, fontSize: T.fontSize.small }}>← Back</button>
+            {selectedIndex !== null && (
+              <button onClick={() => setSelectedIndex(null)} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: T.radius.md, color: C.textDim, cursor: "pointer", padding: `${T.space.sm}px ${T.space.lg}px`, fontSize: T.fontSize.small }}>← List</button>
             )}
             <button onClick={onClose} style={{ background: C.bg, border: "none", color: C.textDim, cursor: "pointer", borderRadius: T.radius.full, width: 28, height: 28, fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
           </div>
         </div>
 
         {/* Content */}
-        {selectedId ? (
-          /* Video player */
+        {selectedIndex !== null ? (
+          /* Video player with prev/next */
           <div style={{ flex: 1, background: "#000", display: "flex", flexDirection: "column" }}>
             <iframe
-              src={`https://www.youtube.com/embed/${selectedId}?autoplay=1&rel=0&modestbranding=1`}
-              style={{ flex: 1, width: "100%", border: "none", minHeight: 280 }}
+              key={selectedVideo?.id}
+              src={`https://www.youtube.com/embed/${selectedVideo?.id}?autoplay=1&rel=0&modestbranding=1`}
+              style={{ flex: 1, width: "100%", border: "none", minHeight: 260 }}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
-              title={label}
+              title={selectedVideo?.title || label}
             />
-            <div style={{ height: "env(safe-area-inset-bottom)", background: "#000" }} />
+            {/* Title + nav */}
+            <div style={{ background: C.surface, padding: `${T.space.lg}px ${T.space.xl}px`, display: "flex", flexDirection: "column", gap: T.space.base }}>
+              <div style={{ fontSize: T.fontSize.small, fontWeight: T.fontWeight.semi, color: C.text, lineHeight: 1.4 }}>{selectedVideo?.title}</div>
+              <div style={{ fontSize: T.fontSize.xs, color: C.textDim }}>{selectedVideo?.channel}</div>
+              <div style={{ display: "flex", gap: T.space.base }}>
+                <button
+                  onClick={() => setSelectedIndex(i => Math.max(0, i - 1))}
+                  disabled={selectedIndex === 0}
+                  style={{ flex: 1, background: C.bg, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: "12px", color: selectedIndex === 0 ? C.border : C.text, cursor: selectedIndex === 0 ? "default" : "pointer", fontSize: T.fontSize.body, fontWeight: T.fontWeight.bold }}
+                >← Prev</button>
+                <button
+                  onClick={() => setSelectedIndex(i => Math.min(videos.length - 1, i + 1))}
+                  disabled={selectedIndex === videos.length - 1}
+                  style={{ flex: 1, background: C.bg, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: "12px", color: selectedIndex === videos.length - 1 ? C.border : C.accent, cursor: selectedIndex === videos.length - 1 ? "default" : "pointer", fontSize: T.fontSize.body, fontWeight: T.fontWeight.bold }}
+                >Next →</button>
+              </div>
+            </div>
+            <div style={{ height: "env(safe-area-inset-bottom)", background: C.surface }} />
           </div>
         ) : (
           /* Search results list */
@@ -146,8 +165,8 @@ function VideoSheet({ query, label, onClose }) {
               </div>
             )}
 
-            {!loading && !error && videos.map(v => (
-              <button key={v.id} onClick={() => setSelectedId(v.id)} style={{ width: "100%", background: "none", border: "none", display: "flex", gap: T.space.lg, alignItems: "center", padding: `${T.space.base}px ${T.space.sm}px`, borderRadius: T.radius.lg, cursor: "pointer", textAlign: "left", marginBottom: T.space.sm }}>
+            {!loading && !error && videos.map((v, i) => (
+              <button key={v.id} onClick={() => setSelectedIndex(i)} style={{ width: "100%", background: selectedIndex === i ? C.accentDim : "none", border: `1px solid ${selectedIndex === i ? C.accentBorder : "transparent"}`, display: "flex", gap: T.space.lg, alignItems: "center", padding: `${T.space.base}px ${T.space.sm}px`, borderRadius: T.radius.lg, cursor: "pointer", textAlign: "left", marginBottom: T.space.sm }}>
                 <div style={{ position: "relative", flexShrink: 0 }}>
                   <img src={v.thumbnail} alt="" style={{ width: 120, height: 68, borderRadius: T.radius.md, objectFit: "cover", display: "block", background: C.border }} />
                   <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -180,18 +199,15 @@ function VideoSheet({ query, label, onClose }) {
 function ApiKeyInput({ value, onChange }) {
   const [show, setShow] = useState(false);
   const [draft, setDraft] = useState(value);
-  const [saved, setSaved] = useState(false);
   const dirty = draft !== value;
 
   // Sync if value changes externally (import/restore)
-  useEffect(() => { setDraft(value); setSaved(false); }, [value]);
+  useEffect(() => { setDraft(value); }, [value]);
 
-  const save = () => {
-    onChange(draft.trim());
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  };
+  const save = () => onChange(draft.trim());
   const clear = () => { setDraft(""); onChange(""); };
+
+  const isSaved = value && !dirty;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: T.space.base }}>
@@ -199,22 +215,30 @@ function ApiKeyInput({ value, onChange }) {
         <input
           type={show ? "text" : "password"}
           value={draft}
-          onChange={e => { setDraft(e.target.value); setSaved(false); }}
+          onChange={e => setDraft(e.target.value)}
           placeholder="sk-ant-..."
-          style={{ flex: 1, background: C.bg, border: `1px solid ${draft ? C.accentBorder : C.border}`, borderRadius: T.radius.lg, padding: "10px 12px", color: C.text, fontSize: T.fontSize.h3, outline: "none", fontFamily: T.font.mono, transition: `border-color ${T.transition.fast}` }}
+          style={{ flex: 1, background: C.bg, border: `1px solid ${isSaved ? C.accentBorder : draft ? C.border : C.border}`, borderRadius: T.radius.lg, padding: "10px 12px", color: C.text, fontSize: T.fontSize.h3, outline: "none", fontFamily: T.font.mono, transition: `border-color ${T.transition.fast}` }}
         />
         <button onClick={() => setShow(s => !s)} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, color: C.textDim, cursor: "pointer", padding: "10px 12px", fontSize: T.fontSize.small, flexShrink: 0 }}>{show ? "Hide" : "Show"}</button>
       </div>
-      <div style={{ display: "flex", gap: T.space.base }}>
-        <Btn onClick={save} disabled={!dirty || !draft.trim()} style={{ flex: 1 }}>
-          {saved ? "Saved" : "Save Key"}
-        </Btn>
-        {value && <Btn variant="danger" onClick={clear} style={{ flex: 1 }}>Remove</Btn>}
-      </div>
-      {value && !dirty && (
-        <div style={{ fontSize: T.fontSize.xs, color: C.accent, fontWeight: T.fontWeight.semi }}>
-          ✓ Key saved · {value.slice(0, 8)}...{value.slice(-4)}
+
+      {isSaved ? (
+        /* Key is saved and unchanged — show confirmation state */
+        <div style={{ display: "flex", gap: T.space.base, alignItems: "center" }}>
+          <div style={{ flex: 1, display: "flex", alignItems: "center", gap: T.space.base, padding: "12px 16px", background: C.accentDim, border: `1px solid ${C.accentBorder}`, borderRadius: T.radius.lg }}>
+            <span style={{ color: C.accent, fontWeight: T.fontWeight.bold, fontSize: T.fontSize.body }}>✓</span>
+            <div>
+              <div style={{ fontSize: T.fontSize.small, color: C.accent, fontWeight: T.fontWeight.semi }}>Key saved</div>
+              <div style={{ fontSize: T.fontSize.xs, color: C.textDim, fontFamily: T.font.mono }}>{value.slice(0, 10)}···{value.slice(-4)}</div>
+            </div>
+          </div>
+          <Btn variant="danger" onClick={clear}>Remove</Btn>
         </div>
+      ) : (
+        /* Unsaved or dirty — show save button */
+        <Btn onClick={save} disabled={!dirty || !draft.trim()} style={{ width: "100%" }}>
+          Save Key
+        </Btn>
       )}
     </div>
   );
