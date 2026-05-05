@@ -561,10 +561,39 @@ function SetsPage({ data, save, onStartSession, coach }) {
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [error, setError] = useState("");
   const [orderLoading, setOrderLoading] = useState(false);
-  const [orderError, setOrderError] = useState("");
+  const [orderSuggested, setOrderSuggested] = useState(false);
 
-  const startCreate = () => { setCreating(true); setEditingId(null); setName(""); setSelected([]); setMuscleFilter("All"); setSearch(""); setError(""); };
-  const startEdit = (s) => { setCreating(true); setEditingId(s.id); setName(s.name); setSelected([...s.exerciseIds]); setMuscleFilter("All"); setSearch(""); setError(""); };
+  const startCreate = () => { setCreating(true); setEditingId(null); setName(""); setSelected([]); setMuscleFilter("All"); setSearch(""); setError(""); setOrderSuggested(false); };
+  const startEdit = (s) => { setCreating(true); setEditingId(s.id); setName(s.name); setSelected([...s.exerciseIds]); setMuscleFilter("All"); setSearch(""); setError(""); setOrderSuggested(true); };
+
+  // Auto-suggest order: fires 1.2s after selection reaches 2+ exercises
+  useEffect(() => {
+    if (!coach.hasKey || selected.length < 2 || orderSuggested || orderLoading) return;
+    const run = async () => {
+      setOrderLoading(true);
+      const exercises = selected.map(id => data.exercises.find(e => e.id === id)).filter(Boolean);
+      const { text, error: err } = await coach.ask(
+        prompts.exerciseOrder(exercises),
+        { maxTokens: 300, model: "claude-haiku-4-5-20251001" }
+      );
+      if (!err) {
+        try {
+          const match = text.match(/\[[\s\S]*?\]/);
+          if (!match) throw new Error("no match");
+          const names = JSON.parse(match[0]);
+          const nameToId = {};
+          exercises.forEach(e => { nameToId[e.name.toLowerCase()] = e.id; });
+          const reordered = names.map(n => nameToId[n.toLowerCase()]).filter(Boolean);
+          const missing = selected.filter(id => !reordered.includes(id));
+          setSelected([...reordered, ...missing]);
+          setOrderSuggested(true);
+        } catch (parseErr) { /* ignore silently */ }
+      }
+      setOrderLoading(false);
+    };
+    const t = setTimeout(run, 1200);
+    return () => clearTimeout(t);
+  }, [selected.length, orderSuggested, orderLoading]);
   const saveSet = () => {
     if (!name.trim() && selected.length === 0) { setError("Give your set a name and select at least one exercise."); return; }
     if (!name.trim()) { setError("Give your set a name."); return; }
@@ -579,37 +608,10 @@ function SetsPage({ data, save, onStartSession, coach }) {
   const deleteSet = (id) => { save({ ...data, sets: data.sets.filter(s => s.id !== id) }); setConfirmDelete(null); };
   const toggle = (id) => {
     setSelected(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id]);
+    setOrderSuggested(false);
     setError("");
   };
 
-  const suggestOrder = async () => {
-    if (selected.length < 2) return;
-    setOrderLoading(true); setOrderError("");
-    const exercises = selected.map(id => data.exercises.find(e => e.id === id)).filter(Boolean);
-    const { text, error: err } = await coach.ask(
-      prompts.exerciseOrder(exercises),
-      { maxTokens: 300, model: "claude-haiku-4-5-20251001" }
-    );
-    if (err) { setOrderError(coachError(err)); setOrderLoading(false); return; }
-    try {
-      // Parse JSON array of names from response
-      const match = text.match(/\[[\s\S]*?\]/);
-      if (!match) throw new Error("no json");
-      const names = JSON.parse(match[0]);
-      // Reorder selected to match suggested order
-      const nameToId = {};
-      exercises.forEach(e => { nameToId[e.name.toLowerCase()] = e.id; });
-      const reordered = names
-        .map(n => nameToId[n.toLowerCase()])
-        .filter(Boolean);
-      // Add any exercises not in the suggestion at the end
-      const missing = selected.filter(id => !reordered.includes(id));
-      setSelected([...reordered, ...missing]);
-    } catch {
-      setOrderError("Could not parse suggestion. Try again.");
-    }
-    setOrderLoading(false);
-  };
   const moveUp = (id) => {
     const idx = selected.indexOf(id);
     if (idx <= 0) return;
@@ -667,16 +669,11 @@ function SetsPage({ data, save, onStartSession, coach }) {
                   ))}
                 </div>
                 {coach.hasKey && selected.length >= 2 && (
-                  <button
-                    onClick={suggestOrder}
-                    disabled={orderLoading}
-                    style={{ flexShrink: 0, marginLeft: T.space.base, background: "none", border: `1px solid ${C.border}`, borderRadius: T.radius.md, color: orderLoading ? C.textDim : C.accent, cursor: orderLoading ? "default" : "pointer", fontSize: T.fontSize.xs, fontWeight: T.fontWeight.semi, padding: "5px 10px", whiteSpace: "nowrap", transition: `color ${T.transition.fast}` }}
-                  >
-                    {orderLoading ? "Ordering..." : "✦ Suggest order"}
-                  </button>
+                  <div style={{ flexShrink: 0, marginLeft: T.space.base, fontSize: T.fontSize.xs, color: orderLoading ? C.accent : C.textDim, display: "flex", alignItems: "center", gap: T.space.xs }}>
+                    {orderLoading ? <><span className="t-pulse" style={{ display: "inline-block" }}>✦</span> Ordering...</> : orderSuggested ? <>✦ AI ordered</> : null}
+                  </div>
                 )}
               </div>
-              {orderError && <div style={{ fontSize: T.fontSize.xs, color: C.danger, marginBottom: T.space.base }}>{orderError}</div>}
               {/* Selected exercise rows with reorder + remove */}
               <div style={{ display: "flex", flexDirection: "column", gap: T.space.sm }}>
                 {selectedExercises.map((ex, idx) => (
