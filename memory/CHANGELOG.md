@@ -1,6 +1,17 @@
 # 🟁 Temple — Changelog
 
-## v0.9 (Current)
+## v0.9.1 (Current)
+- AI CORS fix: all AI calls now routed through Netlify proxy (`netlify/functions/coach.js`) — fixes "could not connect" on Body Check and exercise ordering
+- Auto exercise ordering: fixed nonstop re-trigger loop — now uses selection fingerprint, only fires when exercises change not on reorder
+- Session delete: tap ✕ in Progress → History to remove a session, PRs auto-recalculated from remaining sessions
+- Sets page: edit/delete hidden behind `···` toggle per card, fades in with animation
+- Search fields: inline clear `✕` button appears when field has content
+- Token fixes: #000/#fff in VideoSheet replaced with C.bg/C.text
+- netlify/functions/coach.js: new file — proxies Anthropic API, forwards user key per-request, never stored
+
+
+
+## v0.9
 - Logo hidden by default — only appears sliding in from top during pull-to-refresh gesture
 - Pull-to-refresh: 🟁 TEMPLE slides down tracking your finger, spins on release, reloads page
 - Safe area header fixed — content no longer hidden behind iPhone notch/Dynamic Island

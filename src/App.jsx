@@ -41,12 +41,22 @@ function Btn({ children, variant = "primary", style, disabled, onClick, ...props
   return <button {...props} disabled={disabled} onClick={disabled ? undefined : onClick} style={{ border: "none", borderRadius: T.radius.lg, padding: "10px 18px", fontSize: T.fontSize.bodySmall, cursor: disabled ? "not-allowed" : "pointer", transition: `opacity ${T.transition.fast}`, opacity: disabled ? T.opacity.disabled : 1, ...v[variant], ...style }}>{children}</button>;
 }
 
-function Input({ label, ...props }) {
+function Input({ label, clearable, onClear, ...props }) {
   const [focused, setFocused] = useState(false);
+  const showClear = clearable && props.value && props.value.length > 0;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: T.space.sm }}>
       {label && <label style={{ fontSize: T.fontSize.small, color: C.textDim, fontWeight: T.fontWeight.semi, textTransform: "uppercase", letterSpacing: T.letterSpacing.uppercase }}>{label}</label>}
-      <input {...props} onFocus={e => { setFocused(true); props.onFocus?.(e); }} onBlur={e => { setFocused(false); props.onBlur?.(e); }} style={{ background: C.bg, border: `1px solid ${focused ? C.accent : C.border}`, borderRadius: T.radius.lg, padding: "10px 12px", color: C.text, fontSize: T.fontSize.h3, outline: "none", transition: `border-color ${T.transition.fast}`, ...props.style }} />
+      <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+        <input {...props} onFocus={e => { setFocused(true); props.onFocus?.(e); }} onBlur={e => { setFocused(false); props.onBlur?.(e); }}
+          style={{ background: C.bg, border: `1px solid ${focused ? C.accent : C.border}`, borderRadius: T.radius.lg, padding: `10px ${showClear ? 36 : 12}px 10px 12px`, color: C.text, fontSize: T.fontSize.h3, outline: "none", transition: `border-color ${T.transition.fast}`, width: "100%", boxSizing: "border-box", ...props.style }} />
+        {showClear && (
+          <button
+            onMouseDown={e => { e.preventDefault(); onClear?.(); }}
+            style={{ position: "absolute", right: 10, background: "none", border: "none", color: C.textDim, cursor: "pointer", fontSize: T.fontSize.small, padding: `${T.space.xs}px ${T.space.sm}px`, lineHeight: 1, borderRadius: T.radius.base, display: "flex", alignItems: "center", justifyContent: "center" }}
+          >✕</button>
+        )}
+      </div>
     </div>
   );
 }
@@ -521,7 +531,7 @@ function LibraryPage({ data, save }) {
         </div>
         <Btn onClick={startNew}>+ New</Btn>
       </div>
-      <Input placeholder="Search exercises..." value={search} onChange={e => setSearch(e.target.value)} />
+      <Input placeholder="Search exercises..." value={search} onChange={e => setSearch(e.target.value)} clearable onClear={() => setSearch("")} />
       <FilterBar muscle={filter} onMuscle={setFilter} equipment={eqFilter} onEquipment={setEqFilter} category={catFilter} onCategory={setCatFilter} small />
       <div style={{ display: "flex", flexDirection: "column", gap: T.space.base }}>
         {filtered.map(ex => (
@@ -559,16 +569,21 @@ function SetsPage({ data, save, onStartSession, coach }) {
   const [muscleFilter, setMuscleFilter] = useState("All");
   const [search, setSearch] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(null);
+  const [expandedSet, setExpandedSet] = useState(null);
   const [error, setError] = useState("");
   const [orderLoading, setOrderLoading] = useState(false);
-  const [orderSuggested, setOrderSuggested] = useState(false);
+  const [lastOrderedKey, setLastOrderedKey] = useState("");
+  // Fingerprint: sorted IDs joined — changes only when the SET of exercises changes,
+  // not when they're reordered (by AI or manually)
+  const selectionKey = [...selected].sort().join(",");
 
-  const startCreate = () => { setCreating(true); setEditingId(null); setName(""); setSelected([]); setMuscleFilter("All"); setSearch(""); setError(""); setOrderSuggested(false); };
-  const startEdit = (s) => { setCreating(true); setEditingId(s.id); setName(s.name); setSelected([...s.exerciseIds]); setMuscleFilter("All"); setSearch(""); setError(""); setOrderSuggested(true); };
+  const startCreate = () => { setCreating(true); setEditingId(null); setName(""); setSelected([]); setMuscleFilter("All"); setSearch(""); setError(""); setLastOrderedKey(""); };
+  const startEdit = (s) => { setCreating(true); setEditingId(s.id); setName(s.name); setSelected([...s.exerciseIds]); setMuscleFilter("All"); setSearch(""); setError(""); setLastOrderedKey([...s.exerciseIds].sort().join(",")); };
 
-  // Auto-suggest order: fires 1.2s after selection reaches 2+ exercises
+  // Auto-suggest order only when the SET of exercises changes (not on reorder)
   useEffect(() => {
-    if (!coach.hasKey || selected.length < 2 || orderSuggested || orderLoading) return;
+    if (!coach.hasKey || selected.length < 2) return;
+    if (selectionKey === lastOrderedKey) return; // same exercises, already ordered
     const run = async () => {
       setOrderLoading(true);
       const exercises = selected.map(id => data.exercises.find(e => e.id === id)).filter(Boolean);
@@ -586,14 +601,14 @@ function SetsPage({ data, save, onStartSession, coach }) {
           const reordered = names.map(n => nameToId[n.toLowerCase()]).filter(Boolean);
           const missing = selected.filter(id => !reordered.includes(id));
           setSelected([...reordered, ...missing]);
-          setOrderSuggested(true);
-        } catch (parseErr) { /* ignore silently */ }
+          setLastOrderedKey(selectionKey); // mark this set as done
+        } catch (e) { setLastOrderedKey(selectionKey); } // mark done even on parse fail
       }
       setOrderLoading(false);
     };
     const t = setTimeout(run, 1200);
     return () => clearTimeout(t);
-  }, [selected.length, orderSuggested, orderLoading]);
+  }, [selectionKey]);
   const saveSet = () => {
     if (!name.trim() && selected.length === 0) { setError("Give your set a name and select at least one exercise."); return; }
     if (!name.trim()) { setError("Give your set a name."); return; }
@@ -608,7 +623,6 @@ function SetsPage({ data, save, onStartSession, coach }) {
   const deleteSet = (id) => { save({ ...data, sets: data.sets.filter(s => s.id !== id) }); setConfirmDelete(null); };
   const toggle = (id) => {
     setSelected(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id]);
-    setOrderSuggested(false);
     setError("");
   };
 
@@ -670,7 +684,7 @@ function SetsPage({ data, save, onStartSession, coach }) {
                 </div>
                 {coach.hasKey && selected.length >= 2 && (
                   <div style={{ flexShrink: 0, marginLeft: T.space.base, fontSize: T.fontSize.xs, color: orderLoading ? C.accent : C.textDim, display: "flex", alignItems: "center", gap: T.space.xs }}>
-                    {orderLoading ? <><span className="t-pulse" style={{ display: "inline-block" }}>✦</span> Ordering...</> : orderSuggested ? <>✦ AI ordered</> : null}
+                    {orderLoading ? <><span className="t-pulse" style={{ display: "inline-block" }}>✦</span> Ordering...</> : lastOrderedKey ? <>✦ AI ordered</> : null}
                   </div>
                 )}
               </div>
@@ -699,13 +713,21 @@ function SetsPage({ data, save, onStartSession, coach }) {
           </label>
 
           {/* Search */}
-          <input
-            type="text"
-            placeholder="Search exercises..."
-            value={search}
-            onChange={e => { setSearch(e.target.value); if (e.target.value) setMuscleFilter("All"); }}
-            style={{ width: "100%", boxSizing: "border-box", background: C.surface, border: `1px solid ${search ? C.accent : C.border}`, borderRadius: T.radius.lg, padding: "10px 14px", color: C.text, fontSize: T.fontSize.h3, outline: "none", marginTop: T.space.base, marginBottom: T.space.base, transition: `border-color ${T.transition.fast}` }}
-          />
+          <div style={{ position: "relative", marginTop: T.space.base, marginBottom: T.space.base }}>
+            <input
+              type="text"
+              placeholder="Search exercises..."
+              value={search}
+              onChange={e => { setSearch(e.target.value); if (e.target.value) setMuscleFilter("All"); }}
+              style={{ width: "100%", boxSizing: "border-box", background: C.surface, border: `1px solid ${search ? C.accent : C.border}`, borderRadius: T.radius.lg, padding: `10px ${search ? 36 : 14}px 10px 14px`, color: C.text, fontSize: T.fontSize.h3, outline: "none", transition: `border-color ${T.transition.fast}` }}
+            />
+            {search.length > 0 && (
+              <button
+                onMouseDown={e => { e.preventDefault(); setSearch(""); setMuscleFilter("All"); }}
+                style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: C.textDim, cursor: "pointer", fontSize: T.fontSize.small, padding: `${T.space.xs}px ${T.space.sm}px`, lineHeight: 1, borderRadius: T.radius.base }}
+              >✕</button>
+            )}
+          </div>
 
           {/* Muscle filter — always reserves same space */}
           <div style={{ marginBottom: T.space.base, opacity: search ? 0.3 : 1, pointerEvents: search ? "none" : "auto", transition: `opacity ${T.transition.fast}` }}>
@@ -764,21 +786,33 @@ function SetsPage({ data, save, onStartSession, coach }) {
         const exNames = s.exerciseIds.map(id => data.exercises.find(e => e.id === id)?.name).filter(Boolean);
         const validCount = s.exerciseIds.filter(eid => data.exercises.some(e => e.id === eid)).length;
         const sessionCount = data.sessions.filter(ss => ss.setId === s.id).length;
+        const expanded = expandedSet === s.id;
         return (
           <Card key={s.id}>
-            <div style={{ marginBottom: T.space.base }}>
-              <div style={{ fontWeight: T.fontWeight.heavy, fontSize: T.fontSize.h3 }}>{s.name}</div>
-              <div style={{ fontSize: T.fontSize.small, color: C.textDim, marginTop: T.space.xs }}>{exNames.length} exercises · {sessionCount} sessions</div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: T.space.base }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: T.fontWeight.heavy, fontSize: T.fontSize.h3 }}>{s.name}</div>
+                <div style={{ fontSize: T.fontSize.small, color: C.textDim, marginTop: T.space.xs }}>{exNames.length} exercises · {sessionCount} sessions</div>
+              </div>
+              {/* ··· toggle */}
+              <button
+                onClick={() => setExpandedSet(expanded ? null : s.id)}
+                style={{ background: "none", border: "none", color: expanded ? C.accent : C.textDim, cursor: "pointer", fontSize: 18, padding: `0 ${T.space.sm}px`, lineHeight: 1, flexShrink: 0, letterSpacing: 1 }}
+              >···</button>
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: T.space.sm, marginBottom: T.space.lg }}>
               {exNames.slice(0, 5).map((n, i) => <span key={i} style={{ fontSize: T.fontSize.xs, background: C.bg, padding: "3px 8px", borderRadius: T.radius.md, color: C.textDim }}>{n}</span>)}
               {exNames.length > 5 && <span style={{ fontSize: T.fontSize.xs, color: C.textDim, padding: "3px 4px" }}>+{exNames.length - 5} more</span>}
             </div>
-            <div style={{ display: "flex", gap: T.space.base }}>
-              <Btn variant="primary" onClick={() => onStartSession(s)} disabled={validCount === 0} style={{ flex: 1 }}>▶ Start</Btn>
-              <Btn variant="secondary" onClick={() => startEdit(s)}>Edit</Btn>
-              <Btn variant="danger" onClick={() => setConfirmDelete(s.id)}>✕</Btn>
-            </div>
+            {/* Primary action */}
+            <Btn variant="primary" onClick={() => onStartSession(s)} disabled={validCount === 0} style={{ width: "100%" }}>▶ Start</Btn>
+            {/* Edit + Delete — only visible when expanded */}
+            {expanded && (
+              <div className="t-fade-in" style={{ display: "flex", gap: T.space.base, marginTop: T.space.base }}>
+                <Btn variant="secondary" onClick={() => { startEdit(s); setExpandedSet(null); }} style={{ flex: 1 }}>Edit</Btn>
+                <Btn variant="danger" onClick={() => { setConfirmDelete(s.id); setExpandedSet(null); }} style={{ flex: 1 }}>Delete</Btn>
+              </div>
+            )}
           </Card>
         );
       })}
@@ -1150,11 +1184,35 @@ function MuscleBar({ label, value, max, icon, unit }) {
   );
 }
 
-function ProgressPage({ data, onRepeatSession }) {
+function ProgressPage({ data, save, onRepeatSession }) {
   const [view, setView] = useState("prs");
   const [selectedExId, setSelectedExId] = useState(null);
+  const [confirmDeleteSession, setConfirmDeleteSession] = useState(null);
   const unit = data.settings?.unit || "kg";
   const wl = weightLabel(unit);
+
+  // Delete a session and recalculate all PRs from remaining sessions
+  const deleteSession = (sessionId) => {
+    const remaining = data.sessions.filter(s => s.id !== sessionId);
+    // Recalculate PRs from scratch using remaining sessions
+    const newPrs = {};
+    remaining.forEach(s => {
+      s.entries.forEach(e => {
+        const maxW = Math.max(...e.sets.map(st => st.weight), 0);
+        const maxR = Math.max(...e.sets.map(st => st.reps), 0);
+        const vol = e.sets.reduce((a, st) => a + st.reps * st.weight, 0);
+        const prev = newPrs[e.exerciseId] || { maxWeight: 0, maxReps: 0, maxVolume: 0, date: 0 };
+        newPrs[e.exerciseId] = {
+          maxWeight: Math.max(maxW, prev.maxWeight),
+          maxReps: Math.max(maxR, prev.maxReps),
+          maxVolume: Math.max(vol, prev.maxVolume),
+          date: Math.max(s.date, prev.date),
+        };
+      });
+    });
+    save({ ...data, sessions: remaining, prs: newPrs });
+    setConfirmDeleteSession(null);
+  };
 
   const { prEntries, totalSessions, totalVol, weeksActive, thisWeekSessions, muscleEntries } = React.useMemo(() => {
     const prEntries = Object.entries(data.prs).map(([eid, pr]) => {
@@ -1359,17 +1417,30 @@ function ProgressPage({ data, onRepeatSession }) {
       {/* History tab */}
       {view === "history" && (
         <div style={{ display: "flex", flexDirection: "column", gap: T.space.base }}>
+          {confirmDeleteSession && (
+            <ConfirmDialog
+              message="Delete this session? PRs will be recalculated from your remaining sessions."
+              confirmLabel="Delete"
+              cancelLabel="Cancel"
+              onConfirm={() => deleteSession(confirmDeleteSession)}
+              onCancel={() => setConfirmDeleteSession(null)}
+            />
+          )}
           {data.sessions.length === 0 && <Card style={{ textAlign: "center", padding: T.space["3xl"], color: C.textDim }}>No sessions yet</Card>}
           {[...data.sessions].reverse().map(s => {
             const set = data.sets.find(ws => ws.id === s.setId);
             const vol = s.entries.reduce((a, e) => a + e.sets.reduce((b, st) => b + st.reps * st.weight, 0), 0);
             return (
               <Card key={s.id}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: T.fontWeight.bold, fontSize: T.fontSize.body }}>{set?.name || "Deleted Set"}</div>
                     <div style={{ fontSize: T.fontSize.small, color: C.textDim }}>{fmtDateFull(s.date)} {s.duration ? `· ${Math.floor(s.duration / 60)}min` : ""}</div>
                   </div>
+                  <button
+                    onClick={() => setConfirmDeleteSession(s.id)}
+                    style={{ background: "none", border: "none", color: C.textDim, cursor: "pointer", fontSize: T.fontSize.small, padding: `${T.space.xs}px ${T.space.sm}px`, flexShrink: 0, opacity: 0.6 }}
+                  >✕</button>
                 </div>
                 <div style={{ display: "flex", gap: T.space.xl, marginTop: T.space.base, fontSize: T.fontSize.small, color: C.textDim }}>
                   <span>{s.entries.length} exercises</span>
@@ -1572,7 +1643,7 @@ function SettingsPage({ data, save, drive }) {
       <Card>
         <div style={{ fontSize: T.fontSize.body, fontWeight: T.fontWeight.bold, marginBottom: T.space.base }}>About</div>
         <div style={{ fontSize: T.fontSize.caption, color: C.textDim, lineHeight: 1.5 }}>
-          <strong style={{ color: C.accent }}>🟁 Temple v0.9</strong><br />
+          <strong style={{ color: C.accent }}>🟁 Temple v0.9.1</strong><br />
           Your body is a temple. Train it.<br /><br />
           Built to replace subscription-gated workout apps. Free, private, all data stays on your device.
         </div>
@@ -1772,7 +1843,7 @@ export default function Temple() {
             {tab === "library" && <LibraryPage data={data} save={save} />}
             {tab === "sets" && <SetsPage data={data} save={save} onStartSession={handleStartSession} coach={coach} />}
             {tab === "session" && <SessionPage data={data} save={save} activeSet={activeSet} setActiveSet={setActiveSet} setTab={setTab} coach={coach} />}
-            {tab === "progress" && <ProgressPage data={data} onRepeatSession={handleStartSession} />}
+            {tab === "progress" && <ProgressPage data={data} save={save} onRepeatSession={handleStartSession} />}
             {tab === "settings" && <SettingsPage data={data} save={save} drive={drive} />}
           </div>
         </div>

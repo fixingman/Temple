@@ -28,17 +28,16 @@
 
 ## Where We Left Off
 ```
-Version:     v0.9
+Version:     v0.9.1
 Date:        2026-05-10
-Shipped:     Logo hidden (pull-to-refresh reveal) · YouTube in-app search/player
-             prev/next navigation · iOS zoom fix · Google Drive persistent
-             connection · API key saved state (checkmark) · auto AI exercise
-             ordering · token fixes B25–B26
+Shipped:     AI CORS fix (coach.js proxy) · ordering loop fix · session delete
+             with PR recalc · Sets ··· menu · search clear X · token fixes
 Tested:      Not yet — smoke tests S1–S10 needed
-Next:        Add YOUTUBE_API_KEY to Netlify env vars · run smoke tests ·
+Next:        Run smoke tests · add YOUTUBE_API_KEY to Netlify env vars ·
              session detail view · post-session recovery tip
 Open issues: Google OAuth still in testing mode
              YouTube API key not yet added to Netlify (S8 will fail without it)
+             AI features untested after CORS fix — need real device test
 ```
 
 ---
@@ -57,9 +56,33 @@ memory/   RULES.md · PRODUCT.md · ARCHITECTURE.md · DESIGN.md
 ---
 
 ## Versioning
-- **Patch** (0.9.1): bug fixes · **Minor** (1.0): features · **Major** (1.0): launch-ready
-- Commit format: `"vX.X — one-line summary"`
-- SW cache names must always match the version
+
+**Auto-bump logic — run at the start of every end-of-session routine:**
+
+```
+Read current version from App.jsx About card.
+Count what shipped this session:
+
+  Any crash / data loss fix          → PATCH bump (e.g. 0.9 → 0.9.1)
+  Any bug fix or minor UX improvement → PATCH bump
+  Any new user-facing feature         → MINOR bump (e.g. 0.9.1 → 1.0)
+  Major architectural rewrite         → MAJOR bump (e.g. 0.9 → 1.0)
+
+If BOTH bugs AND features shipped → use the highest applicable bump.
+If only memory/docs changed with no code change → no bump, add .md suffix note only.
+
+Apply the bump to:
+  1. App.jsx About card  →  🟁 Temple vX.X
+  2. public/sw.js        →  temple-vX.X  (both CACHE and ASSETS_CACHE)
+
+Commit format: "vX.X — one-line summary of what shipped"
+```
+
+**Current series:** `0.9.x` — patch fixes · `1.0` — first feature-complete minor
+
+**This session so far (unbumped):**
+- AI CORS fix (patch) · auto-ordering loop fix (patch) · session delete (feature)
+- Sets `···` menu (UX) · search clear X (UX) → **bump to v0.9.1**
 
 ---
 
