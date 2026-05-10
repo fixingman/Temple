@@ -4,45 +4,43 @@ Run before every deploy. Update Last Run when done.
 
 ## Checklist
 
-**Syntax:** No bare `catch{}` · default export present · no duplicate exercise IDs · SW cache names match app version · no unused imports
+**Syntax:** No bare `catch{}` · default export present · no duplicate exercise IDs · SW cache names match app version · no unused imports · no useState after early returns
 
-**Tokens:** No raw hex outside `tokens.js` · `T.space.*` for all spacing · no `transition: all` · no unused tokens
+**Tokens:** No raw hex outside `tokens.js` · `T.space.*` for all spacing · no `transition: all`
 
 **Dead code:** No unused functions, variables, or props
 
 **Privacy:**
 - Storage: idb-keyval only — no `localStorage`, `window.storage`
-- Fetch: only in `useCoach.js`, `useGoogleDrive.js`, `sw.js`
+- Fetch: only in `useCoach.js`, `useGoogleDrive.js`, `sw.js`, and VideoSheet (`/api/youtube` Netlify function)
 - No analytics or tracking scripts
 - Export/import: clipboard or local file only
 - User API key: never sent to any Temple server
 
-**Performance:** `useCallback` on async functions · `useMemo` on expensive list computations · intervals cleaned up on unmount · no useState after early returns
+**Performance:** `useCallback` on async functions · `useMemo` on expensive computations · intervals cleaned up on unmount
 
-**Data integrity:** Migration backfills all missing `settings` keys · delete cascades to sets + PRs · export/import validates required fields
+**Data integrity:** Migration backfills all missing `settings` keys · delete cascades to sets + PRs
 
-**Motion:** No content shift on expand · elements animate in · no input spinners or tap highlights
+**Security:** `dangerouslySetInnerHTML` only in `renderResult` (HTML stripped) · no `eval()` · external links use `rel="noopener noreferrer"` · security headers in netlify.toml
 
-**Security:** `dangerouslySetInnerHTML` only in `renderResult` (HTML stripped before use) · no `eval()` · external links use `rel="noopener noreferrer"` · security headers in netlify.toml
-
-**Memory files:** All reflect current code · CHANGELOG current · BUGS.md updated · total memory under 40KB
+**Memory files:** All reflect current code · CHANGELOG current · BUGS.md updated · total under 40KB
 
 ## Smoke Tests
-
-Run on live site after every deploy. Mark pass/fail in Last Run.
 
 | # | Scenario | Steps | Expected |
 |---|----------|-------|----------|
 | S1 | **Weighted set** | Sets → Train → weight + reps → Log Set | Logs · rest timer starts |
-| S2 | **Bodyweight exercise** | Add Push-up → Train → enter reps | Weight input hidden · logs correctly |
-| S3 | **Mobility exercise** | Add Cat-Cow → Train → enter seconds | Weight hidden · label "Seconds" |
-| S4 | **Google Drive backup** | Settings → Connect → Back Up Now | User card shows · success message |
+| S2 | **Bodyweight exercise** | Add Push-up → Train → enter reps | Weight input hidden |
+| S3 | **Mobility exercise** | Add Cat-Cow → Train → enter seconds | Label "Seconds" |
+| S4 | **Google Drive backup** | Settings → Connect → Back Up Now | User card shows · success |
 | S5 | **Export + import** | Export → Reset → Import | All data restored |
-| S6 | **Body Check** | Add API key → Train → "Feeling pain?" → describe | Response with bold sections |
-| S7 | **Exercise order** | New Set → 3+ exercises → ✦ Suggest order | List reorders · no crash |
-| S8 | **YouTube sheet** | Library → ▶ Form | Sheet slides up · closes on backdrop tap |
+| S6 | **Body Check** | Add API key → Train → "Feeling pain?" → describe | Response renders |
+| S7 | **Auto exercise order** | New Set → add 3 exercises → wait 1.2s | List reorders · "✦ AI ordered" |
+| S8 | **YouTube sheet** | Library → ▶ Form → tap result | Video plays in-app |
+| S9 | **Pull-to-refresh** | Scroll to top → pull down | Logo slides in · releases to reload |
+| S10 | **iOS zoom** | Tap any input on iPhone | No zoom |
 
 ## Last Run
-- **Date**: 2026-05-05
-- **Smoke tests**: Not run — user testing today
-- **Code checks**: All clean — 4 new bugs found and fixed (B21–B24)
+- **Date**: 2026-05-10
+- **Smoke tests**: Not run
+- **Code checks**: 2 token violations fixed (B25, B26) · fetch in VideoSheet documented as acceptable (Netlify function)

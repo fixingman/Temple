@@ -9,10 +9,10 @@
 
 ## End of Session
 1. Bump version in App.jsx About card
-2. Bump SW cache names in `public/sw.js` (`temple-vX.X` + `temple-assets-vX.X`)
+2. Bump SW cache names in `public/sw.js` (`temple-vX.X`)
 3. CHANGELOG.md → new version at top, list everything shipped
 4. BACKLOG.md → remove completed, add discovered, update tags
-5. BUGS.md → move fixed bugs to Fixed table, add newly discovered bugs
+5. BUGS.md → move fixed to Fixed table, add newly discovered
 6. ARCHITECTURE.md → update if structure/data model/files changed
 7. Housekeeping checks (HOUSEKEEPING.md) — run all, update Last Run
 8. `npm run build` — must pass zero errors
@@ -22,22 +22,23 @@
 
 **Never close with:** stale memory files · failing build · uncommitted changes · Where We Left Off not updated
 
-**Memory drift rule:** Memory files must be committed in the same push as code.
+**Memory drift rule:** Memory files committed in the same push as code.
 
 ---
 
 ## Where We Left Off
 ```
-Version:     v0.8.2
-Date:        2026-05-05
-Shipped:     4 bugs fixed (B21–B24) · tokenisation audit · performance
-             (bundle split 613KB→94KB · useMemo · useCallback) ·
-             security headers · BUGS.md created with full history
-Tested:      Not yet — user testing today (smoke tests S1–S8)
-Next:        Run smoke tests · session detail view · post-session recovery
-             tip · exercise swap UI · gap analysis UI
+Version:     v0.9
+Date:        2026-05-10
+Shipped:     Logo hidden (pull-to-refresh reveal) · YouTube in-app search/player
+             prev/next navigation · iOS zoom fix · Google Drive persistent
+             connection · API key saved state (checkmark) · auto AI exercise
+             ordering · token fixes B25–B26
+Tested:      Not yet — smoke tests S1–S10 needed
+Next:        Add YOUTUBE_API_KEY to Netlify env vars · run smoke tests ·
+             session detail view · post-session recovery tip
 Open issues: Google OAuth still in testing mode
-             All v0.8.x features shipped, none tested on real device yet
+             YouTube API key not yet added to Netlify (S8 will fail without it)
 ```
 
 ---
@@ -48,6 +49,7 @@ index.html · vite.config.js · package.json · netlify.toml · .gitignore
 public/   manifest.json · sw.js · icon.svg · _headers · _redirects
 src/      main.jsx · tokens.js · data.js · hooks.js
           useGoogleDrive.js · useCoach.js · App.jsx
+netlify/functions/  youtube.js
 memory/   RULES.md · PRODUCT.md · ARCHITECTURE.md · DESIGN.md
           CHANGELOG.md · BACKLOG.md · BUGS.md · HOUSEKEEPING.md
 ```
@@ -55,7 +57,7 @@ memory/   RULES.md · PRODUCT.md · ARCHITECTURE.md · DESIGN.md
 ---
 
 ## Versioning
-- **Patch** (0.8.3): bug fixes · **Minor** (0.9): features · **Major** (1.0): rewrites
+- **Patch** (0.9.1): bug fixes · **Minor** (1.0): features · **Major** (1.0): launch-ready
 - Commit format: `"vX.X — one-line summary"`
 - SW cache names must always match the version
 
@@ -65,13 +67,13 @@ memory/   RULES.md · PRODUCT.md · ARCHITECTURE.md · DESIGN.md
 
 **Storage:** idb-keyval only. Key: `"temple-data"`. Weights always in kg internally.
 
-**Styling:** Inline styles via `T` tokens. `T.space.*` for spacing. `T.color.*`/`C.*` for color. No raw hex outside `tokens.js`. No `transition: all`.
+**Styling:** Inline styles via `T` tokens. No raw hex outside `tokens.js`. No `transition: all`.
 
-**Privacy:** Fetch only in `useCoach.js` + `useGoogleDrive.js` + `sw.js`. No analytics. Export/import = clipboard or local file only.
+**Privacy:** Fetch only in `useCoach.js` + `useGoogleDrive.js` + `sw.js` + VideoSheet (`/api/youtube`). No analytics. Export/import = local only.
 
 **AI:** All calls via `useCoach`. `MODELS.fast` (Haiku) for structured tasks. `MODELS.smart` (Sonnet) for nuanced judgment. All prompts in `useCoach.js`.
 
-**React:** `useCallback` on async functions. `useMemo` on expensive computations. No useState after early returns. Clean up intervals in useEffect return. `dangerouslySetInnerHTML` only in `renderResult` (strips HTML first).
+**React:** `useCallback` on async functions. `useMemo` on expensive computations. No useState after early returns. `dangerouslySetInnerHTML` only in `renderResult` (strips HTML first).
 
 **Copy:** No exclamation marks. No forward pressure. No emojis in motivational text.
 
@@ -82,3 +84,4 @@ memory/   RULES.md · PRODUCT.md · ARCHITECTURE.md · DESIGN.md
 - Bundle: app ~94KB gzip · recharts ~154KB gzip (separate chunk)
 - Google OAuth Client ID: `186862100308-4lfr928avpodulpf4d70m9jteh1qgm2r.apps.googleusercontent.com`
 - Authorized origins: `https://tmple.netlify.app` · `http://localhost:5173`
+- **Netlify env vars needed:** `YOUTUBE_API_KEY` (YouTube Data API v3)

@@ -113,7 +113,7 @@ function VideoSheet({ query, label, onClose }) {
         {/* Content */}
         {selectedIndex !== null ? (
           /* Video player with prev/next */
-          <div style={{ flex: 1, background: "#000", display: "flex", flexDirection: "column" }}>
+          <div style={{ flex: 1, background: C.bg, display: "flex", flexDirection: "column" }}>
             <iframe
               key={selectedVideo?.id}
               src={`https://www.youtube.com/embed/${selectedVideo?.id}?autoplay=1&rel=0&modestbranding=1`}
@@ -171,7 +171,7 @@ function VideoSheet({ query, label, onClose }) {
                   <img src={v.thumbnail} alt="" style={{ width: 120, height: 68, borderRadius: T.radius.md, objectFit: "cover", display: "block", background: C.border }} />
                   <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <div style={{ width: 28, height: 28, background: "rgba(0,0,0,0.7)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <span style={{ color: "#fff", fontSize: 10, paddingLeft: 2 }}>▶</span>
+                      <span style={{ color: C.text, fontSize: 10, paddingLeft: 2 }}>▶</span>
                     </div>
                   </div>
                 </div>
@@ -1572,7 +1572,7 @@ function SettingsPage({ data, save, drive }) {
       <Card>
         <div style={{ fontSize: T.fontSize.body, fontWeight: T.fontWeight.bold, marginBottom: T.space.base }}>About</div>
         <div style={{ fontSize: T.fontSize.caption, color: C.textDim, lineHeight: 1.5 }}>
-          <strong style={{ color: C.accent }}>🟁 Temple v0.8.2</strong><br />
+          <strong style={{ color: C.accent }}>🟁 Temple v0.9</strong><br />
           Your body is a temple. Train it.<br /><br />
           Built to replace subscription-gated workout apps. Free, private, all data stays on your device.
         </div>
@@ -1713,42 +1713,42 @@ export default function Temple() {
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
       >
-        {/* Header — safe-area aware, logo animates on pull */}
+        {/* Pull-to-refresh logo — only visible when pulling, slides in from top */}
         <div style={{
-          paddingTop: "calc(env(safe-area-inset-top) + 12px)",
-          paddingBottom: T.space.base,
-          paddingLeft: T.space.xl,
-          paddingRight: T.space.xl,
-          display: "flex", justifyContent: "center", alignItems: "center",
-          background: C.bg, zIndex: T.z.header, flexShrink: 0,
-          transform: pullY > 0 ? `translateY(${pullY * 0.4}px)` : "none",
-          transition: pulling ? "none" : `transform 0.35s ${T.easing.spring}`,
-          position: "relative",
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: T.z.header + 10,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          pointerEvents: "none",
+          // Slides down from above: starts hidden above screen, follows pull
+          transform: pullY > 0 || refreshing
+            ? `translateY(calc(env(safe-area-inset-top) + ${refreshing ? 20 : Math.max(pullY - 32, 0)}px))`
+            : `translateY(calc(env(safe-area-inset-top) - 60px))`,
+          transition: pulling ? "none" : `transform 0.4s ${T.easing.spring}`,
+          opacity: pullProgress > 0.1 || refreshing ? 1 : 0,
         }}>
           <div style={{ fontWeight: T.fontWeight.black, fontSize: T.fontSize.h2, letterSpacing: T.letterSpacing.tight, color: C.accent, display: "flex", alignItems: "center", gap: T.space.sm, userSelect: "none" }}>
             <span style={{
               display: "inline-block",
-              transform: refreshing ? "scale(1.3)" : `rotate(${logoRotate}deg) scale(${pulling ? logoScale : 1})`,
-              opacity: pulling ? logoOpacity : 1,
-              transition: pulling ? "none" : `transform 0.4s ${T.easing.spring}, opacity 0.25s`,
+              transform: refreshing ? "scale(1.2)" : `rotate(${logoRotate}deg) scale(${logoScale})`,
+              transition: pulling ? "none" : `transform 0.4s ${T.easing.spring}`,
               animation: refreshing ? "temple-logo-spin 0.6s cubic-bezier(0.34,1.56,0.64,1) forwards" : "none",
             }}>🟁</span>
             TEMPLE
           </div>
-
-          {/* Pull hint */}
           {pulling && pullY > 8 && (
-            <div style={{ position: "absolute", bottom: -T.space.lg, fontSize: T.fontSize.xs, color: C.textDim, opacity: pullProgress, letterSpacing: T.letterSpacing.label, textTransform: "uppercase" }}>
+            <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: T.space.xs, opacity: pullProgress, letterSpacing: T.letterSpacing.label, textTransform: "uppercase" }}>
               {pullY >= THRESHOLD ? "Release" : "Pull to refresh"}
             </div>
           )}
-
-          {saving && (
-            <div style={{ position: "absolute", right: T.space.xl, display: "flex", alignItems: "center", gap: T.space.sm }}>
-              <div className="t-pulse" style={{ width: 6, height: 6, borderRadius: "50%", background: C.accent }} />
-            </div>
-          )}
         </div>
+
+        {/* Safe area spacer — no visible header */}
+        <div style={{ height: "env(safe-area-inset-top)", flexShrink: 0, background: C.bg }} />
 
         {/* Scrollable content */}
         <div
@@ -1758,11 +1758,16 @@ export default function Temple() {
             overflowY: "auto",
             overflowX: "hidden",
             WebkitOverflowScrolling: "touch",
-            transform: pullY > 0 ? `translateY(${pullY * 0.6}px)` : "none",
+            transform: pullY > 0 ? `translateY(${pullY * 0.5}px)` : "none",
             transition: pulling ? "none" : `transform 0.35s ${T.easing.spring}`,
           }}
         >
-          <div style={{ padding: `${T.space.base}px ${T.space.xl}px`, paddingBottom: "calc(env(safe-area-inset-bottom) + 90px)", maxWidth: T.size.maxWidth, margin: "0 auto" }}>
+          <div style={{ padding: `${T.space.xl}px ${T.space.xl}px`, paddingBottom: "calc(env(safe-area-inset-bottom) + 90px)", maxWidth: T.size.maxWidth, margin: "0 auto" }}>
+            {saving && (
+              <div style={{ position: "fixed", top: "calc(env(safe-area-inset-top) + 8px)", right: T.space.xl, zIndex: T.z.header }}>
+                <div className="t-pulse" style={{ width: 6, height: 6, borderRadius: "50%", background: C.accent }} />
+              </div>
+            )}
             {pwa.canInstall && <div style={{ marginBottom: T.space.xl }}><InstallBanner onInstall={pwa.install} onDismiss={pwa.dismiss} /></div>}
             {tab === "library" && <LibraryPage data={data} save={save} />}
             {tab === "sets" && <SetsPage data={data} save={save} onStartSession={handleStartSession} coach={coach} />}
