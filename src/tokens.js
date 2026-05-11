@@ -35,3 +35,14 @@ export const T = {
 };
 
 export const C = T.color;
+
+// Style shorthands — reduce JSX verbosity
+export const S = {
+  col:     (gap = T.space.xl) => ({ display: "flex", flexDirection: "column", gap }),
+  row:     (gap = T.space.base, align = "center") => ({ display: "flex", gap, alignItems: align }),
+  between: (gap = 0) => ({ display: "flex", justifyContent: "space-between", alignItems: "center", gap: gap || undefined }),
+  label:   { fontSize: T.fontSize.small, color: T.color.textDim, fontWeight: T.fontWeight.semi, textTransform: "uppercase", letterSpacing: T.letterSpacing.uppercase },
+  title:   { fontSize: T.fontSize.body, fontWeight: T.fontWeight.bold },
+  mono:    { fontFamily: T.font.mono },
+  ellipsis:{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
+};
