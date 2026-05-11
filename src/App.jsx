@@ -11,6 +11,104 @@ import { useAppData, usePWA } from "./hooks";
 import { useGoogleDrive } from "./useGoogleDrive";
 import { useCoach, coachError, prompts } from "./useCoach";
 
+// ─── Error Monitor ───
+// Captures console.error, unhandled rejections, and app errors.
+// Shows as a dot in the corner — grey when clean, red when errors exist.
+function useErrorMonitor() {
+  const [logs, setLogs] = useState([]);
+  const add = useCallback((type, message) => {
+    const entry = { id: uid(), type, message: String(message), time: new Date().toLocaleTimeString() };
+    setLogs(prev => [...prev.slice(-49), entry]); // keep last 50
+  }, []);
+
+  useEffect(() => {
+    const origError = console.error.bind(console);
+    const origWarn = console.warn.bind(console);
+
+    console.error = (...args) => { add("error", args.map(String).join(" ")); origError(...args); };
+    console.warn = (...args) => { add("warn", args.map(String).join(" ")); origWarn(...args); };
+
+    const onError = (e) => add("error", `${e.message} (${e.filename}:${e.lineno})`);
+    const onUnhandled = (e) => add("error", `Unhandled: ${e.reason}`);
+
+    window.addEventListener("error", onError);
+    window.addEventListener("unhandledrejection", onUnhandled);
+
+    return () => {
+      console.error = origError;
+      console.warn = origWarn;
+      window.removeEventListener("error", onError);
+      window.removeEventListener("unhandledrejection", onUnhandled);
+    };
+  }, [add]);
+
+  return { logs, clear: () => setLogs([]) };
+}
+
+function ErrorMonitor({ logs, onClear }) {
+  const [open, setOpen] = useState(false);
+  const hasErrors = logs.some(l => l.type === "error");
+  const hasLogs = logs.length > 0;
+
+  return (
+    <>
+      {/* Dot — always visible */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          position: "fixed", bottom: `calc(env(safe-area-inset-bottom) + 64px)`, left: T.space.xl,
+          width: 12, height: 12, borderRadius: "50%",
+          background: hasErrors ? C.danger : hasLogs ? C.textDim : "rgba(255,255,255,0.1)",
+          border: "none", cursor: "pointer", padding: 0, zIndex: T.z.modal - 1,
+          boxShadow: hasErrors ? `0 0 0 3px ${C.dangerDim}` : "none",
+          transition: `background ${T.transition.fast}, box-shadow ${T.transition.fast}`,
+        }}
+      />
+
+      {/* Log sheet */}
+      {open && (
+        <div className="t-fade-in" style={{ position: "fixed", inset: 0, background: C.overlay, zIndex: T.z.modal + 20, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}
+          onClick={() => setOpen(false)}>
+          <div className="t-slide-up" onClick={e => e.stopPropagation()}
+            style={{ background: C.surface, borderRadius: `${T.radius.xl}px ${T.radius.xl}px 0 0`, maxHeight: "70vh", display: "flex", flexDirection: "column" }}>
+            {/* Handle */}
+            <div style={{ width: 36, height: 4, borderRadius: T.radius.sm, background: C.border, margin: `${T.space.base}px auto` }} />
+            {/* Header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `0 ${T.space.xl}px ${T.space.base}px`, borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
+              <div style={{ fontSize: T.fontSize.bodySmall, fontWeight: T.fontWeight.bold }}>
+                Console · {logs.length} {logs.length === 1 ? "entry" : "entries"}
+              </div>
+              <div style={{ display: "flex", gap: T.space.base }}>
+                {logs.length > 0 && (
+                  <button onClick={() => { onClear(); }} style={{ background: "none", border: "none", color: C.textDim, cursor: "pointer", fontSize: T.fontSize.small }}>Clear</button>
+                )}
+                <button onClick={() => setOpen(false)} style={{ background: C.bg, border: "none", color: C.textDim, cursor: "pointer", borderRadius: T.radius.full, width: 28, height: 28, fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+              </div>
+            </div>
+            {/* Log entries */}
+            <div style={{ flex: 1, overflowY: "auto", padding: T.space.base }}>
+              {logs.length === 0 ? (
+                <div style={{ textAlign: "center", color: C.textDim, fontSize: T.fontSize.small, padding: T.space["2xl"] }}>No errors logged</div>
+              ) : (
+                [...logs].reverse().map(l => (
+                  <div key={l.id} style={{ marginBottom: T.space.base, padding: `${T.space.sm}px ${T.space.base}px`, background: C.bg, borderRadius: T.radius.md, borderLeft: `3px solid ${l.type === "error" ? C.danger : C.textDim}` }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: T.space.xs }}>
+                      <span style={{ fontSize: T.fontSize.xs, fontWeight: T.fontWeight.bold, color: l.type === "error" ? C.danger : C.textDim, textTransform: "uppercase" }}>{l.type}</span>
+                      <span style={{ fontSize: T.fontSize.xs, color: C.textDim }}>{l.time}</span>
+                    </div>
+                    <div style={{ fontSize: T.fontSize.xs, color: C.text, fontFamily: T.font.mono, lineHeight: 1.5, wordBreak: "break-all" }}>{l.message}</div>
+                  </div>
+                ))
+              )}
+              <div style={{ height: "env(safe-area-inset-bottom)" }} />
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 // ─── Shared Components ───
 function Tabs({ active, onChange }) {
   const tabs = [
@@ -572,18 +670,18 @@ function SetsPage({ data, save, onStartSession, coach }) {
   const [expandedSet, setExpandedSet] = useState(null);
   const [error, setError] = useState("");
   const [orderLoading, setOrderLoading] = useState(false);
+  const [orderError, setOrderError] = useState("");
   const [lastOrderedKey, setLastOrderedKey] = useState("");
-  // Fingerprint: sorted IDs joined — changes only when the SET of exercises changes,
-  // not when they're reordered (by AI or manually)
   const selectionKey = [...selected].sort().join(",");
 
-  const startCreate = () => { setCreating(true); setEditingId(null); setName(""); setSelected([]); setMuscleFilter("All"); setSearch(""); setError(""); setLastOrderedKey(""); };
-  const startEdit = (s) => { setCreating(true); setEditingId(s.id); setName(s.name); setSelected([...s.exerciseIds]); setMuscleFilter("All"); setSearch(""); setError(""); setLastOrderedKey([...s.exerciseIds].sort().join(",")); };
+  const startCreate = () => { setCreating(true); setEditingId(null); setName(""); setSelected([]); setMuscleFilter("All"); setSearch(""); setError(""); setOrderError(""); setLastOrderedKey(""); };
+  const startEdit = (s) => { setCreating(true); setEditingId(s.id); setName(s.name); setSelected([...s.exerciseIds]); setMuscleFilter("All"); setSearch(""); setError(""); setOrderError(""); setLastOrderedKey([...s.exerciseIds].sort().join(",")); };
 
-  // Auto-suggest order only when the SET of exercises changes (not on reorder)
+  // Auto-suggest order when selection changes, retries if key becomes available
   useEffect(() => {
     if (!coach.hasKey || selected.length < 2) return;
-    if (selectionKey === lastOrderedKey) return; // same exercises, already ordered
+    if (selectionKey === lastOrderedKey) return;
+    setOrderError("");
     const run = async () => {
       setOrderLoading(true);
       const exercises = selected.map(id => data.exercises.find(e => e.id === id)).filter(Boolean);
@@ -591,7 +689,10 @@ function SetsPage({ data, save, onStartSession, coach }) {
         prompts.exerciseOrder(exercises),
         { maxTokens: 300, model: "claude-haiku-4-5-20251001" }
       );
-      if (!err) {
+      if (err) {
+        setOrderError(coachError(err));
+        setLastOrderedKey(selectionKey); // don't retry same selection on error
+      } else {
         try {
           const match = text.match(/\[[\s\S]*?\]/);
           if (!match) throw new Error("no match");
@@ -601,14 +702,14 @@ function SetsPage({ data, save, onStartSession, coach }) {
           const reordered = names.map(n => nameToId[n.toLowerCase()]).filter(Boolean);
           const missing = selected.filter(id => !reordered.includes(id));
           setSelected([...reordered, ...missing]);
-          setLastOrderedKey(selectionKey); // mark this set as done
-        } catch (e) { setLastOrderedKey(selectionKey); } // mark done even on parse fail
+          setLastOrderedKey(selectionKey);
+        } catch (e) { setLastOrderedKey(selectionKey); }
       }
       setOrderLoading(false);
     };
     const t = setTimeout(run, 1200);
     return () => clearTimeout(t);
-  }, [selectionKey]);
+  }, [selectionKey, coach.hasKey]);
   const saveSet = () => {
     if (!name.trim() && selected.length === 0) { setError("Give your set a name and select at least one exercise."); return; }
     if (!name.trim()) { setError("Give your set a name."); return; }
@@ -683,8 +784,14 @@ function SetsPage({ data, save, onStartSession, coach }) {
                   ))}
                 </div>
                 {coach.hasKey && selected.length >= 2 && (
-                  <div style={{ flexShrink: 0, marginLeft: T.space.base, fontSize: T.fontSize.xs, color: orderLoading ? C.accent : C.textDim, display: "flex", alignItems: "center", gap: T.space.xs }}>
-                    {orderLoading ? <><span className="t-pulse" style={{ display: "inline-block" }}>✦</span> Ordering...</> : lastOrderedKey ? <>✦ AI ordered</> : null}
+                  <div style={{ flexShrink: 0, marginLeft: T.space.base, fontSize: T.fontSize.xs, display: "flex", alignItems: "center", gap: T.space.xs }}>
+                    {orderLoading
+                      ? <span style={{ color: C.accent }}><span className="t-pulse" style={{ display: "inline-block" }}>✦</span> Ordering...</span>
+                      : orderError
+                      ? <span style={{ color: C.danger }}>✦ {orderError}</span>
+                      : lastOrderedKey
+                      ? <span style={{ color: C.textDim }}>✦ AI ordered</span>
+                      : null}
                   </div>
                 )}
               </div>
@@ -842,7 +949,7 @@ function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach }) {
   const wl = weightLabel(unit);
 
   // Find last session for this set to pre-fill values
-  const getLastSessionData = (setId, exerciseIds) => {
+  const getLastSessionData = useCallback((setId) => {
     const lastSession = [...data.sessions].reverse().find(s => s.setId === setId);
     if (!lastSession) return null;
     const lookup = {};
@@ -855,13 +962,13 @@ function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach }) {
       }
     });
     return lookup;
-  };
+  }, [data.sessions, unit]);
 
   useEffect(() => {
     if (activeSet) {
       const validIds = activeSet.exerciseIds.filter(eid => data.exercises.some(e => e.id === eid));
       if (validIds.length === 0) { setActiveSet(null); return; }
-      const lastData = getLastSessionData(activeSet.id, validIds);
+      const lastData = getLastSessionData(activeSet.id);
       const entries = validIds.map(eid => {
         const prev = lastData?.[eid];
         if (prev) return { exerciseId: eid, sets: prev, logged: [] };
@@ -1214,7 +1321,7 @@ function ProgressPage({ data, save, onRepeatSession }) {
     setConfirmDeleteSession(null);
   };
 
-  const { prEntries, totalSessions, totalVol, weeksActive, thisWeekSessions, muscleEntries } = React.useMemo(() => {
+  const { prEntries, totalSessions, totalVol, weeksActive, thisWeekSessions, muscleEntries, best1RMByExercise } = React.useMemo(() => {
     const prEntries = Object.entries(data.prs).map(([eid, pr]) => {
       const ex = data.exercises.find(e => e.id === eid);
       return { ...pr, exerciseId: eid, exerciseName: ex?.name || "Unknown", muscle: ex?.muscle || "" };
@@ -1249,10 +1356,35 @@ function ProgressPage({ data, save, onRepeatSession }) {
     });
     const muscleEntries = Object.entries(muscleVol).sort((a, b) => b[1] - a[1]);
 
-    return { prEntries, totalSessions, totalVol, weeksActive, thisWeekSessions, muscleEntries };
+    // Precompute best est1RM per exercise to avoid per-render loops
+    const best1RMByExercise = {};
+    data.sessions.forEach(s => {
+      s.entries.forEach(e => {
+        e.sets.forEach(st => {
+          const v = est1RM(st.weight, st.reps);
+          if (v > (best1RMByExercise[e.exerciseId] || 0)) best1RMByExercise[e.exerciseId] = v;
+        });
+      });
+    });
+
+    return { prEntries, totalSessions, totalVol, weeksActive, thisWeekSessions, muscleEntries, best1RMByExercise };
   }, [data.sessions, data.prs, data.exercises]);
 
   const maxMuscleVol = Math.max(...muscleEntries.map(([, v]) => v), 1);
+
+  const prTooltip = useCallback(({ active, payload }) => {
+    if (!active || !payload?.[0]) return null;
+    const d = payload[0].payload;
+    return (
+      <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: "10px 14px", fontSize: T.fontSize.small }}>
+        <div style={{ fontWeight: T.fontWeight.bold, color: C.text, marginBottom: T.space.sm }}>{d.date}</div>
+        <div style={{ color: C.accent }}>Max: {d.weight} {wl}</div>
+        <div style={{ color: C.pr }}>Est 1RM: {d.e1rm} {wl}</div>
+        <div style={{ color: C.textDim }}>{d.sets} sets · {d.reps} best reps</div>
+        <div style={{ color: C.textDim }}>Vol: {d.volume} {wl}</div>
+      </div>
+    );
+  }, [wl]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: T.space.xl }}>
@@ -1304,19 +1436,7 @@ function ProgressPage({ data, save, onRepeatSession }) {
               chartData.sort((a, b) => a.rawDate - b.rawDate);
             }
 
-            const customTooltip = ({ active, payload }) => {
-              if (!active || !payload || !payload[0]) return null;
-              const d = payload[0].payload;
-              return (
-                <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: "10px 14px", fontSize: T.fontSize.small }}>
-                  <div style={{ fontWeight: T.fontWeight.bold, color: C.text, marginBottom: T.space.sm }}>{d.date}</div>
-                  <div style={{ color: C.accent }}>Max: {d.weight} {wl}</div>
-                  <div style={{ color: C.pr }}>Est 1RM: {d.e1rm} {wl}</div>
-                  <div style={{ color: C.textDim }}>{d.sets} sets · {d.reps} best reps</div>
-                  <div style={{ color: C.textDim }}>Vol: {d.volume} {wl}</div>
-                </div>
-              );
-            };
+            const customTooltip = prTooltip;
 
             return (
               <Card key={i} style={{ border: isOpen ? `1px solid ${C.accent}` : undefined }}>
@@ -1338,13 +1458,7 @@ function ProgressPage({ data, save, onRepeatSession }) {
                     let val;
                     if (k === "maxReps") val = pr[k];
                     else if (k === "est1rm") {
-                      // Compute from best set across all sessions
-                      let best = 0;
-                      data.sessions.forEach(s => {
-                        const entry = s.entries.find(e => e.exerciseId === pr.exerciseId);
-                        if (!entry) return;
-                        entry.sets.forEach(st => { const e = est1RM(st.weight, st.reps); if (e > best) best = e; });
-                      });
+                      const best = best1RMByExercise[pr.exerciseId] || 0;
                       val = best > 0 ? displayWeight(best, unit) : "—";
                     } else val = displayWeight(pr[k], unit);
                     return (
@@ -1380,7 +1494,7 @@ function ProgressPage({ data, save, onRepeatSession }) {
                     {chartData.length > 0 && (
                       <div style={{ marginTop: chartData.length >= 2 ? T.space.xl : 0 }}>
                         {[...chartData].reverse().map((d, j) => (
-                          <div key={j} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: j < chartData.length - 1 ? `1px solid ${C.border}` : "none" }}>
+                          <div key={j} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${T.space.base}px 0`, borderBottom: j < chartData.length - 1 ? `1px solid ${C.border}` : "none" }}>
                             <div>
                               <div style={{ fontSize: T.fontSize.bodySmall, fontWeight: T.fontWeight.semi }}>{d.date}</div>
                               <div style={{ fontSize: T.fontSize.xs, color: C.textDim }}>{d.sets} sets · best {d.reps} reps</div>
@@ -1718,6 +1832,7 @@ export default function Temple() {
   const pwa = usePWA();
   const drive = useGoogleDrive();
   const coach = useCoach(data?.settings?.anthropicKey || "");
+  const errorMonitor = useErrorMonitor();
 
   // ── Pull-to-refresh ──
   const [pullY, setPullY] = useState(0);
@@ -1849,6 +1964,7 @@ export default function Temple() {
         </div>
 
         <Tabs active={tab} onChange={setTab} />
+        <ErrorMonitor logs={errorMonitor.logs} onClear={errorMonitor.clear} />
       </div>
     </ErrorBoundary>
   );
