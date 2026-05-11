@@ -137,8 +137,11 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [showRecovery, setShowRecovery] = useState(false);
   const [showRecoveryMid, setShowRecoveryMid] = useState(false);
+  const [mobCountdown, setMobCountdown] = useState(null); // null = idle, N = counting down
+  const [mobRunning, setMobRunning] = useState(false);
   const intervalRef = useRef(null);
   const restRef = useRef(null);
+  const mobRef = useRef(null);
   const unit = data.settings?.unit || "kg";
   const wl = weightLabel(unit);
 
@@ -199,6 +202,24 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
       return () => clearTimeout(t);
     }
   }, [restDone]);
+
+  // Mobility countdown — ticks down, auto-logs at 0
+  useEffect(() => {
+    if (mobRunning) {
+      mobRef.current = setInterval(() => {
+        setMobCountdown(t => {
+          if (t <= 1) {
+            setMobRunning(false);
+            return 0; // logMobility called via separate effect when mobRunning→false at 0
+          }
+          return t - 1;
+        });
+      }, 1000);
+    } else {
+      clearInterval(mobRef.current);
+    }
+    return () => clearInterval(mobRef.current);
+  }, [mobRunning]);
 
   // ── Empty state ──
   if (!activeSet) {
@@ -303,6 +324,7 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
       setCurrentIdx(i => i + 1);
       setCurrentSetIdx(0);
       setResting(false); setRestTimer(0); setRestDone(false);
+      setMobCountdown(null); setMobRunning(false);
     }
   };
 
@@ -415,25 +437,92 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
         {!resting && (
           <div>
             <div style={{ fontSize: T.fontSize.xs, color: C.accent, fontWeight: T.fontWeight.semi, textTransform: "uppercase", letterSpacing: T.letterSpacing.uppercase, marginBottom: T.space.lg }}>Set {entry.logged.length + 1}</div>
-            <div style={{ display: "flex", gap: T.space.lg }}>
-              {!isBodyweight && !isMobility && (
+            {isMobility ? (
+              /* Mobility: countdown timer UI */
+              <div style={{ display: "flex", flexDirection: "column", gap: T.space.lg }}>
+                {mobRunning || mobCountdown === 0 ? (
+                  /* Active/done countdown */
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{
+                      fontSize: 72, fontWeight: T.fontWeight.heavy, fontFamily: T.font.mono,
+                      color: mobCountdown === 0 ? C.accent : mobCountdown <= 5 ? C.danger : C.text,
+                      lineHeight: 1, marginBottom: T.space.base,
+                      transition: `color ${T.transition.fast}`,
+                    }}>{mobCountdown}</div>
+                    <div style={{ fontSize: T.fontSize.small, color: C.textDim }}>seconds remaining</div>
+                  </div>
+                ) : (
+                  /* Idle: show adjustable target */
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: 72, fontWeight: T.fontWeight.heavy, fontFamily: T.font.mono, color: C.textDim, lineHeight: 1, marginBottom: T.space.base }}>
+                      {Number(currentSet.reps) || 30}
+                    </div>
+                    <div style={{ fontSize: T.fontSize.small, color: C.textDim }}>seconds</div>
+                    {/* ±5s nudge buttons */}
+                    <div style={{ display: "flex", justifyContent: "center", gap: T.space.base, marginTop: T.space.lg }}>
+                      <button onClick={() => updateCurrentSet("reps", String(Math.max(5, (Number(currentSet.reps) || 30) - 5)))} style={{ background: "none", border: `1px solid ${C.border}`, borderRadius: T.radius.md, color: C.textDim, cursor: "pointer", fontSize: T.fontSize.small, padding: `${T.space.sm}px ${T.space.lg}px` }}>−5s</button>
+                      <button onClick={() => updateCurrentSet("reps", String((Number(currentSet.reps) || 30) + 5))} style={{ background: "none", border: `1px solid ${C.border}`, borderRadius: T.radius.md, color: C.textDim, cursor: "pointer", fontSize: T.fontSize.small, padding: `${T.space.sm}px ${T.space.lg}px` }}>+5s</button>
+                    </div>
+                  </div>
+                )}
+                <div style={{ display: "flex", gap: T.space.base }}>
+                  {mobRunning ? (
+                    <Btn variant="secondary" onClick={() => {
+                      setMobRunning(false);
+                      const elapsed = (Number(currentSet.reps) || 30) - mobCountdown;
+                      if (elapsed > 0) {
+                        // Log with elapsed time
+                        const nd = [...sessionData];
+                        nd[currentIdx] = { ...nd[currentIdx], logged: [...nd[currentIdx].logged, { weight: 0, reps: elapsed }] };
+                        setSessionData(nd); setCurrentSetIdx(p => p + 1);
+                        setRestTimer(DEFAULT_REST); setResting(true); setRestDone(false);
+                        setMobCountdown(null);
+                      }
+                    }} style={{ flex: 1, padding: 16 }}>Stop & Log</Btn>
+                  ) : mobCountdown === 0 ? (
+                    <Btn onClick={() => {
+                      // Auto-log the full target seconds
+                      const target = Number(currentSet.reps) || 30;
+                      const nd = [...sessionData];
+                      nd[currentIdx] = { ...nd[currentIdx], logged: [...nd[currentIdx].logged, { weight: 0, reps: target }] };
+                      setSessionData(nd); setCurrentSetIdx(p => p + 1);
+                      setRestTimer(DEFAULT_REST); setResting(true); setRestDone(false);
+                      setMobCountdown(null);
+                    }} style={{ flex: 1, padding: 16 }}>Log Set {entry.logged.length + 1}</Btn>
+                  ) : (
+                    <Btn onClick={() => {
+                      const target = Number(currentSet.reps) || 30;
+                      updateCurrentSet("reps", String(target));
+                      setMobCountdown(target);
+                      setMobRunning(true);
+                    }} style={{ flex: 1, padding: 16, fontSize: T.fontSize.body }}>▶ Start Timer</Btn>
+                  )}
+                </div>
+              </div>
+            ) : (
+              /* Weighted / bodyweight inputs */
+              <div style={{ display: "flex", gap: T.space.lg }}>
+                {!isBodyweight && (
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: T.fontSize.xs, color: C.textDim, fontWeight: T.fontWeight.semi, textTransform: "uppercase", marginBottom: T.space.sm, display: "block" }}>Weight ({wl})</label>
+                    <input type="number" inputMode="decimal" min="0" value={currentSet.weight} onChange={e => updateCurrentSet("weight", e.target.value)} placeholder="0"
+                      style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: "14px 16px", color: C.text, fontSize: T.fontSize.h2, fontWeight: T.fontWeight.bold, outline: "none", width: "100%", boxSizing: "border-box", textAlign: "center" }} />
+                  </div>
+                )}
                 <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: T.fontSize.xs, color: C.textDim, fontWeight: T.fontWeight.semi, textTransform: "uppercase", marginBottom: T.space.sm, display: "block" }}>Weight ({wl})</label>
-                  <input type="number" inputMode="decimal" min="0" value={currentSet.weight} onChange={e => updateCurrentSet("weight", e.target.value)} placeholder="0"
+                  <label style={{ fontSize: T.fontSize.xs, color: C.textDim, fontWeight: T.fontWeight.semi, textTransform: "uppercase", marginBottom: T.space.sm, display: "block" }}>Reps</label>
+                  <input type="number" inputMode="numeric" min="0" value={currentSet.reps} onChange={e => updateCurrentSet("reps", e.target.value)} placeholder="0"
                     style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: "14px 16px", color: C.text, fontSize: T.fontSize.h2, fontWeight: T.fontWeight.bold, outline: "none", width: "100%", boxSizing: "border-box", textAlign: "center" }} />
                 </div>
-              )}
-              <div style={{ flex: 1 }}>
-                <label style={{ fontSize: T.fontSize.xs, color: C.textDim, fontWeight: T.fontWeight.semi, textTransform: "uppercase", marginBottom: T.space.sm, display: "block" }}>{isMobility ? "Seconds" : "Reps"}</label>
-                <input type="number" inputMode="numeric" min="0" value={currentSet.reps} onChange={e => updateCurrentSet("reps", e.target.value)} placeholder="0"
-                  style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: "14px 16px", color: C.text, fontSize: T.fontSize.h2, fontWeight: T.fontWeight.bold, outline: "none", width: "100%", boxSizing: "border-box", textAlign: "center" }} />
               </div>
-            </div>
+            )}
 
-            {/* Log Set — the primary action */}
-            <Btn onClick={logSet} disabled={!canLogCurrent} style={{ width: "100%", padding: 18, fontSize: T.fontSize.body, marginTop: T.space.xl }}>
-              Log Set {entry.logged.length + 1}
-            </Btn>
+            {/* Log Set — non-mobility only (mobility has its own flow above) */}
+            {!isMobility && (
+              <Btn onClick={logSet} disabled={!canLogCurrent} style={{ width: "100%", padding: 18, fontSize: T.fontSize.body, marginTop: T.space.xl }}>
+                Log Set {entry.logged.length + 1}
+              </Btn>
+            )}
           </div>
         )}
       </Card>
