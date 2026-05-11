@@ -11,6 +11,104 @@ import { useAppData, usePWA } from "./hooks";
 import { useGoogleDrive } from "./useGoogleDrive";
 import { useCoach, coachError, prompts } from "./useCoach";
 
+// ─── Error Monitor ───
+// Captures console.error, unhandled rejections, and app errors.
+// Shows as a dot in the corner — grey when clean, red when errors exist.
+function useErrorMonitor() {
+  const [logs, setLogs] = useState([]);
+  const add = useCallback((type, message) => {
+    const entry = { id: uid(), type, message: String(message), time: new Date().toLocaleTimeString() };
+    setLogs(prev => [...prev.slice(-49), entry]); // keep last 50
+  }, []);
+
+  useEffect(() => {
+    const origError = console.error.bind(console);
+    const origWarn = console.warn.bind(console);
+
+    console.error = (...args) => { add("error", args.map(String).join(" ")); origError(...args); };
+    console.warn = (...args) => { add("warn", args.map(String).join(" ")); origWarn(...args); };
+
+    const onError = (e) => add("error", `${e.message} (${e.filename}:${e.lineno})`);
+    const onUnhandled = (e) => add("error", `Unhandled: ${e.reason}`);
+
+    window.addEventListener("error", onError);
+    window.addEventListener("unhandledrejection", onUnhandled);
+
+    return () => {
+      console.error = origError;
+      console.warn = origWarn;
+      window.removeEventListener("error", onError);
+      window.removeEventListener("unhandledrejection", onUnhandled);
+    };
+  }, [add]);
+
+  return { logs, clear: () => setLogs([]) };
+}
+
+function ErrorMonitor({ logs, onClear }) {
+  const [open, setOpen] = useState(false);
+  const hasErrors = logs.some(l => l.type === "error");
+  const hasLogs = logs.length > 0;
+
+  return (
+    <>
+      {/* Dot — always visible */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          position: "fixed", bottom: `calc(env(safe-area-inset-bottom) + 64px)`, left: T.space.xl,
+          width: 12, height: 12, borderRadius: "50%",
+          background: hasErrors ? C.danger : hasLogs ? C.textDim : "rgba(255,255,255,0.1)",
+          border: "none", cursor: "pointer", padding: 0, zIndex: T.z.modal - 1,
+          boxShadow: hasErrors ? `0 0 0 3px ${C.dangerDim}` : "none",
+          transition: `background ${T.transition.fast}, box-shadow ${T.transition.fast}`,
+        }}
+      />
+
+      {/* Log sheet */}
+      {open && (
+        <div className="t-fade-in" style={{ position: "fixed", inset: 0, background: C.overlay, zIndex: T.z.modal + 20, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}
+          onClick={() => setOpen(false)}>
+          <div className="t-slide-up" onClick={e => e.stopPropagation()}
+            style={{ background: C.surface, borderRadius: `${T.radius.xl}px ${T.radius.xl}px 0 0`, maxHeight: "70vh", display: "flex", flexDirection: "column" }}>
+            {/* Handle */}
+            <div style={{ width: 36, height: 4, borderRadius: T.radius.sm, background: C.border, margin: `${T.space.base}px auto` }} />
+            {/* Header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `0 ${T.space.xl}px ${T.space.base}px`, borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
+              <div style={{ fontSize: T.fontSize.bodySmall, fontWeight: T.fontWeight.bold }}>
+                Console · {logs.length} {logs.length === 1 ? "entry" : "entries"}
+              </div>
+              <div style={{ display: "flex", gap: T.space.base }}>
+                {logs.length > 0 && (
+                  <button onClick={() => { onClear(); }} style={{ background: "none", border: "none", color: C.textDim, cursor: "pointer", fontSize: T.fontSize.small }}>Clear</button>
+                )}
+                <button onClick={() => setOpen(false)} style={{ background: C.bg, border: "none", color: C.textDim, cursor: "pointer", borderRadius: T.radius.full, width: 28, height: 28, fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+              </div>
+            </div>
+            {/* Log entries */}
+            <div style={{ flex: 1, overflowY: "auto", padding: T.space.base }}>
+              {logs.length === 0 ? (
+                <div style={{ textAlign: "center", color: C.textDim, fontSize: T.fontSize.small, padding: T.space["2xl"] }}>No errors logged</div>
+              ) : (
+                [...logs].reverse().map(l => (
+                  <div key={l.id} style={{ marginBottom: T.space.base, padding: `${T.space.sm}px ${T.space.base}px`, background: C.bg, borderRadius: T.radius.md, borderLeft: `3px solid ${l.type === "error" ? C.danger : C.textDim}` }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: T.space.xs }}>
+                      <span style={{ fontSize: T.fontSize.xs, fontWeight: T.fontWeight.bold, color: l.type === "error" ? C.danger : C.textDim, textTransform: "uppercase" }}>{l.type}</span>
+                      <span style={{ fontSize: T.fontSize.xs, color: C.textDim }}>{l.time}</span>
+                    </div>
+                    <div style={{ fontSize: T.fontSize.xs, color: C.text, fontFamily: T.font.mono, lineHeight: 1.5, wordBreak: "break-all" }}>{l.message}</div>
+                  </div>
+                ))
+              )}
+              <div style={{ height: "env(safe-area-inset-bottom)" }} />
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 // ─── Shared Components ───
 function Tabs({ active, onChange }) {
   const tabs = [
@@ -41,12 +139,22 @@ function Btn({ children, variant = "primary", style, disabled, onClick, ...props
   return <button {...props} disabled={disabled} onClick={disabled ? undefined : onClick} style={{ border: "none", borderRadius: T.radius.lg, padding: "10px 18px", fontSize: T.fontSize.bodySmall, cursor: disabled ? "not-allowed" : "pointer", transition: `opacity ${T.transition.fast}`, opacity: disabled ? T.opacity.disabled : 1, ...v[variant], ...style }}>{children}</button>;
 }
 
-function Input({ label, ...props }) {
+function Input({ label, clearable, onClear, ...props }) {
   const [focused, setFocused] = useState(false);
+  const showClear = clearable && props.value && props.value.length > 0;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: T.space.sm }}>
       {label && <label style={{ fontSize: T.fontSize.small, color: C.textDim, fontWeight: T.fontWeight.semi, textTransform: "uppercase", letterSpacing: T.letterSpacing.uppercase }}>{label}</label>}
-      <input {...props} onFocus={e => { setFocused(true); props.onFocus?.(e); }} onBlur={e => { setFocused(false); props.onBlur?.(e); }} style={{ background: C.bg, border: `1px solid ${focused ? C.accent : C.border}`, borderRadius: T.radius.lg, padding: "10px 12px", color: C.text, fontSize: T.fontSize.h3, outline: "none", transition: `border-color ${T.transition.fast}`, ...props.style }} />
+      <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+        <input {...props} onFocus={e => { setFocused(true); props.onFocus?.(e); }} onBlur={e => { setFocused(false); props.onBlur?.(e); }}
+          style={{ background: C.bg, border: `1px solid ${focused ? C.accent : C.border}`, borderRadius: T.radius.lg, padding: `10px ${showClear ? 36 : 12}px 10px 12px`, color: C.text, fontSize: T.fontSize.h3, outline: "none", transition: `border-color ${T.transition.fast}`, width: "100%", boxSizing: "border-box", ...props.style }} />
+        {showClear && (
+          <button
+            onMouseDown={e => { e.preventDefault(); onClear?.(); }}
+            style={{ position: "absolute", right: 10, background: "none", border: "none", color: C.textDim, cursor: "pointer", fontSize: T.fontSize.small, padding: `${T.space.xs}px ${T.space.sm}px`, lineHeight: 1, borderRadius: T.radius.base, display: "flex", alignItems: "center", justifyContent: "center" }}
+          >✕</button>
+        )}
+      </div>
     </div>
   );
 }
@@ -113,7 +221,7 @@ function VideoSheet({ query, label, onClose }) {
         {/* Content */}
         {selectedIndex !== null ? (
           /* Video player with prev/next */
-          <div style={{ flex: 1, background: "#000", display: "flex", flexDirection: "column" }}>
+          <div style={{ flex: 1, background: C.bg, display: "flex", flexDirection: "column" }}>
             <iframe
               key={selectedVideo?.id}
               src={`https://www.youtube.com/embed/${selectedVideo?.id}?autoplay=1&rel=0&modestbranding=1`}
@@ -171,7 +279,7 @@ function VideoSheet({ query, label, onClose }) {
                   <img src={v.thumbnail} alt="" style={{ width: 120, height: 68, borderRadius: T.radius.md, objectFit: "cover", display: "block", background: C.border }} />
                   <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <div style={{ width: 28, height: 28, background: "rgba(0,0,0,0.7)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <span style={{ color: "#fff", fontSize: 10, paddingLeft: 2 }}>▶</span>
+                      <span style={{ color: C.text, fontSize: 10, paddingLeft: 2 }}>▶</span>
                     </div>
                   </div>
                 </div>
@@ -521,7 +629,7 @@ function LibraryPage({ data, save }) {
         </div>
         <Btn onClick={startNew}>+ New</Btn>
       </div>
-      <Input placeholder="Search exercises..." value={search} onChange={e => setSearch(e.target.value)} />
+      <Input placeholder="Search exercises..." value={search} onChange={e => setSearch(e.target.value)} clearable onClear={() => setSearch("")} />
       <FilterBar muscle={filter} onMuscle={setFilter} equipment={eqFilter} onEquipment={setEqFilter} category={catFilter} onCategory={setCatFilter} small />
       <div style={{ display: "flex", flexDirection: "column", gap: T.space.base }}>
         {filtered.map(ex => (
@@ -559,16 +667,21 @@ function SetsPage({ data, save, onStartSession, coach }) {
   const [muscleFilter, setMuscleFilter] = useState("All");
   const [search, setSearch] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(null);
+  const [expandedSet, setExpandedSet] = useState(null);
   const [error, setError] = useState("");
   const [orderLoading, setOrderLoading] = useState(false);
-  const [orderSuggested, setOrderSuggested] = useState(false);
+  const [orderError, setOrderError] = useState("");
+  const [lastOrderedKey, setLastOrderedKey] = useState("");
+  const selectionKey = [...selected].sort().join(",");
 
-  const startCreate = () => { setCreating(true); setEditingId(null); setName(""); setSelected([]); setMuscleFilter("All"); setSearch(""); setError(""); setOrderSuggested(false); };
-  const startEdit = (s) => { setCreating(true); setEditingId(s.id); setName(s.name); setSelected([...s.exerciseIds]); setMuscleFilter("All"); setSearch(""); setError(""); setOrderSuggested(true); };
+  const startCreate = () => { setCreating(true); setEditingId(null); setName(""); setSelected([]); setMuscleFilter("All"); setSearch(""); setError(""); setOrderError(""); setLastOrderedKey(""); };
+  const startEdit = (s) => { setCreating(true); setEditingId(s.id); setName(s.name); setSelected([...s.exerciseIds]); setMuscleFilter("All"); setSearch(""); setError(""); setOrderError(""); setLastOrderedKey([...s.exerciseIds].sort().join(",")); };
 
-  // Auto-suggest order: fires 1.2s after selection reaches 2+ exercises
+  // Auto-suggest order when selection changes, retries if key becomes available
   useEffect(() => {
-    if (!coach.hasKey || selected.length < 2 || orderSuggested || orderLoading) return;
+    if (!coach.hasKey || selected.length < 2) return;
+    if (selectionKey === lastOrderedKey) return;
+    setOrderError("");
     const run = async () => {
       setOrderLoading(true);
       const exercises = selected.map(id => data.exercises.find(e => e.id === id)).filter(Boolean);
@@ -576,7 +689,10 @@ function SetsPage({ data, save, onStartSession, coach }) {
         prompts.exerciseOrder(exercises),
         { maxTokens: 300, model: "claude-haiku-4-5-20251001" }
       );
-      if (!err) {
+      if (err) {
+        setOrderError(coachError(err));
+        setLastOrderedKey(selectionKey); // don't retry same selection on error
+      } else {
         try {
           const match = text.match(/\[[\s\S]*?\]/);
           if (!match) throw new Error("no match");
@@ -586,14 +702,14 @@ function SetsPage({ data, save, onStartSession, coach }) {
           const reordered = names.map(n => nameToId[n.toLowerCase()]).filter(Boolean);
           const missing = selected.filter(id => !reordered.includes(id));
           setSelected([...reordered, ...missing]);
-          setOrderSuggested(true);
-        } catch (parseErr) { /* ignore silently */ }
+          setLastOrderedKey(selectionKey);
+        } catch (e) { setLastOrderedKey(selectionKey); }
       }
       setOrderLoading(false);
     };
     const t = setTimeout(run, 1200);
     return () => clearTimeout(t);
-  }, [selected.length, orderSuggested, orderLoading]);
+  }, [selectionKey, coach.hasKey]);
   const saveSet = () => {
     if (!name.trim() && selected.length === 0) { setError("Give your set a name and select at least one exercise."); return; }
     if (!name.trim()) { setError("Give your set a name."); return; }
@@ -608,7 +724,6 @@ function SetsPage({ data, save, onStartSession, coach }) {
   const deleteSet = (id) => { save({ ...data, sets: data.sets.filter(s => s.id !== id) }); setConfirmDelete(null); };
   const toggle = (id) => {
     setSelected(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id]);
-    setOrderSuggested(false);
     setError("");
   };
 
@@ -669,8 +784,14 @@ function SetsPage({ data, save, onStartSession, coach }) {
                   ))}
                 </div>
                 {coach.hasKey && selected.length >= 2 && (
-                  <div style={{ flexShrink: 0, marginLeft: T.space.base, fontSize: T.fontSize.xs, color: orderLoading ? C.accent : C.textDim, display: "flex", alignItems: "center", gap: T.space.xs }}>
-                    {orderLoading ? <><span className="t-pulse" style={{ display: "inline-block" }}>✦</span> Ordering...</> : orderSuggested ? <>✦ AI ordered</> : null}
+                  <div style={{ flexShrink: 0, marginLeft: T.space.base, fontSize: T.fontSize.xs, display: "flex", alignItems: "center", gap: T.space.xs }}>
+                    {orderLoading
+                      ? <span style={{ color: C.accent }}><span className="t-pulse" style={{ display: "inline-block" }}>✦</span> Ordering...</span>
+                      : orderError
+                      ? <span style={{ color: C.danger }}>✦ {orderError}</span>
+                      : lastOrderedKey
+                      ? <span style={{ color: C.textDim }}>✦ AI ordered</span>
+                      : null}
                   </div>
                 )}
               </div>
@@ -699,13 +820,21 @@ function SetsPage({ data, save, onStartSession, coach }) {
           </label>
 
           {/* Search */}
-          <input
-            type="text"
-            placeholder="Search exercises..."
-            value={search}
-            onChange={e => { setSearch(e.target.value); if (e.target.value) setMuscleFilter("All"); }}
-            style={{ width: "100%", boxSizing: "border-box", background: C.surface, border: `1px solid ${search ? C.accent : C.border}`, borderRadius: T.radius.lg, padding: "10px 14px", color: C.text, fontSize: T.fontSize.h3, outline: "none", marginTop: T.space.base, marginBottom: T.space.base, transition: `border-color ${T.transition.fast}` }}
-          />
+          <div style={{ position: "relative", marginTop: T.space.base, marginBottom: T.space.base }}>
+            <input
+              type="text"
+              placeholder="Search exercises..."
+              value={search}
+              onChange={e => { setSearch(e.target.value); if (e.target.value) setMuscleFilter("All"); }}
+              style={{ width: "100%", boxSizing: "border-box", background: C.surface, border: `1px solid ${search ? C.accent : C.border}`, borderRadius: T.radius.lg, padding: `10px ${search ? 36 : 14}px 10px 14px`, color: C.text, fontSize: T.fontSize.h3, outline: "none", transition: `border-color ${T.transition.fast}` }}
+            />
+            {search.length > 0 && (
+              <button
+                onMouseDown={e => { e.preventDefault(); setSearch(""); setMuscleFilter("All"); }}
+                style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: C.textDim, cursor: "pointer", fontSize: T.fontSize.small, padding: `${T.space.xs}px ${T.space.sm}px`, lineHeight: 1, borderRadius: T.radius.base }}
+              >✕</button>
+            )}
+          </div>
 
           {/* Muscle filter — always reserves same space */}
           <div style={{ marginBottom: T.space.base, opacity: search ? 0.3 : 1, pointerEvents: search ? "none" : "auto", transition: `opacity ${T.transition.fast}` }}>
@@ -764,21 +893,33 @@ function SetsPage({ data, save, onStartSession, coach }) {
         const exNames = s.exerciseIds.map(id => data.exercises.find(e => e.id === id)?.name).filter(Boolean);
         const validCount = s.exerciseIds.filter(eid => data.exercises.some(e => e.id === eid)).length;
         const sessionCount = data.sessions.filter(ss => ss.setId === s.id).length;
+        const expanded = expandedSet === s.id;
         return (
           <Card key={s.id}>
-            <div style={{ marginBottom: T.space.base }}>
-              <div style={{ fontWeight: T.fontWeight.heavy, fontSize: T.fontSize.h3 }}>{s.name}</div>
-              <div style={{ fontSize: T.fontSize.small, color: C.textDim, marginTop: T.space.xs }}>{exNames.length} exercises · {sessionCount} sessions</div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: T.space.base }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: T.fontWeight.heavy, fontSize: T.fontSize.h3 }}>{s.name}</div>
+                <div style={{ fontSize: T.fontSize.small, color: C.textDim, marginTop: T.space.xs }}>{exNames.length} exercises · {sessionCount} sessions</div>
+              </div>
+              {/* ··· toggle */}
+              <button
+                onClick={() => setExpandedSet(expanded ? null : s.id)}
+                style={{ background: "none", border: "none", color: expanded ? C.accent : C.textDim, cursor: "pointer", fontSize: 18, padding: `0 ${T.space.sm}px`, lineHeight: 1, flexShrink: 0, letterSpacing: 1 }}
+              >···</button>
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: T.space.sm, marginBottom: T.space.lg }}>
               {exNames.slice(0, 5).map((n, i) => <span key={i} style={{ fontSize: T.fontSize.xs, background: C.bg, padding: "3px 8px", borderRadius: T.radius.md, color: C.textDim }}>{n}</span>)}
               {exNames.length > 5 && <span style={{ fontSize: T.fontSize.xs, color: C.textDim, padding: "3px 4px" }}>+{exNames.length - 5} more</span>}
             </div>
-            <div style={{ display: "flex", gap: T.space.base }}>
-              <Btn variant="primary" onClick={() => onStartSession(s)} disabled={validCount === 0} style={{ flex: 1 }}>▶ Start</Btn>
-              <Btn variant="secondary" onClick={() => startEdit(s)}>Edit</Btn>
-              <Btn variant="danger" onClick={() => setConfirmDelete(s.id)}>✕</Btn>
-            </div>
+            {/* Primary action */}
+            <Btn variant="primary" onClick={() => onStartSession(s)} disabled={validCount === 0} style={{ width: "100%" }}>▶ Start</Btn>
+            {/* Edit + Delete — only visible when expanded */}
+            {expanded && (
+              <div className="t-fade-in" style={{ display: "flex", gap: T.space.base, marginTop: T.space.base }}>
+                <Btn variant="secondary" onClick={() => { startEdit(s); setExpandedSet(null); }} style={{ flex: 1 }}>Edit</Btn>
+                <Btn variant="danger" onClick={() => { setConfirmDelete(s.id); setExpandedSet(null); }} style={{ flex: 1 }}>Delete</Btn>
+              </div>
+            )}
           </Card>
         );
       })}
@@ -808,7 +949,7 @@ function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach }) {
   const wl = weightLabel(unit);
 
   // Find last session for this set to pre-fill values
-  const getLastSessionData = (setId, exerciseIds) => {
+  const getLastSessionData = useCallback((setId) => {
     const lastSession = [...data.sessions].reverse().find(s => s.setId === setId);
     if (!lastSession) return null;
     const lookup = {};
@@ -821,13 +962,13 @@ function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach }) {
       }
     });
     return lookup;
-  };
+  }, [data.sessions, unit]);
 
   useEffect(() => {
     if (activeSet) {
       const validIds = activeSet.exerciseIds.filter(eid => data.exercises.some(e => e.id === eid));
       if (validIds.length === 0) { setActiveSet(null); return; }
-      const lastData = getLastSessionData(activeSet.id, validIds);
+      const lastData = getLastSessionData(activeSet.id);
       const entries = validIds.map(eid => {
         const prev = lastData?.[eid];
         if (prev) return { exerciseId: eid, sets: prev, logged: [] };
@@ -1150,13 +1291,37 @@ function MuscleBar({ label, value, max, icon, unit }) {
   );
 }
 
-function ProgressPage({ data, onRepeatSession }) {
+function ProgressPage({ data, save, onRepeatSession }) {
   const [view, setView] = useState("prs");
   const [selectedExId, setSelectedExId] = useState(null);
+  const [confirmDeleteSession, setConfirmDeleteSession] = useState(null);
   const unit = data.settings?.unit || "kg";
   const wl = weightLabel(unit);
 
-  const { prEntries, totalSessions, totalVol, weeksActive, thisWeekSessions, muscleEntries } = React.useMemo(() => {
+  // Delete a session and recalculate all PRs from remaining sessions
+  const deleteSession = (sessionId) => {
+    const remaining = data.sessions.filter(s => s.id !== sessionId);
+    // Recalculate PRs from scratch using remaining sessions
+    const newPrs = {};
+    remaining.forEach(s => {
+      s.entries.forEach(e => {
+        const maxW = Math.max(...e.sets.map(st => st.weight), 0);
+        const maxR = Math.max(...e.sets.map(st => st.reps), 0);
+        const vol = e.sets.reduce((a, st) => a + st.reps * st.weight, 0);
+        const prev = newPrs[e.exerciseId] || { maxWeight: 0, maxReps: 0, maxVolume: 0, date: 0 };
+        newPrs[e.exerciseId] = {
+          maxWeight: Math.max(maxW, prev.maxWeight),
+          maxReps: Math.max(maxR, prev.maxReps),
+          maxVolume: Math.max(vol, prev.maxVolume),
+          date: Math.max(s.date, prev.date),
+        };
+      });
+    });
+    save({ ...data, sessions: remaining, prs: newPrs });
+    setConfirmDeleteSession(null);
+  };
+
+  const { prEntries, totalSessions, totalVol, weeksActive, thisWeekSessions, muscleEntries, best1RMByExercise } = React.useMemo(() => {
     const prEntries = Object.entries(data.prs).map(([eid, pr]) => {
       const ex = data.exercises.find(e => e.id === eid);
       return { ...pr, exerciseId: eid, exerciseName: ex?.name || "Unknown", muscle: ex?.muscle || "" };
@@ -1191,10 +1356,35 @@ function ProgressPage({ data, onRepeatSession }) {
     });
     const muscleEntries = Object.entries(muscleVol).sort((a, b) => b[1] - a[1]);
 
-    return { prEntries, totalSessions, totalVol, weeksActive, thisWeekSessions, muscleEntries };
+    // Precompute best est1RM per exercise to avoid per-render loops
+    const best1RMByExercise = {};
+    data.sessions.forEach(s => {
+      s.entries.forEach(e => {
+        e.sets.forEach(st => {
+          const v = est1RM(st.weight, st.reps);
+          if (v > (best1RMByExercise[e.exerciseId] || 0)) best1RMByExercise[e.exerciseId] = v;
+        });
+      });
+    });
+
+    return { prEntries, totalSessions, totalVol, weeksActive, thisWeekSessions, muscleEntries, best1RMByExercise };
   }, [data.sessions, data.prs, data.exercises]);
 
   const maxMuscleVol = Math.max(...muscleEntries.map(([, v]) => v), 1);
+
+  const prTooltip = useCallback(({ active, payload }) => {
+    if (!active || !payload?.[0]) return null;
+    const d = payload[0].payload;
+    return (
+      <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: "10px 14px", fontSize: T.fontSize.small }}>
+        <div style={{ fontWeight: T.fontWeight.bold, color: C.text, marginBottom: T.space.sm }}>{d.date}</div>
+        <div style={{ color: C.accent }}>Max: {d.weight} {wl}</div>
+        <div style={{ color: C.pr }}>Est 1RM: {d.e1rm} {wl}</div>
+        <div style={{ color: C.textDim }}>{d.sets} sets · {d.reps} best reps</div>
+        <div style={{ color: C.textDim }}>Vol: {d.volume} {wl}</div>
+      </div>
+    );
+  }, [wl]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: T.space.xl }}>
@@ -1246,19 +1436,7 @@ function ProgressPage({ data, onRepeatSession }) {
               chartData.sort((a, b) => a.rawDate - b.rawDate);
             }
 
-            const customTooltip = ({ active, payload }) => {
-              if (!active || !payload || !payload[0]) return null;
-              const d = payload[0].payload;
-              return (
-                <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: "10px 14px", fontSize: T.fontSize.small }}>
-                  <div style={{ fontWeight: T.fontWeight.bold, color: C.text, marginBottom: T.space.sm }}>{d.date}</div>
-                  <div style={{ color: C.accent }}>Max: {d.weight} {wl}</div>
-                  <div style={{ color: C.pr }}>Est 1RM: {d.e1rm} {wl}</div>
-                  <div style={{ color: C.textDim }}>{d.sets} sets · {d.reps} best reps</div>
-                  <div style={{ color: C.textDim }}>Vol: {d.volume} {wl}</div>
-                </div>
-              );
-            };
+            const customTooltip = prTooltip;
 
             return (
               <Card key={i} style={{ border: isOpen ? `1px solid ${C.accent}` : undefined }}>
@@ -1280,13 +1458,7 @@ function ProgressPage({ data, onRepeatSession }) {
                     let val;
                     if (k === "maxReps") val = pr[k];
                     else if (k === "est1rm") {
-                      // Compute from best set across all sessions
-                      let best = 0;
-                      data.sessions.forEach(s => {
-                        const entry = s.entries.find(e => e.exerciseId === pr.exerciseId);
-                        if (!entry) return;
-                        entry.sets.forEach(st => { const e = est1RM(st.weight, st.reps); if (e > best) best = e; });
-                      });
+                      const best = best1RMByExercise[pr.exerciseId] || 0;
                       val = best > 0 ? displayWeight(best, unit) : "—";
                     } else val = displayWeight(pr[k], unit);
                     return (
@@ -1322,7 +1494,7 @@ function ProgressPage({ data, onRepeatSession }) {
                     {chartData.length > 0 && (
                       <div style={{ marginTop: chartData.length >= 2 ? T.space.xl : 0 }}>
                         {[...chartData].reverse().map((d, j) => (
-                          <div key={j} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: j < chartData.length - 1 ? `1px solid ${C.border}` : "none" }}>
+                          <div key={j} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${T.space.base}px 0`, borderBottom: j < chartData.length - 1 ? `1px solid ${C.border}` : "none" }}>
                             <div>
                               <div style={{ fontSize: T.fontSize.bodySmall, fontWeight: T.fontWeight.semi }}>{d.date}</div>
                               <div style={{ fontSize: T.fontSize.xs, color: C.textDim }}>{d.sets} sets · best {d.reps} reps</div>
@@ -1359,17 +1531,30 @@ function ProgressPage({ data, onRepeatSession }) {
       {/* History tab */}
       {view === "history" && (
         <div style={{ display: "flex", flexDirection: "column", gap: T.space.base }}>
+          {confirmDeleteSession && (
+            <ConfirmDialog
+              message="Delete this session? PRs will be recalculated from your remaining sessions."
+              confirmLabel="Delete"
+              cancelLabel="Cancel"
+              onConfirm={() => deleteSession(confirmDeleteSession)}
+              onCancel={() => setConfirmDeleteSession(null)}
+            />
+          )}
           {data.sessions.length === 0 && <Card style={{ textAlign: "center", padding: T.space["3xl"], color: C.textDim }}>No sessions yet</Card>}
           {[...data.sessions].reverse().map(s => {
             const set = data.sets.find(ws => ws.id === s.setId);
             const vol = s.entries.reduce((a, e) => a + e.sets.reduce((b, st) => b + st.reps * st.weight, 0), 0);
             return (
               <Card key={s.id}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: T.fontWeight.bold, fontSize: T.fontSize.body }}>{set?.name || "Deleted Set"}</div>
                     <div style={{ fontSize: T.fontSize.small, color: C.textDim }}>{fmtDateFull(s.date)} {s.duration ? `· ${Math.floor(s.duration / 60)}min` : ""}</div>
                   </div>
+                  <button
+                    onClick={() => setConfirmDeleteSession(s.id)}
+                    style={{ background: "none", border: "none", color: C.textDim, cursor: "pointer", fontSize: T.fontSize.small, padding: `${T.space.xs}px ${T.space.sm}px`, flexShrink: 0, opacity: 0.6 }}
+                  >✕</button>
                 </div>
                 <div style={{ display: "flex", gap: T.space.xl, marginTop: T.space.base, fontSize: T.fontSize.small, color: C.textDim }}>
                   <span>{s.entries.length} exercises</span>
@@ -1572,7 +1757,7 @@ function SettingsPage({ data, save, drive }) {
       <Card>
         <div style={{ fontSize: T.fontSize.body, fontWeight: T.fontWeight.bold, marginBottom: T.space.base }}>About</div>
         <div style={{ fontSize: T.fontSize.caption, color: C.textDim, lineHeight: 1.5 }}>
-          <strong style={{ color: C.accent }}>🟁 Temple v0.8.2</strong><br />
+          <strong style={{ color: C.accent }}>🟁 Temple v0.9.1</strong><br />
           Your body is a temple. Train it.<br /><br />
           Built to replace subscription-gated workout apps. Free, private, all data stays on your device.
         </div>
@@ -1647,6 +1832,7 @@ export default function Temple() {
   const pwa = usePWA();
   const drive = useGoogleDrive();
   const coach = useCoach(data?.settings?.anthropicKey || "");
+  const errorMonitor = useErrorMonitor();
 
   // ── Pull-to-refresh ──
   const [pullY, setPullY] = useState(0);
@@ -1713,42 +1899,42 @@ export default function Temple() {
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
       >
-        {/* Header — safe-area aware, logo animates on pull */}
+        {/* Pull-to-refresh logo — only visible when pulling, slides in from top */}
         <div style={{
-          paddingTop: "calc(env(safe-area-inset-top) + 12px)",
-          paddingBottom: T.space.base,
-          paddingLeft: T.space.xl,
-          paddingRight: T.space.xl,
-          display: "flex", justifyContent: "center", alignItems: "center",
-          background: C.bg, zIndex: T.z.header, flexShrink: 0,
-          transform: pullY > 0 ? `translateY(${pullY * 0.4}px)` : "none",
-          transition: pulling ? "none" : `transform 0.35s ${T.easing.spring}`,
-          position: "relative",
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: T.z.header + 10,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          pointerEvents: "none",
+          // Slides down from above: starts hidden above screen, follows pull
+          transform: pullY > 0 || refreshing
+            ? `translateY(calc(env(safe-area-inset-top) + ${refreshing ? 20 : Math.max(pullY - 32, 0)}px))`
+            : `translateY(calc(env(safe-area-inset-top) - 60px))`,
+          transition: pulling ? "none" : `transform 0.4s ${T.easing.spring}`,
+          opacity: pullProgress > 0.1 || refreshing ? 1 : 0,
         }}>
           <div style={{ fontWeight: T.fontWeight.black, fontSize: T.fontSize.h2, letterSpacing: T.letterSpacing.tight, color: C.accent, display: "flex", alignItems: "center", gap: T.space.sm, userSelect: "none" }}>
             <span style={{
               display: "inline-block",
-              transform: refreshing ? "scale(1.3)" : `rotate(${logoRotate}deg) scale(${pulling ? logoScale : 1})`,
-              opacity: pulling ? logoOpacity : 1,
-              transition: pulling ? "none" : `transform 0.4s ${T.easing.spring}, opacity 0.25s`,
+              transform: refreshing ? "scale(1.2)" : `rotate(${logoRotate}deg) scale(${logoScale})`,
+              transition: pulling ? "none" : `transform 0.4s ${T.easing.spring}`,
               animation: refreshing ? "temple-logo-spin 0.6s cubic-bezier(0.34,1.56,0.64,1) forwards" : "none",
             }}>🟁</span>
             TEMPLE
           </div>
-
-          {/* Pull hint */}
           {pulling && pullY > 8 && (
-            <div style={{ position: "absolute", bottom: -T.space.lg, fontSize: T.fontSize.xs, color: C.textDim, opacity: pullProgress, letterSpacing: T.letterSpacing.label, textTransform: "uppercase" }}>
+            <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: T.space.xs, opacity: pullProgress, letterSpacing: T.letterSpacing.label, textTransform: "uppercase" }}>
               {pullY >= THRESHOLD ? "Release" : "Pull to refresh"}
             </div>
           )}
-
-          {saving && (
-            <div style={{ position: "absolute", right: T.space.xl, display: "flex", alignItems: "center", gap: T.space.sm }}>
-              <div className="t-pulse" style={{ width: 6, height: 6, borderRadius: "50%", background: C.accent }} />
-            </div>
-          )}
         </div>
+
+        {/* Safe area spacer — no visible header */}
+        <div style={{ height: "env(safe-area-inset-top)", flexShrink: 0, background: C.bg }} />
 
         {/* Scrollable content */}
         <div
@@ -1758,21 +1944,27 @@ export default function Temple() {
             overflowY: "auto",
             overflowX: "hidden",
             WebkitOverflowScrolling: "touch",
-            transform: pullY > 0 ? `translateY(${pullY * 0.6}px)` : "none",
+            transform: pullY > 0 ? `translateY(${pullY * 0.5}px)` : "none",
             transition: pulling ? "none" : `transform 0.35s ${T.easing.spring}`,
           }}
         >
-          <div style={{ padding: `${T.space.base}px ${T.space.xl}px`, paddingBottom: "calc(env(safe-area-inset-bottom) + 90px)", maxWidth: T.size.maxWidth, margin: "0 auto" }}>
+          <div style={{ padding: `${T.space.xl}px ${T.space.xl}px`, paddingBottom: "calc(env(safe-area-inset-bottom) + 90px)", maxWidth: T.size.maxWidth, margin: "0 auto" }}>
+            {saving && (
+              <div style={{ position: "fixed", top: "calc(env(safe-area-inset-top) + 8px)", right: T.space.xl, zIndex: T.z.header }}>
+                <div className="t-pulse" style={{ width: 6, height: 6, borderRadius: "50%", background: C.accent }} />
+              </div>
+            )}
             {pwa.canInstall && <div style={{ marginBottom: T.space.xl }}><InstallBanner onInstall={pwa.install} onDismiss={pwa.dismiss} /></div>}
             {tab === "library" && <LibraryPage data={data} save={save} />}
             {tab === "sets" && <SetsPage data={data} save={save} onStartSession={handleStartSession} coach={coach} />}
             {tab === "session" && <SessionPage data={data} save={save} activeSet={activeSet} setActiveSet={setActiveSet} setTab={setTab} coach={coach} />}
-            {tab === "progress" && <ProgressPage data={data} onRepeatSession={handleStartSession} />}
+            {tab === "progress" && <ProgressPage data={data} save={save} onRepeatSession={handleStartSession} />}
             {tab === "settings" && <SettingsPage data={data} save={save} drive={drive} />}
           </div>
         </div>
 
         <Tabs active={tab} onChange={setTab} />
+        <ErrorMonitor logs={errorMonitor.logs} onClear={errorMonitor.clear} />
       </div>
     </ErrorBoundary>
   );

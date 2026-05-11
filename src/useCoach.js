@@ -23,13 +23,11 @@ export function useCoach(apiKey = "") {
     if (!hasKey) return { text: "", error: "no_key" };
 
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      const res = await fetch("/api/coach", {
         method: "POST",
         headers: {
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
-          "anthropic-dangerous-client-side-api-key-unsafe": "true",
           "content-type": "application/json",
+          "x-coach-key": apiKey,
         },
         body: JSON.stringify({
           model: opts.model || MODELS.fast,
@@ -42,9 +40,7 @@ export function useCoach(apiKey = "") {
       const data = await res.json();
 
       if (!res.ok) {
-        if (res.status === 401) return { text: "", error: "invalid_key" };
-        if (res.status === 429) return { text: "", error: "rate_limit" };
-        return { text: "", error: data.error?.message || "api_error" };
+        return { text: "", error: data.error || "api_error" };
       }
 
       return { text: data.content?.[0]?.text || "", error: null };
