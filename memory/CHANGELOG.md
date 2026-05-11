@@ -1,60 +1,49 @@
 # 🟁 Temple — Changelog
 
-## v0.9.1 (Current)
-- AI CORS fix: all AI calls now routed through Netlify proxy (`netlify/functions/coach.js`) — fixes "could not connect" on Body Check and exercise ordering
-- Auto exercise ordering: fixed nonstop re-trigger loop — now uses selection fingerprint, only fires when exercises change not on reorder
-- Session delete: tap ✕ in Progress → History to remove a session, PRs auto-recalculated from remaining sessions
-- Sets page: edit/delete hidden behind `···` toggle per card, fades in with animation
-- Search fields: inline clear `✕` button appears when field has content
-- Token fixes: #000/#fff in VideoSheet replaced with C.bg/C.text
-- netlify/functions/coach.js: new file — proxies Anthropic API, forwards user key per-request, never stored
+## v0.9.2 (Current)
+- **Code split**: App.jsx (1972 lines) → 7 files, ~280 lines each
+  - `src/components.jsx` — shared UI (Tabs, Card, Btn, Input, VideoSheet, YTButton, etc.)
+  - `src/pages/LibraryPage.jsx`, `SetsPage.jsx`, `SessionPage.jsx`, `ProgressPage.jsx`, `SettingsPage.jsx`
+- **Style helpers**: `S` object added to `tokens.js` — `S.col()`, `S.row()`, `S.between()`, `S.label`
+- **Performance**: `customTooltip` extracted from `.map()` → memoized with `useCallback`
+- **Performance**: `est1RM` moved into `useMemo` as precomputed `best1RMByExercise` map
+- **Performance**: `getLastSessionData` memoized with `useCallback`
+- **Bug B27**: `ASSETS_CACHE` stuck at `temple-assets-v0.7.1` → bumped to match version
+- **Bug B28**: Raw `padding: "8px 0"` in PR chart table → `T.space.base`
+- **Bug B29**: `recovery.js` orphan Netlify function removed
+- Error monitor: red dot captures console.error, unhandled rejections, window.onerror
+- Session delete: remove a session from history, PRs auto-recalculated from remaining
+- Sets `···` menu: edit/delete hidden behind per-card toggle
+- Search clear `✕`: inline clear button on all search fields
+- AI CORS fix: all AI calls via `/api/coach` Netlify proxy (coach.js)
+- Auto exercise ordering: fixed nonstop loop (fingerprint-based, `coach.hasKey` in deps)
+- `recovery.js` dead Netlify function deleted
 
-
+## v0.9.1
+- AI CORS fix: coach.js proxy · ordering loop fix · ordering error feedback
+- Session delete with PR recalculation · Sets ··· menu · search clear ✕
+- Error monitor dot (red/grey/invisible)
 
 ## v0.9
-- Logo hidden by default — only appears sliding in from top during pull-to-refresh gesture
-- Pull-to-refresh: 🟁 TEMPLE slides down tracking your finger, spins on release, reloads page
-- Safe area header fixed — content no longer hidden behind iPhone notch/Dynamic Island
-- YouTube in-app search: real results via YouTube Data API v3 (Netlify function)
-- YouTube in-app player: tap result to play embedded video, prev/next navigation, "X of 8" counter
-- iOS zoom fix: viewport maximum-scale=1, all inputs ≥17px (T.fontSize.h3)
-- Google Drive persistent connection: user info stored in idb-keyval, silent token refresh on load
-- API key input: "Save Key" button replaced with ✓ teal card once saved
-- Auto AI exercise ordering: triggers 1.2s after selection stabilises (2+ exercises), silent, resets on change
-- Token fixes: #000/#fff in VideoSheet replaced with C.bg/C.text
-- Netlify function: youtube.js — proxies YouTube Data API, caches 1hr
+- Logo hidden — only appears sliding from top during pull-to-refresh
+- YouTube in-app search + player (YouTube Data API) · prev/next navigation
+- iOS zoom fix (viewport + input ≥17px) · Google Drive persistent connection
+- API key saved state (✓ checkmark) · auto AI exercise ordering
 
 ## v0.8.2
-- Tokenisation audit · VideoSheet handle fix · Start button disabled state
-- ApiKeyInput draft sync · Body Check navigation · useMemo on ProgressPage
-- Bundle split 613KB→94KB · security headers · bugs B21–B24 fixed
+- Tokenisation audit · bundle split 613KB→94KB · security headers
+- useMemo on ProgressPage · useCallback on consult() · bugs B21–B24 fixed
 
 ## v0.8.1
 - useCoach hook · MODELS (Haiku/Sonnet) · all prompts in useCoach.js
 - Exercise order suggestion · Body Check uses Sonnet
-- User API key in Settings · anthropicKey in DEFAULT_SETTINGS
 
 ## v0.8
-- Body Check: post-workout pain guidance via Claude AI
-- Stable two-zone set builder · YouTube bottom sheet · exercise search
-- Session: rest timer ±30s · exercise progress strip · calm completion screen
-- ConfirmDialog labels · Input focus border
+- Body Check AI · stable set builder · YouTube bottom sheet
+- Session: rest ±30s · exercise strip · bodyweight handling · calm completion
 
-## v0.7.1
-- SW black screen fix: network-first HTML · versioned cache names
-- Exercise search + alphabetical sort in set builder
-
-## v0.7
-- New icon: pyramid with T in negative space
-- Google Drive connected user card · lean memory system · RULES.md
-
-## v0.6
-- Google Drive backup/restore · Vite split · idb-keyval
-
-## v0.5
-- Training flow · 51 exercises · Progress · loading splash · ErrorBoundary
-
-## v0.4 — PWA: service worker · manifest · Apple meta
-## v0.3 — Custom exercise CRUD · reordering · Settings
-## v0.2 — Design token system · rebrand to Temple 🟁
-## v0.1 — Exercise library · workout sets · session player · PR detection
+## v0.7.1 — SW black screen fix · exercise search + sort
+## v0.7 — New icon · Google Drive card · lean memory · RULES.md
+## v0.6 — Google Drive backup · Vite split · idb-keyval
+## v0.5 — Training flow · 51 exercises · Progress · splash · ErrorBoundary
+## v0.4 — PWA · v0.3 — Settings · v0.2 — Tokens · v0.1 — Core

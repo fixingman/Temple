@@ -44,3 +44,8 @@ Run before every deploy. Update Last Run when done.
 - **Date**: 2026-05-10
 - **Smoke tests**: Not run
 - **Code checks**: 2 token violations fixed (B25, B26) · fetch in VideoSheet documented as acceptable (Netlify function)
+
+## Last Run (updated)
+- **Date**: 2026-05-11
+- **Smoke tests**: Not run
+- **Code checks**: B27–B29 fixed · ASSETS_CACHE bumped · recovery.js removed · all pages split · build clean

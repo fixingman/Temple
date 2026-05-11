@@ -28,16 +28,17 @@
 
 ## Where We Left Off
 ```
-Version:     v0.9.1
-Date:        2026-05-10
-Shipped:     AI CORS fix (coach.js proxy) · ordering loop fix · session delete
-             with PR recalc · Sets ··· menu · search clear X · token fixes
-Tested:      Not yet — smoke tests S1–S10 needed
-Next:        Run smoke tests · add YOUTUBE_API_KEY to Netlify env vars ·
+Version:     v0.9.2
+Date:        2026-05-11
+Shipped:     Code split (1972→280 line App.jsx + 5 page files) · S style helpers ·
+             performance fixes (customTooltip, est1RM, getLastSessionData) ·
+             bugs B27-B29 · error monitor · session delete · Sets ··· menu ·
+             search clear ✕ · AI CORS fix · ordering loop fix
+Tested:      Not yet — AI features need real device test after CORS fix
+Next:        Add YOUTUBE_API_KEY to Netlify · test AI ordering + Body Check ·
              session detail view · post-session recovery tip
 Open issues: Google OAuth still in testing mode
-             YouTube API key not yet added to Netlify (S8 will fail without it)
-             AI features untested after CORS fix — need real device test
+             YouTube API key not yet in Netlify env vars
 ```
 
 ---
@@ -47,8 +48,11 @@ Open issues: Google OAuth still in testing mode
 index.html · vite.config.js · package.json · netlify.toml · .gitignore
 public/   manifest.json · sw.js · icon.svg · _headers · _redirects
 src/      main.jsx · tokens.js · data.js · hooks.js
-          useGoogleDrive.js · useCoach.js · App.jsx
-netlify/functions/  youtube.js
+          useGoogleDrive.js · useCoach.js
+          App.jsx · components.jsx
+          pages/  LibraryPage.jsx · SetsPage.jsx · SessionPage.jsx
+                  ProgressPage.jsx · SettingsPage.jsx
+netlify/functions/  coach.js · youtube.js
 memory/   RULES.md · PRODUCT.md · ARCHITECTURE.md · DESIGN.md
           CHANGELOG.md · BACKLOG.md · BUGS.md · HOUSEKEEPING.md
 ```

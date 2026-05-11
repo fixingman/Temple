@@ -3,8 +3,8 @@
 Status tags: `[shipped]` = deployed untested · `[tested]` = verified on device · `[wip]` = in progress
 
 ## Up Next
-1. **Run smoke tests S1–S8** — update HOUSEKEEPING with results
-2. **YouTube API key setup** — add YOUTUBE_API_KEY to Netlify env vars (console.cloud.google.com → same project as Google Drive → enable YouTube Data API v3 → create API key)
+1. **Add YOUTUBE_API_KEY to Netlify** — console.cloud.google.com → same project as Drive → enable YouTube Data API v3 → create API key → Netlify env vars
+2. **Test AI features** — add Anthropic key in Settings → create a set with 3+ exercises → verify AI ordering works + ✦ AI ordered appears
 3. **Session detail view** — tap history entry → full breakdown
 4. **Post-session recovery tip** — auto-surface using prompts.recoveryTip (Haiku)
 5. **Custom rest timer** — configurable in Settings
@@ -12,15 +12,15 @@ Status tags: `[shipped]` = deployed untested · `[tested]` = verified on device 
 ## Recently Shipped
 | Feature | Status |
 |---------|--------|
-| Logo hidden, pull-to-refresh reveal | `[shipped]` |
+| Code split into page files | `[shipped]` |
+| Style helpers (S object) | `[shipped]` |
+| Performance: customTooltip, est1RM, getLastSessionData | `[shipped]` |
+| Error monitor dot | `[shipped]` |
+| Session delete + PR recalc | `[shipped]` |
+| Sets ··· menu | `[shipped]` |
+| Search clear ✕ | `[shipped]` |
+| AI CORS fix (coach.js proxy) | `[shipped]` |
 | YouTube in-app search + player | `[shipped]` |
-| YouTube prev/next navigation | `[shipped]` |
-| iOS zoom fix | `[shipped]` |
-| Google Drive persistent connection | `[shipped]` |
-| API key saved state (checkmark) | `[shipped]` |
-| Auto AI exercise ordering | `[shipped]` |
-| Body Check + useCoach system | `[shipped]` |
-| Bundle split 613KB→94KB | `[shipped]` |
 | SW black screen fix | `[tested]` |
 
 ## Feature Backlog
@@ -30,19 +30,16 @@ Status tags: `[shipped]` = deployed untested · `[tested]` = verified on device 
 | Gap analysis (undertrained muscles) | High | prompts written, needs UI |
 | Session detail view | Medium | — |
 | Custom rest timer | Medium | — |
-| Session notes + RPE | Medium | — |
 | Post-session recovery tip | Medium | prompt written, needs UI |
-| Active session indicator on tab | Low | — |
+| Session notes + RPE | Medium | — |
 | Superset / circuit mode | Medium | — |
+| Active session indicator on tab | Low | — |
 | Weekly/monthly volume charts | Medium | — |
-| Rest timer audio alert | Low | — |
 | Calendar heatmap | Low | — |
-| Workout sharing | Low | — |
 
 ## Technical Debt
-- App.jsx ~1780 lines — consider splitting pages
-- recharts 537KB gzip — acceptable for now
+- S style helpers added but not yet applied to existing code (would reduce tokens further)
+- recharts 537KB gzip — acceptable, needs lighter lib to fix
 - Timezone-naive week calculation
 - No accessibility (aria, keyboard nav)
-- Google OAuth in testing mode — needs verification to go public
-- YouTube API key needs to be added to Netlify env vars
+- Google OAuth in testing mode
