@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
 import { T, C } from "./tokens";
 import { uid } from "./data";
 import { useAppData, usePWA } from "./hooks";
@@ -8,8 +8,10 @@ import { GlobalStyles, Tabs, InstallBanner } from "./components";
 import { LibraryPage } from "./pages/LibraryPage";
 import { SetsPage } from "./pages/SetsPage";
 import { SessionPage } from "./pages/SessionPage";
-import { ProgressPage } from "./pages/ProgressPage";
 import { SettingsPage } from "./pages/SettingsPage";
+
+// Lazy — recharts only loads when Progress tab is first opened
+const ProgressPage = lazy(() => import("./pages/ProgressPage").then(m => ({ default: m.ProgressPage })));
 
 // ─── Error Monitor ───
 // Captures console.error, unhandled rejections, and app errors.
@@ -266,7 +268,7 @@ export default function Temple() {
             {tab === "library" && <LibraryPage data={data} save={save} />}
             {tab === "sets" && <SetsPage data={data} save={save} onStartSession={handleStartSession} coach={coach} />}
             {tab === "session" && <SessionPage data={data} save={save} activeSet={activeSet} setActiveSet={setActiveSet} setTab={setTab} coach={coach} />}
-            {tab === "progress" && <ProgressPage data={data} save={save} onRepeatSession={handleStartSession} />}
+            {tab === "progress" && <Suspense fallback={<div style={{ padding: T.space["3xl"], textAlign: "center", color: C.textDim }}>Loading...</div>}><ProgressPage data={data} save={save} onRepeatSession={handleStartSession} /></Suspense>}
             {tab === "settings" && <SettingsPage data={data} save={save} drive={drive} />}
           </div>
         </div>
