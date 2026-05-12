@@ -140,6 +140,7 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
   const [mobCountdown, setMobCountdown] = useState(null);
   const [mobRunning, setMobRunning] = useState(false);
   const [supersetFlash, setSupersetFlash] = useState(false);
+  const [swapOpen, setSwapOpen] = useState(false);
   const intervalRef = useRef(null);
   const restRef = useRef(null);
   const mobRef = useRef(null);
@@ -390,6 +391,19 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: T.space.xl }}>
+      {swapOpen && (
+        <SwapSheet
+          exercise={exercise}
+          allExercises={data.exercises}
+          coach={coach}
+          onSwap={(newExId) => {
+            const nd = sessionData.map((e, i) => i === currentIdx ? { ...e, exerciseId: newExId, logged: [] } : e);
+            setSessionData(nd);
+            setSwapOpen(false);
+          }}
+          onClose={() => setSwapOpen(false)}
+        />
+      )}
       {showRecoveryMid && <RecoverySheet onClose={() => setShowRecoveryMid(false)} recentExercises={midSessionExercises} coach={coach} onGoToSettings={() => setTab("settings")} />}
       {confirmCancel && <ConfirmDialog message="Cancel this workout? All progress will be lost." onConfirm={() => { setActiveSet(null); setConfirmCancel(false); }} onCancel={() => setConfirmCancel(false)} confirmLabel="Cancel workout" cancelLabel="Keep going" />}
 
@@ -444,16 +458,23 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
       <Card style={{ padding: T.space["2xl"] }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: T.space.xl }}>
           <div style={{ flex: 1, minWidth: 0, marginRight: T.space.base }}>
-            <div style={{ fontWeight: T.fontWeight.heavy, fontSize: T.fontSize.h2 }}>{exercise?.name}</div>
-            {/* Superset indicator */}
-            {(isSupersetWith(entry.exerciseId, sessionData[currentIdx + 1]?.exerciseId) ||
-              isSupersetWith(entry.exerciseId, sessionData[currentIdx - 1]?.exerciseId)) && (
-              <div style={{ fontSize: T.fontSize.xs, color: C.accent, fontWeight: T.fontWeight.semi, marginTop: T.space.xs }}>
-                ⇆ Superset
-                {isSupersetWith(entry.exerciseId, sessionData[currentIdx + 1]?.exerciseId) &&
-                  ` — next: ${data.exercises.find(e => e.id === sessionData[currentIdx + 1]?.exerciseId)?.name}`}
-              </div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <div>
+              <div style={{ fontWeight: T.fontWeight.heavy, fontSize: T.fontSize.h2 }}>{exercise?.name}</div>
+              {/* Superset indicator */}
+              {(isSupersetWith(entry.exerciseId, sessionData[currentIdx + 1]?.exerciseId) ||
+                isSupersetWith(entry.exerciseId, sessionData[currentIdx - 1]?.exerciseId)) && (
+                <div style={{ fontSize: T.fontSize.xs, color: C.accent, fontWeight: T.fontWeight.semi, marginTop: T.space.xs }}>
+                  ⇆ Superset
+                  {isSupersetWith(entry.exerciseId, sessionData[currentIdx + 1]?.exerciseId) &&
+                    ` — next: ${data.exercises.find(e => e.id === sessionData[currentIdx + 1]?.exerciseId)?.name}`}
+                </div>
+              )}
+            </div>
+            {coach.hasKey && (
+              <button onClick={() => setSwapOpen(true)} style={{ background: "none", border: `1px solid ${C.border}`, borderRadius: T.radius.md, color: C.textDim, cursor: "pointer", fontSize: T.fontSize.xs, padding: `${T.space.xs}px ${T.space.base}px`, flexShrink: 0, marginLeft: T.space.base }}>⇄ Swap</button>
             )}
+          </div>
             <div style={{ fontSize: T.fontSize.small, color: C.textDim }}>{exercise?.muscle}</div>
           </div>
           <YTButton query={exercise?.yt} label={exercise?.name} />
@@ -607,3 +628,74 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
 }
 
 
+// ─── Exercise Swap Sheet ───
+const SWAP_AREAS = ["Shoulder", "Elbow / Wrist", "Lower Back", "Knee", "Hip", "Neck", "Other"];
+
+function SwapSheet({ exercise, allExercises, coach, onSwap, onClose }) {
+  const [area, setArea] = useState(null);
+  const [results, setResults] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const search = async () => {
+    setLoading(true); setError(""); setResults(null);
+    const { text, error: err } = await coach.ask(
+      prompts.exerciseSwap(exercise?.name, area, allExercises),
+      { maxTokens: 400, model: "claude-haiku-4-5-20251001" }
+    );
+    if (err) { setError(coachError(err)); setLoading(false); return; }
+    try {
+      const match = text.match(/\[[\s\S]*?\]/);
+      setResults(JSON.parse(match[0]));
+    } catch { setError("Could not parse suggestions. Try again."); }
+    setLoading(false);
+  };
+
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: C.overlay, zIndex: T.z.modal + 10, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+      <div className="t-slide-up" onClick={e => e.stopPropagation()} style={{ background: C.surface, borderRadius: `${T.radius.xl}px ${T.radius.xl}px 0 0` }}>
+        <div style={{ width: 36, height: 4, borderRadius: T.radius.sm, background: C.border, margin: `${T.space.base}px auto` }} />
+        <div style={{ padding: `0 ${T.space.xl}px calc(env(safe-area-inset-bottom) + ${T.space["2xl"]}px)`, display: "flex", flexDirection: "column", gap: T.space.xl }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <div style={{ fontSize: T.fontSize.h3, fontWeight: T.fontWeight.bold }}>Swap Exercise</div>
+              <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: 2 }}>Replacing: {exercise?.name}</div>
+            </div>
+            <button onClick={onClose} style={{ background: C.bg, border: "none", color: C.textDim, cursor: "pointer", borderRadius: T.radius.full, width: 28, height: 28, fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+          </div>
+
+          {!results ? (
+            <>
+              <div>
+                <div style={{ fontSize: T.fontSize.small, color: C.textDim, marginBottom: T.space.base }}>What hurts?</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: T.space.sm }}>
+                  {SWAP_AREAS.map(a => (
+                    <button key={a} onClick={() => setArea(a)} style={{ border: `1px solid ${area === a ? C.accent : C.border}`, borderRadius: T.radius.full, padding: `${T.space.sm}px ${T.space.lg}px`, fontSize: T.fontSize.small, background: area === a ? C.accentDim : "none", color: area === a ? C.accent : C.textDim, cursor: "pointer" }}>{a}</button>
+                  ))}
+                </div>
+              </div>
+              {error && <div style={{ fontSize: T.fontSize.small, color: C.danger }}>{error}</div>}
+              <Btn onClick={search} disabled={!area || loading} style={{ width: "100%" }}>
+                {loading ? "Finding alternatives..." : "✦ Find Alternatives"}
+              </Btn>
+            </>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: T.space.base }}>
+              <div style={{ fontSize: T.fontSize.small, color: C.textDim }}>Tap to swap in</div>
+              {results.map((r, i) => {
+                const match = allExercises.find(e => e.name.toLowerCase() === r.name.toLowerCase());
+                return (
+                  <button key={i} onClick={() => match && onSwap(match.id)} style={{ background: C.bg, border: `1px solid ${match ? C.border : C.border}`, borderRadius: T.radius.xl, padding: T.space.xl, textAlign: "left", cursor: match ? "pointer" : "default", opacity: match ? 1 : 0.5, width: "100%" }}>
+                    <div style={{ fontWeight: T.fontWeight.bold, fontSize: T.fontSize.body, color: match ? C.text : C.textDim }}>{r.name}{!match && " (not in library)"}</div>
+                    <div style={{ fontSize: T.fontSize.small, color: C.textDim, marginTop: T.space.sm }}>{r.reason}</div>
+                  </button>
+                );
+              })}
+              <button onClick={() => { setResults(null); setError(""); }} style={{ background: "none", border: "none", color: C.textDim, cursor: "pointer", fontSize: T.fontSize.small, padding: `${T.space.sm}px 0` }}>← Try again</button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
