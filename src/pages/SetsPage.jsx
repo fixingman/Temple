@@ -19,8 +19,38 @@ export function SetsPage({ data, save, onStartSession, coach }) {
   const [lastOrderedKey, setLastOrderedKey] = useState("");
   const selectionKey = [...selected].sort().join(",");
 
-  const startCreate = () => { setCreating(true); setEditingId(null); setName(""); setSelected([]); setMuscleFilter("All"); setSearch(""); setError(""); setOrderError(""); setLastOrderedKey(""); };
-  const startEdit = (s) => { setCreating(true); setEditingId(s.id); setName(s.name); setSelected([...s.exerciseIds]); setMuscleFilter("All"); setSearch(""); setError(""); setOrderError(""); setLastOrderedKey([...s.exerciseIds].sort().join(",")); };
+  const [supersetPairs, setSupersetPairs] = useState([]); // [[id1,id2], ...]
+
+  const startCreate = () => {
+    setCreating(true); setEditingId(null); setName(""); setSelected([]);
+    setMuscleFilter("All"); setSearch(""); setError(""); setOrderError("");
+    setLastOrderedKey(""); setSupersetPairs([]);
+  };
+  const startEdit = (s) => {
+    setCreating(true); setEditingId(s.id); setName(s.name);
+    setSelected([...s.exerciseIds]); setMuscleFilter("All"); setSearch(""); setError(""); setOrderError("");
+    setLastOrderedKey([...s.exerciseIds].sort().join(","));
+    setSupersetPairs(s.supersets || []);
+  };
+
+  const toggleSuperset = (idx) => {
+    const id1 = selected[idx], id2 = selected[idx + 1];
+    if (!id1 || !id2) return;
+    const paired = supersetPairs.some(([a, b]) => (a === id1 && b === id2) || (a === id2 && b === id1));
+    if (paired) {
+      setSupersetPairs(prev => prev.filter(([a, b]) => !((a === id1 && b === id2) || (a === id2 && b === id1))));
+    } else {
+      // Remove any existing pairs involving either id (can't be in two supersets)
+      const cleaned = supersetPairs.filter(([a, b]) => a !== id1 && b !== id1 && a !== id2 && b !== id2);
+      setSupersetPairs([...cleaned, [id1, id2]]);
+    }
+  };
+
+  const isPaired = (idx) => {
+    const id1 = selected[idx], id2 = selected[idx + 1];
+    return id1 && id2 && supersetPairs.some(([a, b]) => (a === id1 && b === id2) || (a === id2 && b === id1));
+  };
+  const isInAnySuperset = (id) => supersetPairs.some(([a, b]) => a === id || b === id);
 
   // Auto-suggest order when selection changes, retries if key becomes available
   useEffect(() => {
@@ -61,8 +91,8 @@ export function SetsPage({ data, save, onStartSession, coach }) {
     if (selected.length === 0) { setError("Select at least one exercise."); return; }
     setError("");
     const newSets = editingId
-      ? data.sets.map(s => s.id === editingId ? { ...s, name: name.trim(), exerciseIds: selected } : s)
-      : [...data.sets, { id: uid(), name: name.trim(), exerciseIds: selected, createdAt: Date.now() }];
+      ? data.sets.map(s => s.id === editingId ? { ...s, name: name.trim(), exerciseIds: selected, supersets: supersetPairs } : s)
+      : [...data.sets, { id: uid(), name: name.trim(), exerciseIds: selected, supersets: supersetPairs, createdAt: Date.now() }];
     save({ ...data, sets: newSets });
     setCreating(false);
   };
@@ -140,19 +170,36 @@ export function SetsPage({ data, save, onStartSession, coach }) {
                   </div>
                 )}
               </div>
-              {/* Selected exercise rows with reorder + remove */}
-              <div style={{ display: "flex", flexDirection: "column", gap: T.space.sm }}>
-                {selectedExercises.map((ex, idx) => (
-                  <div key={ex.id} style={{ display: "flex", alignItems: "center", gap: T.space.base }}>
-                    <span style={{ fontSize: T.fontSize.xs, color: C.accent, fontWeight: T.fontWeight.bold, width: 16, textAlign: "center", flexShrink: 0 }}>{idx + 1}</span>
-                    <div style={{ flex: 1, fontSize: T.fontSize.bodySmall, fontWeight: T.fontWeight.semi }}>{ex.name}</div>
-                    <div style={{ display: "flex", gap: 2, flexShrink: 0 }}>
-                      <button onClick={() => moveUp(ex.id)} disabled={idx === 0} style={{ background: "none", border: "none", color: idx === 0 ? C.border : C.textDim, cursor: idx === 0 ? "default" : "pointer", fontSize: T.fontSize.caption, padding: `${T.space.xs}px ${T.space.sm}px`, lineHeight: 1 }}>▲</button>
-                      <button onClick={() => moveDown(ex.id)} disabled={idx === selected.length - 1} style={{ background: "none", border: "none", color: idx === selected.length - 1 ? C.border : C.textDim, cursor: idx === selected.length - 1 ? "default" : "pointer", fontSize: T.fontSize.caption, padding: `${T.space.xs}px ${T.space.sm}px`, lineHeight: 1 }}>▼</button>
-                      <button onClick={() => removeFromSelected(ex.id)} style={{ background: "none", border: "none", color: C.danger, cursor: "pointer", fontSize: T.fontSize.caption, padding: `${T.space.xs}px ${T.space.sm}px`, lineHeight: 1 }}>✕</button>
+              {/* Selected exercise rows with reorder + superset + remove */}
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                {selectedExercises.map((ex, idx) => {
+                  const linked = isPaired(idx);
+                  const inSS = isInAnySuperset(ex.id);
+                  return (
+                    <div key={ex.id}>
+                      <div style={{ display: "flex", alignItems: "center", gap: T.space.base, padding: `${T.space.sm}px ${T.space.base}px`, background: inSS ? C.accentDim : C.bg, borderRadius: T.radius.lg, border: `1px solid ${inSS ? C.accentBorder : C.border}`, marginBottom: T.space.xs }}>
+                        <span style={{ fontSize: T.fontSize.xs, color: C.accent, fontWeight: T.fontWeight.bold, width: 16, textAlign: "center", flexShrink: 0 }}>{idx + 1}</span>
+                        <div style={{ flex: 1, fontSize: T.fontSize.bodySmall, fontWeight: T.fontWeight.semi }}>{ex.name}</div>
+                        {inSS && <span style={{ fontSize: T.fontSize.xxs, color: C.accent, fontWeight: T.fontWeight.bold, flexShrink: 0 }}>SS</span>}
+                        <div style={{ display: "flex", gap: 2, flexShrink: 0 }}>
+                          <button onClick={() => moveUp(ex.id)} disabled={idx === 0} style={{ background: "none", border: "none", color: idx === 0 ? C.border : C.textDim, cursor: idx === 0 ? "default" : "pointer", fontSize: T.fontSize.caption, padding: `${T.space.xs}px ${T.space.sm}px`, lineHeight: 1 }}>▲</button>
+                          <button onClick={() => moveDown(ex.id)} disabled={idx === selected.length - 1} style={{ background: "none", border: "none", color: idx === selected.length - 1 ? C.border : C.textDim, cursor: idx === selected.length - 1 ? "default" : "pointer", fontSize: T.fontSize.caption, padding: `${T.space.xs}px ${T.space.sm}px`, lineHeight: 1 }}>▼</button>
+                          <button onClick={() => removeFromSelected(ex.id)} style={{ background: "none", border: "none", color: C.danger, cursor: "pointer", fontSize: T.fontSize.caption, padding: `${T.space.xs}px ${T.space.sm}px`, lineHeight: 1 }}>✕</button>
+                        </div>
+                      </div>
+                      {/* Superset connector between this and next */}
+                      {idx < selectedExercises.length - 1 && (
+                        <div style={{ display: "flex", alignItems: "center", gap: T.space.sm, padding: `0 0 ${T.space.xs}px ${T.space["2xl"]}px` }}>
+                          <div style={{ flex: 1, height: 1, background: linked ? C.accentBorder : C.border }} />
+                          <button onClick={() => toggleSuperset(idx)} style={{ background: linked ? C.accentDim : "none", border: `1px solid ${linked ? C.accentBorder : C.border}`, borderRadius: T.radius.full, color: linked ? C.accent : C.textDim, cursor: "pointer", fontSize: T.fontSize.xxs, padding: "2px 8px", fontWeight: T.fontWeight.bold, whiteSpace: "nowrap", flexShrink: 0 }}>
+                            {linked ? "⇆ SS ✕" : "+ SS"}
+                          </button>
+                          <div style={{ flex: 1, height: 1, background: linked ? C.accentBorder : C.border }} />
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}

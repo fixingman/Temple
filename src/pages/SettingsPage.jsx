@@ -132,6 +132,25 @@ export function SettingsPage({ data, save, drive }) {
         <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: T.space.base }}>All weights are stored in kg internally. Changing this only affects display.</div>
       </Card>
 
+      {/* Bodyweight — for calorie calculation */}
+      <Card>
+        <div style={{ fontSize: T.fontSize.body, fontWeight: T.fontWeight.bold, marginBottom: T.space.sm }}>Your Bodyweight</div>
+        <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginBottom: T.space.lg, lineHeight: 1.5 }}>Used to estimate calories burnt during sessions. Stored locally, never shared.</div>
+        <div style={{ display: "flex", gap: T.space.base, alignItems: "center" }}>
+          <input
+            type="number" inputMode="decimal" min="0" placeholder={unit === "kg" ? "e.g. 80" : "e.g. 176"}
+            value={unit === "kg" ? (data.settings?.bodyweightKg || "") : (data.settings?.bodyweightKg ? Math.round(Number(data.settings.bodyweightKg) * 2.20462) : "")}
+            onChange={e => {
+              const val = e.target.value;
+              const kg = unit === "kg" ? val : val ? String(Math.round(Number(val) / 2.20462)) : "";
+              save({ ...data, settings: { ...data.settings, bodyweightKg: kg } });
+            }}
+            style={{ flex: 1, background: C.bg, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: "10px 14px", color: C.text, fontSize: T.fontSize.h3, outline: "none", textAlign: "center" }}
+          />
+          <span style={{ fontSize: T.fontSize.body, color: C.textDim, fontWeight: T.fontWeight.semi, minWidth: 28 }}>{unit}</span>
+        </div>
+      </Card>
+
       {/* Google Drive Backup */}
       <Card>
         <div style={{ fontSize: T.fontSize.body, fontWeight: T.fontWeight.bold, marginBottom: T.space.sm }}>Google Drive Backup</div>

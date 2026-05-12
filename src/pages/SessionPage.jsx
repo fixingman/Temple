@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { T, C } from "../tokens";
-import { DEFAULT_REST, uid, fmt, displayWeight, toKg, weightLabel } from "../data";
+import { DEFAULT_REST, uid, fmt, displayWeight, toKg, weightLabel, calcCalories } from "../data";
 import { Card, Btn, ConfirmDialog, YTButton } from "../components";
 import { coachError, prompts } from "../useCoach";
 
@@ -137,13 +137,21 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [showRecovery, setShowRecovery] = useState(false);
   const [showRecoveryMid, setShowRecoveryMid] = useState(false);
-  const [mobCountdown, setMobCountdown] = useState(null); // null = idle, N = counting down
+  const [mobCountdown, setMobCountdown] = useState(null);
   const [mobRunning, setMobRunning] = useState(false);
+  const [supersetFlash, setSupersetFlash] = useState(false);
   const intervalRef = useRef(null);
   const restRef = useRef(null);
   const mobRef = useRef(null);
   const unit = data.settings?.unit || "kg";
   const wl = weightLabel(unit);
+  const bodyweightKg = Number(data.settings?.bodyweightKg) || 0;
+
+  // Superset helpers
+  const supersets = activeSet?.supersets || [];
+  const isSupersetWith = useCallback((id1, id2) =>
+    supersets.some(([a, b]) => (a === id1 && b === id2) || (a === id2 && b === id1))
+  , [supersets]);
 
   // Find last session for this set to pre-fill values
   const getLastSessionData = useCallback((setId) => {
@@ -264,6 +272,7 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: T.space.base }}>
           <Card style={{ textAlign: "center" }}><div style={{ fontSize: T.fontSize.stat, fontWeight: T.fontWeight.heavy, color: C.accent }}>{totalSets}</div><div style={{ fontSize: T.fontSize.xs, color: C.textDim, fontWeight: T.fontWeight.semi }}>SETS</div></Card>
           <Card style={{ textAlign: "center" }}><div style={{ fontSize: T.fontSize.stat, fontWeight: T.fontWeight.heavy, color: C.accent }}>{volDisplay.toLocaleString()}</div><div style={{ fontSize: T.fontSize.xs, color: C.textDim, fontWeight: T.fontWeight.semi }}>VOLUME ({wl})</div></Card>
+          {liveCalories !== null && <Card style={{ textAlign: "center", gridColumn: "1 / -1" }}><div style={{ fontSize: T.fontSize.stat, fontWeight: T.fontWeight.heavy, color: C.accent }}>{liveCalories}</div><div style={{ fontSize: T.fontSize.xs, color: C.textDim, fontWeight: T.fontWeight.semi }}>KCAL BURNT (EST.)</div></Card>}
         </div>
         {newPRs.length > 0 && (
           <Card style={{ border: `1px solid ${C.pr}`, background: C.prDim }}>
@@ -314,9 +323,23 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
     nd[currentIdx] = { ...nd[currentIdx], logged: [...nd[currentIdx].logged, { weight: w, reps: r }] };
     setSessionData(nd);
     setCurrentSetIdx(prev => prev + 1);
-    setRestTimer(DEFAULT_REST);
-    setResting(true);
-    setRestDone(false);
+
+    // Superset navigation
+    const nextEntry = sessionData[currentIdx + 1];
+    const prevEntry = sessionData[currentIdx - 1];
+    if (nextEntry && isSupersetWith(entry.exerciseId, nextEntry.exerciseId)) {
+      // First of pair → go to partner, no rest
+      setCurrentIdx(i => i + 1); setCurrentSetIdx(0);
+      setResting(false); setMobCountdown(null); setMobRunning(false);
+      setSupersetFlash(true); setTimeout(() => setSupersetFlash(false), 1400);
+    } else if (prevEntry && isSupersetWith(entry.exerciseId, prevEntry.exerciseId)) {
+      // Second of pair → go back to first + start rest
+      setCurrentIdx(i => i - 1); setCurrentSetIdx(0);
+      setRestTimer(DEFAULT_REST); setResting(true); setRestDone(false);
+      setMobCountdown(null); setMobRunning(false);
+    } else {
+      setRestTimer(DEFAULT_REST); setResting(true); setRestDone(false);
+    }
   };
 
   const goNextExercise = () => {
@@ -345,7 +368,8 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
       if (vol > prev.maxVolume) found.push({ exerciseId: e.exerciseId, type: "volume", value: vol });
       prs[e.exerciseId] = { maxWeight: Math.max(maxW, prev.maxWeight), maxReps: Math.max(maxR, prev.maxReps), maxVolume: Math.max(vol, prev.maxVolume), date: Date.now() };
     });
-    save({ ...data, sessions: [...data.sessions, { id: uid(), setId: activeSet.id, date: Date.now(), duration: timer, entries: clean }], prs });
+    const caloriesBurnt = calcCalories(clean.map(e => e.exerciseId), data.exercises, timer, bodyweightKg);
+    save({ ...data, sessions: [...data.sessions, { id: uid(), setId: activeSet.id, date: Date.now(), duration: timer, entries: clean, caloriesBurnt }], prs });
     setNewPRs(found); setTimerRunning(false); setFinished(true);
   };
 
@@ -353,6 +377,11 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
   const canLogCurrent = (isBodyweight || isMobility)
     ? Number(currentSet.reps) > 0
     : Number(currentSet.weight) > 0 && Number(currentSet.reps) > 0;
+
+  // Running calorie estimate
+  const liveCalories = sessionData
+    ? calcCalories(sessionData.map(e => e.exerciseId), data.exercises, timer, bodyweightKg)
+    : null;
 
   // ── Training UI ──
   const midSessionExercises = sessionData
@@ -371,7 +400,10 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
           <p style={{ color: C.textDim, fontSize: T.fontSize.small, margin: 0 }}>Exercise {currentIdx + 1} of {sessionData.length}</p>
         </div>
         <div style={{ display: "flex", gap: T.space.base, alignItems: "center" }}>
-          <span style={{ fontFamily: T.font.mono, fontSize: T.fontSize.h2, fontWeight: T.fontWeight.bold, color: timerRunning ? C.accent : C.textDim }}>{fmt(timer)}</span>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontFamily: T.font.mono, fontSize: T.fontSize.h2, fontWeight: T.fontWeight.bold, color: timerRunning ? C.accent : C.textDim }}>{fmt(timer)}</div>
+            {liveCalories !== null && <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: 1 }}>~{liveCalories} kcal</div>}
+          </div>
           <button onClick={() => setTimerRunning(!timerRunning)} style={{ background: "none", border: `1px solid ${C.border}`, borderRadius: T.radius.md, color: C.text, padding: "6px 10px", cursor: "pointer", fontSize: T.fontSize.body }}>{timerRunning ? "⏸" : "▶"}</button>
         </div>
       </div>
@@ -380,6 +412,13 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
       <div style={{ height: T.size.progressBar, background: C.border, borderRadius: T.radius.sm, overflow: "hidden" }}>
         <div style={{ height: "100%", background: C.accent, width: `${((currentIdx + 1) / sessionData.length) * 100}%`, transition: `width ${T.duration.medium} ${T.easing.enter}`, borderRadius: T.radius.sm }} />
       </div>
+
+      {/* Superset flash */}
+      {supersetFlash && (
+        <div className="t-fade-in" style={{ background: C.accentDim, border: `1px solid ${C.accentBorder}`, color: C.accent, borderRadius: T.radius.xl, padding: `${T.space.lg}px ${T.space["2xl"]}px`, textAlign: "center", fontWeight: T.fontWeight.heavy, fontSize: T.fontSize.h3 }}>
+          ⇆ Superset — no rest, go!
+        </div>
+      )}
 
       {/* Rest Done flash */}
       {restDone && (
@@ -406,6 +445,15 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: T.space.xl }}>
           <div style={{ flex: 1, minWidth: 0, marginRight: T.space.base }}>
             <div style={{ fontWeight: T.fontWeight.heavy, fontSize: T.fontSize.h2 }}>{exercise?.name}</div>
+            {/* Superset indicator */}
+            {(isSupersetWith(entry.exerciseId, sessionData[currentIdx + 1]?.exerciseId) ||
+              isSupersetWith(entry.exerciseId, sessionData[currentIdx - 1]?.exerciseId)) && (
+              <div style={{ fontSize: T.fontSize.xs, color: C.accent, fontWeight: T.fontWeight.semi, marginTop: T.space.xs }}>
+                ⇆ Superset
+                {isSupersetWith(entry.exerciseId, sessionData[currentIdx + 1]?.exerciseId) &&
+                  ` — next: ${data.exercises.find(e => e.id === sessionData[currentIdx + 1]?.exerciseId)?.name}`}
+              </div>
+            )}
             <div style={{ fontSize: T.fontSize.small, color: C.textDim }}>{exercise?.muscle}</div>
           </div>
           <YTButton query={exercise?.yt} label={exercise?.name} />
