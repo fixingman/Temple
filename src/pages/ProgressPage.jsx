@@ -2,8 +2,9 @@ import { useState, useCallback } from "react";
 import React from "react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { T, C } from "../tokens";
-import { fmtDateFull, displayWeight, weightLabel, est1RM } from "../data";
+import { fmtDateFull, displayWeight, weightLabel, est1RM, uid } from "../data";
 import { Card, Btn, ConfirmDialog } from "../components";
+import { coachError, prompts } from "../useCoach";
 
 function PRBadge() { return <span style={{ background: C.prDim, color: C.pr, fontSize: T.fontSize.xxs, fontWeight: T.fontWeight.heavy, padding: "2px 8px", borderRadius: T.radius.full, letterSpacing: T.letterSpacing.uppercase }}>🏆 PR</span>; }
 
@@ -23,10 +24,11 @@ function MuscleBar({ label, value, max, icon, unit }) {
 }
 
 
-export function ProgressPage({ data, save, onRepeatSession }) {
+export function ProgressPage({ data, save, onRepeatSession, coach }) {
   const [view, setView] = useState("prs");
   const [selectedExId, setSelectedExId] = useState(null);
   const [confirmDeleteSession, setConfirmDeleteSession] = useState(null);
+  const [gapOpen, setGapOpen] = useState(false);
   const unit = data.settings?.unit || "kg";
   const wl = weightLabel(unit);
 
@@ -249,15 +251,33 @@ export function ProgressPage({ data, save, onRepeatSession }) {
 
       {/* Muscles tab */}
       {view === "muscles" && (
-        <Card>
-          {muscleEntries.length === 0 && <div style={{ textAlign: "center", padding: T.space["2xl"], color: C.textDim }}>Complete a workout to see muscle breakdown</div>}
-          {muscleEntries.map(([muscle, vol]) => (
-            <MuscleBar key={muscle} label={muscle} value={vol} max={maxMuscleVol} icon={MUSCLE_ICONS[muscle] || ""} unit={unit} />
-          ))}
-          {muscleEntries.length > 0 && (
-            <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: T.space.base, textAlign: "center" }}>Total volume across all sessions</div>
+        <>
+          <Card>
+            {muscleEntries.length === 0 && <div style={{ textAlign: "center", padding: T.space["2xl"], color: C.textDim }}>Complete a workout to see muscle breakdown</div>}
+            {muscleEntries.map(([muscle, vol]) => (
+              <MuscleBar key={muscle} label={muscle} value={vol} max={maxMuscleVol} icon={MUSCLE_ICONS[muscle] || ""} unit={unit} />
+            ))}
+            {muscleEntries.length > 0 && (
+              <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: T.space.base, textAlign: "center" }}>Total volume across all sessions</div>
+            )}
+          </Card>
+          {coach?.hasKey && muscleEntries.length > 0 && (
+            <Btn variant="secondary" onClick={() => setGapOpen(true)} style={{ width: "100%" }}>✦ Analyse Training Gaps</Btn>
           )}
-        </Card>
+          {gapOpen && (
+            <GapSheet
+              muscleEntries={muscleEntries}
+              existingSets={data.sets}
+              exercises={data.exercises}
+              coach={coach}
+              onCreateSet={(newSet) => {
+                save({ ...data, sets: [...data.sets, newSet] });
+                setGapOpen(false);
+              }}
+              onClose={() => setGapOpen(false)}
+            />
+          )}
+        </>
       )}
 
       {/* History tab */}
@@ -308,3 +328,85 @@ export function ProgressPage({ data, save, onRepeatSession }) {
 }
 
 
+
+// ─── Gap Analysis Sheet ───
+function GapSheet({ muscleEntries, existingSets, exercises, coach, onCreateSet, onClose }) {
+  const [results, setResults] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const runAnalysis = async () => {
+    setLoading(true); setError(""); setResults(null);
+    const muscleVol = Object.fromEntries(muscleEntries.map(([m, v]) => [m, Math.round(v)]));
+    const setNames = existingSets.map(s => s.name);
+    const { text, error: err } = await coach.ask(
+      prompts.gapAnalysis(muscleVol, setNames),
+      { maxTokens: 600, model: "claude-sonnet-4-6" }
+    );
+    if (err) { setError(coachError(err)); setLoading(false); return; }
+    try {
+      const match = text.match(/\[[\s\S]*?\]/);
+      setResults(JSON.parse(match[0]));
+    } catch { setError("Could not parse suggestions. Try again."); }
+    setLoading(false);
+  };
+
+  // Auto-run on open
+  React.useEffect(() => { runAnalysis(); }, []);
+
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: C.overlay, zIndex: T.z.modal + 10, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+      <div className="t-slide-up" onClick={e => e.stopPropagation()} style={{ background: C.surface, borderRadius: `${T.radius.xl}px ${T.radius.xl}px 0 0`, maxHeight: "85vh", display: "flex", flexDirection: "column" }}>
+        <div style={{ width: 36, height: 4, borderRadius: T.radius.sm, background: C.border, margin: `${T.space.base}px auto`, flexShrink: 0 }} />
+        <div style={{ padding: `0 ${T.space.xl}px ${T.space.base}px`, display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
+          <div>
+            <div style={{ fontSize: T.fontSize.h3, fontWeight: T.fontWeight.bold }}>Training Gap Analysis</div>
+            <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: 2 }}>Based on your session history</div>
+          </div>
+          <button onClick={onClose} style={{ background: C.bg, border: "none", color: C.textDim, cursor: "pointer", borderRadius: T.radius.full, width: 28, height: 28, fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+        </div>
+        <div style={{ flex: 1, overflowY: "auto", padding: T.space.xl, display: "flex", flexDirection: "column", gap: T.space.xl }}>
+          {loading && (
+            <div style={{ textAlign: "center", padding: T.space["3xl"], color: C.textDim }}>
+              <div className="t-pulse" style={{ fontSize: T.fontSize.h2, marginBottom: T.space.lg }}>✦</div>
+              <div style={{ fontSize: T.fontSize.small }}>Analysing your training history...</div>
+            </div>
+          )}
+          {error && (
+            <div style={{ display: "flex", flexDirection: "column", gap: T.space.xl }}>
+              <div style={{ fontSize: T.fontSize.small, color: C.danger, textAlign: "center" }}>{error}</div>
+              <Btn onClick={runAnalysis} style={{ width: "100%" }}>Try Again</Btn>
+            </div>
+          )}
+          {results && results.map((r, i) => {
+            const exerciseIds = r.exercises
+              .map(name => exercises.find(e => e.name.toLowerCase() === name.toLowerCase())?.id)
+              .filter(Boolean);
+            const canCreate = exerciseIds.length > 0;
+            return (
+              <Card key={i}>
+                <div style={{ fontWeight: T.fontWeight.bold, fontSize: T.fontSize.body, marginBottom: T.space.sm }}>{r.setName}</div>
+                <div style={{ fontSize: T.fontSize.small, color: C.textDim, marginBottom: T.space.lg, lineHeight: 1.5 }}>{r.reason}</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: T.space.sm, marginBottom: T.space.xl }}>
+                  {r.exercises.map((name, j) => {
+                    const found = exercises.find(e => e.name.toLowerCase() === name.toLowerCase());
+                    return (
+                      <span key={j} style={{ fontSize: T.fontSize.xs, padding: "3px 10px", borderRadius: T.radius.full, background: found ? C.accentDim : C.bg, color: found ? C.accent : C.textDim, border: `1px solid ${found ? C.accentBorder : C.border}` }}>
+                        {name}{!found && " *"}
+                      </span>
+                    );
+                  })}
+                </div>
+                {!canCreate && <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginBottom: T.space.base }}>* Not in your library. Add them first to create this set.</div>}
+                <Btn onClick={() => onCreateSet({ id: uid(), name: r.setName, exerciseIds, supersets: [], createdAt: Date.now() })} disabled={!canCreate} style={{ width: "100%" }}>
+                  + Add to My Sets
+                </Btn>
+              </Card>
+            );
+          })}
+          <div style={{ height: "env(safe-area-inset-bottom)" }} />
+        </div>
+      </div>
+    </div>
+  );
+}

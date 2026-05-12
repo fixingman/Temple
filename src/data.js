@@ -65,9 +65,24 @@ export const MUSCLE_ICONS = { Chest: "🫁", Back: "🔙", Shoulders: "💪", Le
 export const EQUIPMENT_TYPES = ["Weighted", "Bodyweight"];
 export const CATEGORY_TYPES = ["Strength", "Mobility"];
 export const KG_TO_LBS = 2.20462;
-export const DEFAULT_SETTINGS = { unit: "kg", anthropicKey: "" };
+export const DEFAULT_SETTINGS = { unit: "kg", anthropicKey: "", bodyweightKg: "" };
 export const STORAGE_KEY = "temple-data";
 export const DEFAULT_REST = 90;
+
+// MET (Metabolic Equivalent of Task) values by exercise category
+export const MET = { strength: 5.0, mobility: 2.5 };
+// Bodyweight exercises are slightly higher MET than strength (no rest between reps)
+// Weighted cardio (battle ropes etc) would be ~9 but not in library yet
+
+export const calcCalories = (exerciseIds, allExercises, durationSeconds, bodyweightKg) => {
+  if (!bodyweightKg || bodyweightKg <= 0 || durationSeconds <= 0) return null;
+  const mets = exerciseIds.map(id => {
+    const ex = allExercises.find(e => e.id === id);
+    return ex?.category === "mobility" ? MET.mobility : MET.strength;
+  });
+  const avgMet = mets.length > 0 ? mets.reduce((a, b) => a + b, 0) / mets.length : MET.strength;
+  return Math.round(avgMet * Number(bodyweightKg) * (durationSeconds / 3600));
+};
 
 // ─── Utilities ───
 export const uid = () => Math.random().toString(36).slice(2, 9);
