@@ -121,24 +121,23 @@ export function SettingsPage({ data, save, drive }) {
       {confirmRestore && <ConfirmDialog message="Restore from Google Drive? This will replace all current data with the backup." onConfirm={doRestore} onCancel={() => setConfirmRestore(false)} />}
       <h2 style={{ fontSize: T.fontSize.h1, fontWeight: T.fontWeight.heavy, margin: 0 }}>Settings</h2>
 
-      {/* Unit */}
+      {/* Weight settings — unit + bodyweight together */}
       <Card>
-        <div style={{ fontSize: T.fontSize.body, fontWeight: T.fontWeight.bold, marginBottom: T.space.lg }}>Weight Unit</div>
-        <div style={{ display: "flex", gap: T.space.sm, background: C.bg, borderRadius: T.radius.lg, padding: 3 }}>
+        <div style={{ fontSize: T.fontSize.body, fontWeight: T.fontWeight.bold, marginBottom: T.space.lg }}>Weight</div>
+
+        {/* kg / lbs toggle */}
+        <div style={{ display: "flex", gap: T.space.sm, background: C.bg, borderRadius: T.radius.lg, padding: 3, marginBottom: T.space.xl }}>
           {[{ v: "kg", l: "Kilograms (kg)" }, { v: "lbs", l: "Pounds (lbs)" }].map(o => (
-            <button key={o.v} onClick={() => setUnit(o.v)} style={{ flex: 1, border: "none", borderRadius: T.radius.md, padding: "10px 0", fontSize: T.fontSize.caption, fontWeight: T.fontWeight.semi, cursor: "pointer", background: unit === o.v ? C.accentDim : "transparent", color: unit === o.v ? C.accent : C.textDim, transition: `background ${T.transition.fast}, color ${T.transition.fast}, border-color ${T.transition.fast}` }}>{o.l}</button>
+            <button key={o.v} onClick={() => setUnit(o.v)} style={{ flex: 1, border: "none", borderRadius: T.radius.md, padding: "10px 0", fontSize: T.fontSize.caption, fontWeight: T.fontWeight.semi, cursor: "pointer", background: unit === o.v ? C.accentDim : "transparent", color: unit === o.v ? C.accent : C.textDim, transition: `background ${T.transition.fast}, color ${T.transition.fast}` }}>{o.l}</button>
           ))}
         </div>
-        <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: T.space.base }}>All weights are stored in kg internally. Changing this only affects display.</div>
-      </Card>
 
-      {/* Bodyweight — for calorie calculation */}
-      <Card>
-        <div style={{ fontSize: T.fontSize.body, fontWeight: T.fontWeight.bold, marginBottom: T.space.sm }}>Your Bodyweight</div>
-        <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginBottom: T.space.lg, lineHeight: 1.5 }}>Used to estimate calories burnt during sessions. Stored locally, never shared.</div>
-        <div style={{ display: "flex", gap: T.space.base, alignItems: "center" }}>
+        {/* Bodyweight */}
+        <label style={{ fontSize: T.fontSize.small, color: C.textDim, fontWeight: T.fontWeight.semi, textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: T.space.base }}>Your Bodyweight</label>
+        <div style={{ display: "flex", gap: T.space.base, alignItems: "center", marginBottom: T.space.base }}>
           <input
-            type="number" inputMode="decimal" min="0" name="bodyweight" placeholder={unit === "kg" ? "e.g. 80" : "e.g. 176"}
+            type="number" inputMode="decimal" min="0" name="bodyweight"
+            placeholder={unit === "kg" ? "e.g. 80" : "e.g. 176"}
             value={unit === "kg" ? (data.settings?.bodyweightKg || "") : (data.settings?.bodyweightKg ? Math.round(Number(data.settings.bodyweightKg) * 2.20462) : "")}
             onChange={e => {
               const val = e.target.value;
@@ -149,6 +148,7 @@ export function SettingsPage({ data, save, drive }) {
           />
           <span style={{ fontSize: T.fontSize.body, color: C.textDim, fontWeight: T.fontWeight.semi, minWidth: 28 }}>{unit}</span>
         </div>
+        <div style={{ fontSize: T.fontSize.xs, color: C.textDim, lineHeight: 1.5 }}>Used to estimate calories burnt per session. Stored locally, never shared.</div>
       </Card>
 
       {/* Google Drive Backup */}
