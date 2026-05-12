@@ -214,6 +214,7 @@ export function SetsPage({ data, save, onStartSession, coach }) {
           {/* Search */}
           <div style={{ position: "relative", marginTop: T.space.base, marginBottom: T.space.base }}>
             <input
+              name="exercise-search"
               type="text"
               placeholder="Search exercises..."
               value={search}

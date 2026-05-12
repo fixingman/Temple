@@ -82,7 +82,7 @@ function RecoverySheet({ onClose, recentExercises = [], coach, onGoToSettings })
 
               <div>
                 <label style={{ fontSize: T.fontSize.small, color: C.textDim, fontWeight: T.fontWeight.semi, textTransform: "uppercase", letterSpacing: T.letterSpacing.uppercase, display: "block", marginBottom: T.space.base }}>Describe what you're feeling</label>
-                <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="e.g. sharp pain when I extend my arm, started during the last set of bench press..." rows={4}
+                <textarea value={description} onChange={e => setDescription(e.target.value)} name="pain-description" placeholder="e.g. sharp pain when I extend my arm, started during the last set of bench press..." rows={4}
                   style={{ width: "100%", boxSizing: "border-box", background: C.bg, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: "12px 14px", color: C.text, fontSize: T.fontSize.h3, outline: "none", resize: "none", fontFamily: "inherit", lineHeight: 1.5 }} />
               </div>
 
@@ -574,13 +574,13 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
                 {!isBodyweight && (
                   <div style={{ flex: 1 }}>
                     <label style={{ fontSize: T.fontSize.xs, color: C.textDim, fontWeight: T.fontWeight.semi, textTransform: "uppercase", marginBottom: T.space.sm, display: "block" }}>Weight ({wl})</label>
-                    <input type="number" inputMode="decimal" min="0" value={currentSet.weight} onChange={e => updateCurrentSet("weight", e.target.value)} placeholder="0"
+                    <input name="set-weight" type="number" inputMode="decimal" min="0" value={currentSet.weight} onChange={e => updateCurrentSet("weight", e.target.value)} placeholder="0"
                       style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: "14px 16px", color: C.text, fontSize: T.fontSize.h2, fontWeight: T.fontWeight.bold, outline: "none", width: "100%", boxSizing: "border-box", textAlign: "center" }} />
                   </div>
                 )}
                 <div style={{ flex: 1 }}>
                   <label style={{ fontSize: T.fontSize.xs, color: C.textDim, fontWeight: T.fontWeight.semi, textTransform: "uppercase", marginBottom: T.space.sm, display: "block" }}>Reps</label>
-                  <input type="number" inputMode="numeric" min="0" value={currentSet.reps} onChange={e => updateCurrentSet("reps", e.target.value)} placeholder="0"
+                  <input name="set-reps" type="number" inputMode="numeric" min="0" value={currentSet.reps} onChange={e => updateCurrentSet("reps", e.target.value)} placeholder="0"
                     style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: "14px 16px", color: C.text, fontSize: T.fontSize.h2, fontWeight: T.fontWeight.bold, outline: "none", width: "100%", boxSizing: "border-box", textAlign: "center" }} />
                 </div>
               </div>
