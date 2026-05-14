@@ -165,17 +165,18 @@ export function SettingsPage({ data, save, drive }) {
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: T.space.base }}>
             {/* Connected user */}
-            <div style={{ display: "flex", alignItems: "center", gap: T.space.lg, padding: "12px 14px", background: C.accentDim, borderRadius: T.radius.lg, border: `1px solid ${C.accentBorder}` }}>
+            <div style={{ display: "flex", alignItems: "center", gap: T.space.lg, padding: "12px 14px", background: drive.connected ? C.accentDim : C.surface, borderRadius: T.radius.lg, border: `1px solid ${drive.connected ? C.accentBorder : C.border}`, opacity: drive.connected ? 1 : 0.7 }}>
               {drive.user.picture
                 ? <img src={drive.user.picture} alt="" style={{ width: 36, height: 36, borderRadius: "50%", flexShrink: 0 }} />
-                : <div style={{ width: 36, height: 36, borderRadius: "50%", background: C.accent, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: T.fontSize.body, fontWeight: T.fontWeight.bold, color: C.bg }}>
+                : <div style={{ width: 36, height: 36, borderRadius: "50%", background: drive.connected ? C.accent : C.textDim, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: T.fontSize.body, fontWeight: T.fontWeight.bold, color: C.bg }}>
                     {(drive.user.name || drive.user.email || "G")[0].toUpperCase()}
                   </div>
               }
               <div style={{ flex: 1, minWidth: 0 }}>
                 {drive.user.name && <div style={{ fontSize: T.fontSize.bodySmall, fontWeight: T.fontWeight.bold, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{drive.user.name}</div>}
                 {drive.user.email && <div style={{ fontSize: T.fontSize.xs, color: C.textDim, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{drive.user.email}</div>}
-                {!drive.user.name && !drive.user.email && <div style={{ fontSize: T.fontSize.bodySmall, color: C.accent, fontWeight: T.fontWeight.semi }}>Google Drive connected</div>}
+                {!drive.user.name && !drive.user.email && <div style={{ fontSize: T.fontSize.bodySmall, color: drive.connected ? C.accent : C.textDim, fontWeight: T.fontWeight.semi }}>{drive.connected ? "Google Drive connected" : "Google Drive"}</div>}
+                {!drive.connected && <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: 2 }}>Authorization required</div>}
               </div>
             </div>
 
@@ -194,7 +195,7 @@ export function SettingsPage({ data, save, drive }) {
               </div>
             ) : (
               <Btn onClick={drive.signIn} disabled={driveBusy} style={{ width: "100%" }}>
-                {driveBusy ? "Signing in..." : "Reconnect to Back Up"}
+                {driveBusy ? "Signing in..." : "Authorize to Back Up"}
               </Btn>
             )}
 
