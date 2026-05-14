@@ -241,9 +241,6 @@ export default function Temple() {
             }}><LogoIcon size={28} /></span>
             TEMPLE
           </div>
-          {false && (
-            <div>
-          )}
         </div>
 
         {/* Safe area spacer — no visible header */}
