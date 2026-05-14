@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { T, C } from "../tokens";
-import { DEFAULT_REST, uid, fmt, displayWeight, toKg, weightLabel, calcCalories } from "../data";
-import { Card, Btn, ConfirmDialog, YTButton } from "../components";
+import { DEFAULT_REST, uid, fmt, fmtDate, displayWeight, toKg, weightLabel, calcCalories } from "../data";
+import { Card, Btn, ConfirmDialog, YTButton, LogoIcon } from "../components";
 import { coachError, prompts } from "../useCoach";
 
 // ─── Recovery / Body Check Sheet ───
@@ -236,7 +236,7 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
       <div style={{ display: "flex", flexDirection: "column", gap: T.space.xl }}>
         <h2 style={{ fontSize: T.fontSize.h1, fontWeight: T.fontWeight.heavy, margin: 0 }}>Train</h2>
         <Card style={{ textAlign: "center", padding: T.space["4xl"] }}>
-          <div style={{ fontSize: T.fontSize.icon, marginBottom: T.space.lg }}>🟁</div>
+          <div style={{ marginBottom: T.space.lg, display: "flex", justifyContent: "center" }}><LogoIcon size={56} /></div>
           <div style={{ fontWeight: T.fontWeight.bold, fontSize: T.fontSize.body, marginBottom: T.space.sm }}>Ready to train?</div>
           <div style={{ color: C.textDim, fontSize: T.fontSize.caption, marginBottom: T.space.xl }}>Pick a workout set to begin</div>
           <Btn onClick={() => setTab("sets")}>Go to Sets</Btn>
@@ -253,6 +253,11 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
       </div>
     );
   }
+
+  // Running calorie estimate (needed by both completion screen and training UI)
+  const liveCalories = sessionData
+    ? calcCalories(sessionData.map(e => e.exerciseId), data.exercises, timer, bodyweightKg)
+    : null;
 
   // ── Completion screen ──
   if (finished) {
@@ -379,11 +384,6 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
     ? Number(currentSet.reps) > 0
     : Number(currentSet.weight) > 0 && Number(currentSet.reps) > 0;
 
-  // Running calorie estimate
-  const liveCalories = sessionData
-    ? calcCalories(sessionData.map(e => e.exerciseId), data.exercises, timer, bodyweightKg)
-    : null;
-
   // ── Training UI ──
   const midSessionExercises = sessionData
     .map(e => data.exercises.find(ex => ex.id === e.exerciseId)?.name)
@@ -472,7 +472,7 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
               )}
             </div>
             {coach.hasKey && (
-              <button onClick={() => setSwapOpen(true)} style={{ background: "none", border: `1px solid ${C.border}`, borderRadius: T.radius.md, color: C.textDim, cursor: "pointer", fontSize: T.fontSize.xs, padding: `${T.space.xs}px ${T.space.base}px`, flexShrink: 0, marginLeft: T.space.base }}>⇄ Swap</button>
+              <button onClick={() => setSwapOpen(true)} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: T.radius.md, color: C.textDim, cursor: "pointer", fontSize: T.fontSize.xs, padding: `${T.space.xs}px ${T.space.base}px`, flexShrink: 0, marginLeft: T.space.base, lineHeight: 1 }}>⇄ Swap</button>
             )}
           </div>
             <div style={{ fontSize: T.fontSize.small, color: C.textDim }}>{exercise?.muscle}</div>

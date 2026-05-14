@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { T, C } from "../tokens";
 import { DEFAULT_SETTINGS, mkDefault } from "../data";
-import { Card, Btn, ConfirmDialog, ErrorBanner } from "../components";
+import { Card, Btn, ConfirmDialog, ErrorBanner, Logo } from "../components";
 
 function ApiKeyInput({ value, onChange }) {
   const [show, setShow] = useState(false);
@@ -183,14 +183,20 @@ export function SettingsPage({ data, save, drive }) {
               <div style={{ fontSize: T.fontSize.xs, color: C.textDim }}>Last backup: {drive.lastSync.toLocaleString()}</div>
             )}
 
-            <div style={{ display: "flex", gap: T.space.base }}>
-              <Btn onClick={() => drive.backup(data)} disabled={driveBusy} style={{ flex: 1 }}>
-                {drive.status === "syncing" ? "Saving..." : "Back Up Now"}
+            {drive.connected ? (
+              <div style={{ display: "flex", gap: T.space.base }}>
+                <Btn onClick={() => drive.backup(data)} disabled={driveBusy} style={{ flex: 1 }}>
+                  {drive.status === "syncing" ? "Saving..." : "Back Up Now"}
+                </Btn>
+                <Btn variant="secondary" onClick={() => setConfirmRestore(true)} disabled={driveBusy} style={{ flex: 1 }}>
+                  Restore
+                </Btn>
+              </div>
+            ) : (
+              <Btn onClick={drive.signIn} disabled={driveBusy} style={{ width: "100%" }}>
+                {driveBusy ? "Signing in..." : "Reconnect to Back Up"}
               </Btn>
-              <Btn variant="secondary" onClick={() => setConfirmRestore(true)} disabled={driveBusy} style={{ flex: 1 }}>
-                Restore
-              </Btn>
-            </div>
+            )}
 
             <Btn variant="danger" onClick={drive.signOut} style={{ width: "100%" }}>
               Disconnect Google Drive
@@ -253,7 +259,7 @@ export function SettingsPage({ data, save, drive }) {
       <Card>
         <div style={{ fontSize: T.fontSize.body, fontWeight: T.fontWeight.bold, marginBottom: T.space.base }}>About</div>
         <div style={{ fontSize: T.fontSize.caption, color: C.textDim, lineHeight: 1.5 }}>
-          <strong style={{ color: C.accent }}>🟁 Temple v0.9.2</strong><br />
+          <strong style={{ color: C.accent, display: "inline-flex", alignItems: "center", gap: 6 }}><Logo size={16} />Temple v0.9.2</strong><br />
           Your body is a temple. Train it.<br /><br />
           Built to replace subscription-gated workout apps. Free, private, all data stays on your device.
         </div>

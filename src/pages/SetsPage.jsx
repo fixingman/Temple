@@ -305,10 +305,10 @@ export function SetsPage({ data, save, onStartSession, coach }) {
               {exNames.length > 5 && <span style={{ fontSize: T.fontSize.xs, color: C.textDim, padding: "3px 4px" }}>+{exNames.length - 5} more</span>}
             </div>
             {/* Primary action */}
-            <Btn variant="primary" onClick={() => onStartSession(s)} disabled={validCount === 0} style={{ width: "100%" }}>▶ Start</Btn>
+            <Btn variant="primary" onClick={() => onStartSession(s)} disabled={validCount === 0} style={{ width: "100%", marginTop: T.space.base }}>▶ Start</Btn>
             {/* Edit + Delete — only visible when expanded */}
             {expanded && (
-              <div className="t-fade-in" style={{ display: "flex", gap: T.space.base, marginTop: T.space.base }}>
+              <div className="t-fade-in" style={{ display: "flex", gap: T.space.base, marginTop: T.space.lg }}>
                 <Btn variant="secondary" onClick={() => { startEdit(s); setExpandedSet(null); }} style={{ flex: 1 }}>Edit</Btn>
                 <Btn variant="danger" onClick={() => { setConfirmDelete(s.id); setExpandedSet(null); }} style={{ flex: 1 }}>Delete</Btn>
               </div>

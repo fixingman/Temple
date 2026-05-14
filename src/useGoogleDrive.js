@@ -54,26 +54,15 @@ export function useGoogleDrive() {
       // Check if user was previously connected
       const savedUser = await get(DRIVE_USER_KEY);
 
-      const onToken = async (tokenResponse, silent = false) => {
+      const onToken = async (tokenResponse) => {
         if (tokenResponse.error) {
-          if (silent) {
-            // Silent reconnect failed — clear saved state, require manual sign-in
-            await del(DRIVE_USER_KEY);
-            setStatus("idle");
-          } else {
-            setStatus("error");
-            setMessage("Sign-in failed. Please try again.");
-          }
+          setStatus("error");
+          setMessage("Sign-in failed. Please try again.");
           return;
         }
         setAccessToken(tokenResponse.access_token);
-        if (savedUser && silent) {
-          // Restore user from storage immediately — no flicker
-          setUser(savedUser);
-        } else {
-          setUser({ name: "", email: "", picture: "" });
-          await fetchUser(tokenResponse.access_token);
-        }
+        setUser({ name: "", email: "", picture: "" });
+        await fetchUser(tokenResponse.access_token);
         setStatus("ready");
         setMessage("");
       };
@@ -85,18 +74,10 @@ export function useGoogleDrive() {
       });
       setTokenClient(tc);
 
-      // Attempt silent reconnect if user was previously connected
+      // Restore display info from storage — token must be re-requested on next sign-in click
       if (savedUser) {
         setUser(savedUser);
-        setStatus("signing-in");
-        // Silent token request — no popup, no consent screen
-        const silentClient = window.google.accounts.oauth2.initTokenClient({
-          client_id: CLIENT_ID,
-          scope: SCOPE,
-          prompt: "",
-          callback: (tokenResponse) => onToken(tokenResponse, true),
-        });
-        silentClient.requestAccessToken({ prompt: "" });
+        setStatus("idle");
       }
     };
 
@@ -221,5 +202,6 @@ export function useGoogleDrive() {
     }
   }, [accessToken, findFile]);
 
-  return { status, user, message, lastSync, signIn, signOut, backup, restore };
+  const connected = !!accessToken;
+  return { status, user, message, lastSync, signIn, signOut, backup, restore, connected };
 }
