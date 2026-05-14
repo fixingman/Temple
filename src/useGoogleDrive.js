@@ -6,6 +6,7 @@ const SCOPE = "https://www.googleapis.com/auth/drive.file";
 const FILE_NAME = "temple-backup.json";
 const DISCOVERY_DOC = "https://www.googleapis.com/discovery/v1/apis/drive/v3/rest";
 const DRIVE_USER_KEY = "temple-drive-user";
+const DRIVE_TOKEN_KEY = "temple-drive-token";
 
 export function useGoogleDrive() {
   const [status, setStatus] = useState("idle");
@@ -60,9 +61,12 @@ export function useGoogleDrive() {
           setMessage("Sign-in failed. Please try again.");
           return;
         }
-        setAccessToken(tokenResponse.access_token);
+        const token = tokenResponse.access_token;
+        const expiresAt = Date.now() + (tokenResponse.expires_in || 3600) * 1000;
+        setAccessToken(token);
+        await set(DRIVE_TOKEN_KEY, { token, expiresAt });
         setUser({ name: "", email: "", picture: "" });
-        await fetchUser(tokenResponse.access_token);
+        await fetchUser(token);
         setStatus("ready");
         setMessage("");
       };
@@ -74,10 +78,16 @@ export function useGoogleDrive() {
       });
       setTokenClient(tc);
 
-      // Restore display info from storage — token must be re-requested on next sign-in click
+      // Restore token from storage if still valid (with 5min buffer)
+      const savedToken = await get(DRIVE_TOKEN_KEY);
       if (savedUser) {
         setUser(savedUser);
-        setStatus("idle");
+        if (savedToken && savedToken.expiresAt - Date.now() > 5 * 60 * 1000) {
+          setAccessToken(savedToken.token);
+          setStatus("ready");
+        } else {
+          setStatus("idle");
+        }
       }
     };
 
@@ -112,7 +122,7 @@ export function useGoogleDrive() {
     }
     setStatus("signing-in");
     setMessage("");
-    tokenClient.requestAccessToken({ prompt: "consent" });
+    tokenClient.requestAccessToken({ prompt: "" });
   }, [tokenClient]);
 
   const signOut = useCallback(async () => {
@@ -121,6 +131,7 @@ export function useGoogleDrive() {
     }
     setAccessToken(null);
     await persistUser(null);
+    await del(DRIVE_TOKEN_KEY);
     setStatus("idle");
     setMessage("");
     setLastSync(null);
