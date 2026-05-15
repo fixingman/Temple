@@ -78,6 +78,35 @@ export function Input({ label, clearable, onClear, ...props }) {
   );
 }
 
+// Renders the pyramid mark without background — use for inline / text contexts
+export function Logo({ size = 20, style }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="12 20 76 60" width={size} height={size * 0.6} style={style}>
+      <rect x="34" y="20" width="12" height="12" fill={C.accent}/>
+      <rect x="54" y="20" width="12" height="12" fill={C.accent}/>
+      <rect x="23" y="44" width="23" height="12" fill={C.accent}/>
+      <rect x="54" y="44" width="23" height="12" fill={C.accent}/>
+      <rect x="12" y="68" width="34" height="12" fill={C.accent}/>
+      <rect x="54" y="68" width="34" height="12" fill={C.accent}/>
+    </svg>
+  );
+}
+
+// Renders the mark with rounded dark background — use for splash / pull-to-refresh
+export function LogoIcon({ size = 40, style }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width={size} height={size} style={style}>
+      <rect width="100" height="100" rx="20" fill="#0a0a0f"/>
+      <rect x="34" y="20" width="12" height="12" fill={C.accent}/>
+      <rect x="54" y="20" width="12" height="12" fill={C.accent}/>
+      <rect x="23" y="44" width="23" height="12" fill={C.accent}/>
+      <rect x="54" y="44" width="23" height="12" fill={C.accent}/>
+      <rect x="12" y="68" width="34" height="12" fill={C.accent}/>
+      <rect x="54" y="68" width="34" height="12" fill={C.accent}/>
+    </svg>
+  );
+}
+
 export function ConfirmDialog({ message, onConfirm, onCancel, confirmLabel = "Delete", cancelLabel = "Cancel" }) {
   return (
     <div className="t-fade-in" style={{ position: "fixed", inset: 0, background: C.overlay, display: "flex", alignItems: "center", justifyContent: "center", zIndex: T.z.modal, padding: T.space.xl }}>

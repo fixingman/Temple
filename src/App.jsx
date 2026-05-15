@@ -4,7 +4,7 @@ import { uid } from "./data";
 import { useAppData, usePWA } from "./hooks";
 import { useGoogleDrive } from "./useGoogleDrive";
 import { useCoach } from "./useCoach";
-import { GlobalStyles, Tabs, InstallBanner } from "./components";
+import { GlobalStyles, Tabs, InstallBanner, Logo, LogoIcon } from "./components";
 import { LibraryPage } from "./pages/LibraryPage";
 import { SetsPage } from "./pages/SetsPage";
 import { SessionPage } from "./pages/SessionPage";
@@ -47,25 +47,29 @@ function useErrorMonitor() {
   return { logs, clear: () => setLogs([]) };
 }
 
-function ErrorMonitor({ logs, onClear }) {
-  const [open, setOpen] = useState(false);
+function ErrorDot({ logs, onClick }) {
   const hasErrors = logs.some(l => l.type === "error");
   const hasLogs = logs.length > 0;
+  if (!hasLogs) return null;
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        position: "absolute", top: T.space.xl, right: T.space.xl,
+        width: 10, height: 10, borderRadius: "50%",
+        background: hasErrors ? C.danger : C.textDim,
+        border: "none", cursor: "pointer", padding: 0, zIndex: T.z.modal - 1,
+        boxShadow: hasErrors ? `0 0 0 3px ${C.dangerDim}` : "none",
+        transition: `background ${T.transition.fast}, box-shadow ${T.transition.fast}`,
+        flexShrink: 0,
+      }}
+    />
+  );
+}
 
+function ErrorMonitor({ logs, onClear, open, setOpen }) {
   return (
     <>
-      {/* Dot — always visible */}
-      <button
-        onClick={() => setOpen(o => !o)}
-        style={{
-          position: "fixed", bottom: `calc(env(safe-area-inset-bottom) + 64px)`, left: T.space.xl,
-          width: 12, height: 12, borderRadius: "50%",
-          background: hasErrors ? C.danger : hasLogs ? C.textDim : "rgba(255,255,255,0.1)",
-          border: "none", cursor: "pointer", padding: 0, zIndex: T.z.modal - 1,
-          boxShadow: hasErrors ? `0 0 0 3px ${C.dangerDim}` : "none",
-          transition: `background ${T.transition.fast}, box-shadow ${T.transition.fast}`,
-        }}
-      />
 
       {/* Log sheet */}
       {open && (
@@ -143,6 +147,7 @@ export default function Temple() {
   const drive = useGoogleDrive();
   const coach = useCoach(data?.settings?.anthropicKey || "");
   const errorMonitor = useErrorMonitor();
+  const [errorOpen, setErrorOpen] = useState(false);
 
   // ── Pull-to-refresh ──
   const [pullY, setPullY] = useState(0);
@@ -194,7 +199,7 @@ export default function Temple() {
     <div style={{ fontFamily: T.font.body, color: C.text, background: C.bg, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
       <GlobalStyles />
       <div style={{ textAlign: "center" }}>
-        <div className="t-logo-spin" style={{ fontSize: T.fontSize.hero, marginBottom: T.space.xl, display: "inline-block" }}>🟁</div>
+        <div className="t-logo-spin" style={{ marginBottom: T.space.xl, display: "inline-block" }}><LogoIcon size={64} /></div>
         <div className="t-text-in" style={{ fontWeight: T.fontWeight.heavy, fontSize: T.fontSize.h1, color: C.accent, letterSpacing: T.letterSpacing.tight, animationDelay: "0.3s" }}>TEMPLE</div>
       </div>
     </div>
@@ -233,14 +238,9 @@ export default function Temple() {
               transform: refreshing ? "scale(1.2)" : `rotate(${logoRotate}deg) scale(${logoScale})`,
               transition: pulling ? "none" : `transform 0.4s ${T.easing.spring}`,
               animation: refreshing ? "temple-logo-spin 0.6s cubic-bezier(0.34,1.56,0.64,1) forwards" : "none",
-            }}>🟁</span>
+            }}><LogoIcon size={28} /></span>
             TEMPLE
           </div>
-          {pulling && pullY > 8 && (
-            <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: T.space.xs, opacity: pullProgress, letterSpacing: T.letterSpacing.label, textTransform: "uppercase" }}>
-              {pullY >= THRESHOLD ? "Release" : "Pull to refresh"}
-            </div>
-          )}
         </div>
 
         {/* Safe area spacer — no visible header */}
@@ -258,7 +258,8 @@ export default function Temple() {
             transition: pulling ? "none" : `transform 0.35s ${T.easing.spring}`,
           }}
         >
-          <div style={{ padding: `${T.space.xl}px ${T.space.xl}px`, paddingBottom: "calc(env(safe-area-inset-bottom) + 90px)", maxWidth: T.size.maxWidth, margin: "0 auto" }}>
+          <div style={{ padding: `${T.space.xl}px ${T.space.xl}px`, paddingBottom: "calc(env(safe-area-inset-bottom) + 90px)", maxWidth: T.size.maxWidth, margin: "0 auto", position: "relative" }}>
+            <ErrorDot logs={errorMonitor.logs} onClick={() => setErrorOpen(o => !o)} />
             {saving && (
               <div style={{ position: "fixed", top: "calc(env(safe-area-inset-top) + 8px)", right: T.space.xl, zIndex: T.z.header }}>
                 <div className="t-pulse" style={{ width: 6, height: 6, borderRadius: "50%", background: C.accent }} />
@@ -274,7 +275,7 @@ export default function Temple() {
         </div>
 
         <Tabs active={tab} onChange={setTab} />
-        <ErrorMonitor logs={errorMonitor.logs} onClear={errorMonitor.clear} />
+        <ErrorMonitor logs={errorMonitor.logs} onClear={errorMonitor.clear} open={errorOpen} setOpen={setErrorOpen} />
       </div>
     </ErrorBoundary>
   );

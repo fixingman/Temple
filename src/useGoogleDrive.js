@@ -6,6 +6,7 @@ const SCOPE = "https://www.googleapis.com/auth/drive.file";
 const FILE_NAME = "temple-backup.json";
 const DISCOVERY_DOC = "https://www.googleapis.com/discovery/v1/apis/drive/v3/rest";
 const DRIVE_USER_KEY = "temple-drive-user";
+const DRIVE_TOKEN_KEY = "temple-drive-token";
 
 export function useGoogleDrive() {
   const [status, setStatus] = useState("idle");
@@ -54,26 +55,18 @@ export function useGoogleDrive() {
       // Check if user was previously connected
       const savedUser = await get(DRIVE_USER_KEY);
 
-      const onToken = async (tokenResponse, silent = false) => {
+      const onToken = async (tokenResponse) => {
         if (tokenResponse.error) {
-          if (silent) {
-            // Silent reconnect failed — clear saved state, require manual sign-in
-            await del(DRIVE_USER_KEY);
-            setStatus("idle");
-          } else {
-            setStatus("error");
-            setMessage("Sign-in failed. Please try again.");
-          }
+          setStatus("error");
+          setMessage("Sign-in failed. Please try again.");
           return;
         }
-        setAccessToken(tokenResponse.access_token);
-        if (savedUser && silent) {
-          // Restore user from storage immediately — no flicker
-          setUser(savedUser);
-        } else {
-          setUser({ name: "", email: "", picture: "" });
-          await fetchUser(tokenResponse.access_token);
-        }
+        const token = tokenResponse.access_token;
+        const expiresAt = Date.now() + (tokenResponse.expires_in || 3600) * 1000;
+        setAccessToken(token);
+        await set(DRIVE_TOKEN_KEY, { token, expiresAt });
+        setUser({ name: "", email: "", picture: "" });
+        await fetchUser(token);
         setStatus("ready");
         setMessage("");
       };
@@ -85,18 +78,16 @@ export function useGoogleDrive() {
       });
       setTokenClient(tc);
 
-      // Attempt silent reconnect if user was previously connected
+      // Restore token from storage if still valid (with 5min buffer)
+      const savedToken = await get(DRIVE_TOKEN_KEY);
       if (savedUser) {
         setUser(savedUser);
-        setStatus("signing-in");
-        // Silent token request — no popup, no consent screen
-        const silentClient = window.google.accounts.oauth2.initTokenClient({
-          client_id: CLIENT_ID,
-          scope: SCOPE,
-          prompt: "",
-          callback: (tokenResponse) => onToken(tokenResponse, true),
-        });
-        silentClient.requestAccessToken({ prompt: "" });
+        if (savedToken && savedToken.expiresAt - Date.now() > 5 * 60 * 1000) {
+          setAccessToken(savedToken.token);
+          setStatus("ready");
+        } else {
+          setStatus("idle");
+        }
       }
     };
 
@@ -131,7 +122,7 @@ export function useGoogleDrive() {
     }
     setStatus("signing-in");
     setMessage("");
-    tokenClient.requestAccessToken({ prompt: "consent" });
+    tokenClient.requestAccessToken({ prompt: "" });
   }, [tokenClient]);
 
   const signOut = useCallback(async () => {
@@ -140,6 +131,7 @@ export function useGoogleDrive() {
     }
     setAccessToken(null);
     await persistUser(null);
+    await del(DRIVE_TOKEN_KEY);
     setStatus("idle");
     setMessage("");
     setLastSync(null);
@@ -221,5 +213,6 @@ export function useGoogleDrive() {
     }
   }, [accessToken, findFile]);
 
-  return { status, user, message, lastSync, signIn, signOut, backup, restore };
+  const connected = !!accessToken;
+  return { status, user, message, lastSync, signIn, signOut, backup, restore, connected };
 }

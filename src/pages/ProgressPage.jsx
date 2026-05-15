@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import React from "react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { T, C } from "../tokens";
-import { fmtDateFull, displayWeight, weightLabel, est1RM, uid } from "../data";
+import { fmtDateFull, displayWeight, weightLabel, est1RM, uid, MUSCLE_ICONS } from "../data";
 import { Card, Btn, ConfirmDialog } from "../components";
 import { coachError, prompts } from "../useCoach";
 
