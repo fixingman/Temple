@@ -28,17 +28,22 @@
 
 ## Where We Left Off
 ```
-Version:     v0.9.2
-Date:        2026-05-11
-Shipped:     Code split (1972→280 line App.jsx + 5 page files) · S style helpers ·
-             performance fixes (customTooltip, est1RM, getLastSessionData) ·
-             bugs B27-B29 · error monitor · session delete · Sets ··· menu ·
-             search clear ✕ · AI CORS fix · ordering loop fix
-Tested:      Not yet — AI features need real device test after CORS fix
-Next:        Add YOUTUBE_API_KEY to Netlify · test AI ordering + Body Check ·
+Version:     v0.9.3
+Date:        2026-05-15
+Shipped:     Bugs B30-B35 fixed (crashes on Train/Progress/completion tabs) ·
+             Google Drive token persistence (no reconnect per session) ·
+             Inline SVG Logo/LogoIcon — mobile logo was blank ·
+             YouTube netlify.toml routing + better error messages ·
+             Error dot moved to top-right, scrolls with content ·
+             Set CTA margin · swap button style · pull-to-refresh text removed ·
+             SPA + /api/youtube redirects in netlify.toml
+Tested:      Build passes. YouTube 503 on dev-- context — API key needs
+             "All contexts" in Netlify env vars (not just Production)
+Next:        Test YouTube on production · test AI features (Anthropic key in Settings) ·
+             verify Google Drive token persistence on real device ·
              session detail view · post-session recovery tip
-Open issues: Google OAuth still in testing mode
-             YouTube API key not yet in Netlify env vars
+Open issues: Google OAuth still in testing mode (OAuth consent screen)
+             YouTube may still 503 on dev previews if env var not set for all contexts
 ```
 
 ---
