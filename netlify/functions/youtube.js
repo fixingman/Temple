@@ -34,8 +34,9 @@ export default async (req) => {
     const res = await fetch(ytUrl.toString());
     if (!res.ok) {
       const err = await res.json();
-      console.error("YouTube API error:", err);
-      return new Response(JSON.stringify({ error: "YouTube search failed." }), {
+      console.error("YouTube API error:", JSON.stringify(err));
+      const reason = err?.error?.errors?.[0]?.reason || err?.error?.message || "unknown";
+      return new Response(JSON.stringify({ error: `YouTube search failed: ${reason}` }), {
         status: 502,
         headers: { "Content-Type": "application/json" },
       });
