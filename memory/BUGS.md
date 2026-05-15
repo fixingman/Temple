@@ -10,6 +10,16 @@ Severity: `[crit]` crash · `[high]` broken feature · `[med]` degraded UX · `[
 
 ---
 
+## Fixed (v0.9.3)
+| # | Sev | Description | Fixed |
+|---|-----|-------------|-------|
+| B35 | `[crit]` | `liveCalories` TDZ — crash on workout completion screen | v0.9.3 |
+| B34 | `[crit]` | `fmtDate` missing import in SessionPage — crash on Train tab | v0.9.3 |
+| B33 | `[crit]` | `MUSCLE_ICONS` missing import in ProgressPage — crash on Progress tab | v0.9.3 |
+| B32 | `[crit]` | JSX syntax error `{false && (<div>)}` — Netlify build failure | v0.9.3 |
+| B31 | `[high]` | Google Drive popup blocked on load (silent reconnect) | v0.9.3 |
+| B30 | `[high]` | Google Drive buttons unclickable — token missing but UI showed connected | v0.9.3 |
+
 ## Fixed (v0.9.2)
 | # | Sev | Description | Fixed |
 |---|-----|-------------|-------|

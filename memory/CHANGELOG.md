@@ -1,6 +1,24 @@
 # 🟁 Temple — Changelog
 
-## v0.9.2 (Current)
+## v0.9.3 (Current)
+- **Bug fix**: `fmtDate` missing import in SessionPage → crash on Train tab
+- **Bug fix**: `liveCalories` temporal dead zone → crash on workout completion screen
+- **Bug fix**: `MUSCLE_ICONS` missing import in ProgressPage → crash on Progress tab
+- **Bug fix**: JSX syntax error in pull-to-refresh text removal → build failure
+- **Google Drive**: Token persisted to idb-keyval — no reconnect needed each session
+- **Google Drive**: UI correctly shows "Authorization required" when token expired vs "connected"
+- **Logo**: Replaced `🟁` emoji with inline SVG `Logo`/`LogoIcon` components — fixes blank logo on mobile
+- **Error dot**: Moved to top-right, `position:absolute` — scrolls with content, not fixed
+- **Sets**: Margin added between Start and Edit/Delete buttons
+- **Swap button**: Styled with `C.surface` background to match card
+- **Pull-to-refresh**: Text labels removed, logo animation kept
+- **YouTube**: `netlify.toml` explicit `/api/youtube → /.netlify/functions/youtube` redirect added
+- **YouTube**: SPA `/*` catch-all redirect added to `netlify.toml`
+- **YouTube**: Better error messages from API (shows reason code)
+- **Vite**: Dev proxy for `/api/youtube` → `netlify dev`
+- **SW cache**: Bumped to `temple-v0.9.3`
+
+## v0.9.2
 - **Code split**: App.jsx (1972 lines) → 7 files, ~280 lines each
   - `src/components.jsx` — shared UI (Tabs, Card, Btn, Input, VideoSheet, YTButton, etc.)
   - `src/pages/LibraryPage.jsx`, `SetsPage.jsx`, `SessionPage.jsx`, `ProgressPage.jsx`, `SettingsPage.jsx`

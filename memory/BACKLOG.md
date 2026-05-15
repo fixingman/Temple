@@ -3,25 +3,26 @@
 Status tags: `[shipped]` = deployed untested · `[tested]` = verified on device · `[wip]` = in progress
 
 ## Up Next
-1. **Add YOUTUBE_API_KEY to Netlify** — console.cloud.google.com → same project as Drive → enable YouTube Data API v3 → create API key → Netlify env vars
-2. **Test AI features** — add Anthropic key in Settings → create a set with 3+ exercises → verify AI ordering works + ✦ AI ordered appears
-3. **Session detail view** — tap history entry → full breakdown
-4. **Post-session recovery tip** — auto-surface using prompts.recoveryTip (Haiku)
-5. **Custom rest timer** — configurable in Settings
+1. **Test YouTube** — verify on production (API key set, redirect in netlify.toml) — enable for all Netlify contexts
+2. **Test AI features** — add Anthropic key in Settings → create a set with 3+ exercises → verify AI ordering works
+3. **Verify Google Drive** — token persistence working, no reconnect needed per session
+4. **Session detail view** — tap history entry → full breakdown
+5. **Post-session recovery tip** — auto-surface using prompts.recoveryTip (Haiku)
+6. **Custom rest timer** — configurable in Settings
 
 ## Recently Shipped
 | Feature | Status |
 |---------|--------|
-| Code split into page files | `[shipped]` |
-| Style helpers (S object) | `[shipped]` |
-| Performance: customTooltip, est1RM, getLastSessionData | `[shipped]` |
-| Error monitor dot | `[shipped]` |
-| Session delete + PR recalc | `[shipped]` |
-| Sets ··· menu | `[shipped]` |
-| Search clear ✕ | `[shipped]` |
-| AI CORS fix (coach.js proxy) | `[shipped]` |
+| v0.9.3 bug fixes (fmtDate, liveCalories, MUSCLE_ICONS, build error) | `[shipped]` |
+| Google Drive token persistence | `[shipped]` |
+| Inline SVG logo (mobile fix) | `[shipped]` |
+| YouTube netlify.toml routing | `[shipped]` |
+| Error dot top-right (scrolls) | `[shipped]` |
+| Set CTA spacing + swap button style | `[shipped]` |
+| Code split into page files | `[tested]` |
+| Error monitor dot | `[tested]` |
+| Session delete + PR recalc | `[tested]` |
 | YouTube in-app search + player | `[shipped]` |
-| SW black screen fix | `[tested]` |
 
 ## Feature Backlog
 | Feature | Priority | Status |
