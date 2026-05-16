@@ -1,19 +1,21 @@
 import { useState, useCallback } from "react";
 import React from "react";
+import { motion } from "framer-motion";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { T, C } from "../tokens";
-import { fmtDateFull, displayWeight, weightLabel, est1RM, uid, MUSCLE_ICONS } from "../data";
+import { fmtDateFull, displayWeight, weightLabel, est1RM, uid } from "../data";
 import { Card, Btn, ConfirmDialog } from "../components";
+import { IcTrophy, IcClose } from "../icons";
 import { coachError, prompts } from "../useCoach";
 
-function PRBadge() { return <span style={{ background: C.prDim, color: C.pr, fontSize: T.fontSize.xxs, fontWeight: T.fontWeight.heavy, padding: "2px 8px", borderRadius: T.radius.full, letterSpacing: T.letterSpacing.uppercase }}>🏆 PR</span>; }
+function PRBadge() { return <span style={{ background: C.prDim, color: C.pr, fontSize: T.fontSize.xxs, fontWeight: T.fontWeight.heavy, padding: "2px 8px", borderRadius: T.radius.full, letterSpacing: T.letterSpacing.label, display: "inline-flex", alignItems: "center", gap: 3 }}><IcTrophy size={10} /> PR</span>; }
 
 function MuscleBar({ label, value, max, icon, unit }) {
   const pct = max > 0 ? Math.round((value / max) * 100) : 0;
   return (
     <div style={{ marginBottom: T.space.lg }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: T.space.sm }}>
-        <span style={{ fontSize: T.fontSize.bodySmall, fontWeight: T.fontWeight.semi }}>{icon} {label}</span>
+        <span style={{ fontSize: T.fontSize.bodySmall, fontWeight: T.fontWeight.semi }}>{label}</span>
         <span style={{ fontSize: T.fontSize.small, color: C.accent, fontWeight: T.fontWeight.bold }}>{displayWeight(value, unit).toLocaleString()} {weightLabel(unit)}</span>
       </div>
       <div style={{ height: 8, background: C.bg, borderRadius: T.radius.base, overflow: "hidden" }}>
@@ -124,9 +126,9 @@ export function ProgressPage({ data, save, onRepeatSession, coach }) {
     <div style={{ display: "flex", flexDirection: "column", gap: T.space.xl }}>
       <h2 style={{ fontSize: T.fontSize.h1, fontWeight: T.fontWeight.heavy, margin: 0 }}>Progress</h2>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: T.space.base }}>
-        <Card style={{ textAlign: "center", padding: T.space.lg }}><div style={{ fontSize: T.fontSize.statMd, fontWeight: T.fontWeight.heavy, color: C.accent }}>{totalSessions}</div><div style={{ fontSize: T.fontSize.xxs, color: C.textDim, fontWeight: T.fontWeight.semi }}>SESSIONS</div></Card>
-        <Card style={{ textAlign: "center", padding: T.space.lg }}><div style={{ fontSize: T.fontSize.statMd, fontWeight: T.fontWeight.heavy, color: C.accent }}>{thisWeekSessions}</div><div style={{ fontSize: T.fontSize.xxs, color: C.textDim, fontWeight: T.fontWeight.semi }}>THIS WEEK</div></Card>
-        <Card style={{ textAlign: "center", padding: T.space.lg }}><div style={{ fontSize: T.fontSize.statMd, fontWeight: T.fontWeight.heavy, color: weeksActive >= 3 ? C.accent : C.pr }}>{weeksActive}<span style={{ fontSize: T.fontSize.xs, fontWeight: T.fontWeight.semi }}>/4</span></div><div style={{ fontSize: T.fontSize.xxs, color: C.textDim, fontWeight: T.fontWeight.semi }}>WEEKS ACTIVE</div></Card>
+        <Card style={{ textAlign: "center", padding: T.space.lg }}><div style={{ fontSize: T.fontSize.stat, fontWeight: T.fontWeight.heavy, color: C.accent, fontFamily: T.font.mono, letterSpacing: T.letterSpacing.tight, lineHeight: 1 }}>{totalSessions}</div><div style={{ fontSize: T.fontSize.xxs, color: C.textDim, fontWeight: T.fontWeight.bold, letterSpacing: T.letterSpacing.label, marginTop: T.space.sm }}>SESSIONS</div></Card>
+        <Card style={{ textAlign: "center", padding: T.space.lg }}><div style={{ fontSize: T.fontSize.stat, fontWeight: T.fontWeight.heavy, color: C.accent, fontFamily: T.font.mono, letterSpacing: T.letterSpacing.tight, lineHeight: 1 }}>{thisWeekSessions}</div><div style={{ fontSize: T.fontSize.xxs, color: C.textDim, fontWeight: T.fontWeight.bold, letterSpacing: T.letterSpacing.label, marginTop: T.space.sm }}>THIS WEEK</div></Card>
+        <Card style={{ textAlign: "center", padding: T.space.lg }}><div style={{ fontSize: T.fontSize.stat, fontWeight: T.fontWeight.heavy, color: weeksActive >= 3 ? C.accent : C.pr, fontFamily: T.font.mono, letterSpacing: T.letterSpacing.tight, lineHeight: 1 }}>{weeksActive}<span style={{ fontSize: T.fontSize.small, fontWeight: T.fontWeight.semi }}>/4</span></div><div style={{ fontSize: T.fontSize.xxs, color: C.textDim, fontWeight: T.fontWeight.bold, letterSpacing: T.letterSpacing.label, marginTop: T.space.sm }}>ACTIVE WKS</div></Card>
       </div>
       {totalVol > 0 && <Card style={{ textAlign: "center", padding: T.space.lg }}>
         <div style={{ fontSize: T.fontSize.xs, color: C.textDim, fontWeight: T.fontWeight.semi, marginBottom: T.space.sm }}>TOTAL VOLUME LIFTED</div>
@@ -140,8 +142,8 @@ export function ProgressPage({ data, save, onRepeatSession, coach }) {
 
       {/* Tab switcher */}
       <div style={{ display: "flex", gap: T.space.sm, background: C.surface, borderRadius: T.radius.lg, padding: T.space.xs }}>
-        {[["prs", "🏆 PRs"], ["muscles", "💪 Muscles"], ["history", "📅 History"]].map(([v, l]) => (
-          <button key={v} onClick={() => setView(v)} style={{ flex: 1, border: "none", borderRadius: T.radius.md, padding: "8px 0", fontSize: T.fontSize.caption, fontWeight: T.fontWeight.semi, cursor: "pointer", background: view === v ? C.bg : "transparent", color: view === v ? C.text : C.textDim, transition: `background ${T.transition.fast}, color ${T.transition.fast}, border-color ${T.transition.fast}` }}>{l}</button>
+        {[["prs", "PRs"], ["muscles", "Muscles"], ["history", "History"]].map(([v, l]) => (
+          <button key={v} onClick={() => setView(v)} style={{ flex: 1, border: "none", borderRadius: T.radius.md, padding: "9px 0", fontSize: T.fontSize.xs, fontWeight: T.fontWeight.bold, letterSpacing: T.letterSpacing.label, textTransform: "uppercase", cursor: "pointer", background: view === v ? C.accentDim : "transparent", color: view === v ? C.accent : C.textDim, transition: `background ${T.transition.fast}, color ${T.transition.fast}`, borderBottom: view === v ? `2px solid ${C.accent}` : "2px solid transparent" }}>{l}</button>
         ))}
       </div>
 
@@ -175,20 +177,23 @@ export function ProgressPage({ data, save, onRepeatSession, coach }) {
             return (
               <Card key={i} style={{ border: isOpen ? `1px solid ${C.accent}` : undefined }}>
                 {/* Header — always visible, tappable */}
-                <div onClick={() => setSelectedExId(isOpen ? null : pr.exerciseId)} style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div>
-                    <div style={{ fontWeight: T.fontWeight.heavy, fontSize: T.fontSize.body }}>{pr.exerciseName}</div>
-                    <div style={{ fontSize: T.fontSize.xs, color: C.textDim }}>{MUSCLE_ICONS[exercise?.muscle] || ""} {pr.muscle}</div>
+                <div onClick={() => setSelectedExId(isOpen ? null : pr.exerciseId)} style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div style={{ flex: 1, minWidth: 0, paddingRight: T.space.base }}>
+                    <div style={{ fontWeight: T.fontWeight.heavy, fontSize: T.fontSize.h3, letterSpacing: T.letterSpacing.tight }}>{pr.exerciseName}</div>
+                    <div style={{ fontSize: T.fontSize.xs, color: C.textDim, fontWeight: T.fontWeight.bold, letterSpacing: T.letterSpacing.label, textTransform: "uppercase", marginTop: T.space.xs }}>{pr.muscle}</div>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: T.space.base }}>
-                    <PRBadge />
-                    <span style={{ color: C.textDim, fontSize: T.fontSize.h2, lineHeight: 1, transition: `transform ${T.transition.spring}`, transform: isOpen ? "rotate(45deg)" : "none" }}>+</span>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: T.space.xs, flexShrink: 0 }}>
+                    <div style={{ fontSize: T.fontSize.statMd, fontWeight: T.fontWeight.heavy, color: C.accent, fontFamily: T.font.mono, letterSpacing: T.letterSpacing.tight, lineHeight: 1 }}>{displayWeight(pr.maxWeight, unit)} <span style={{ fontSize: T.fontSize.small, color: C.textDim, fontFamily: T.font.body }}>{wl}</span></div>
+                    <div style={{ display: "flex", gap: T.space.base, alignItems: "center" }}>
+                      <PRBadge />
+                      <motion.span animate={{ rotate: isOpen ? 45 : 0 }} transition={T.motion.snap} style={{ color: C.textDim, fontSize: T.fontSize.h2, lineHeight: 1, display: "inline-block" }}>+</motion.span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Stats — always visible */}
+                {/* Stats row */}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: T.space.sm, marginTop: T.space.lg }}>
-                  {[["maxWeight", `MAX ${wl.toUpperCase()}`], ["maxReps", "MAX REPS"], ["maxVolume", "VOLUME"], ["est1rm", "EST 1RM"]].map(([k, l]) => {
+                  {[["maxWeight", `${wl.toUpperCase()}`], ["maxReps", "REPS"], ["maxVolume", "VOL"], ["est1rm", "1RM"]].map(([k, l]) => {
                     let val;
                     if (k === "maxReps") val = pr[k];
                     else if (k === "est1rm") {
@@ -196,9 +201,9 @@ export function ProgressPage({ data, save, onRepeatSession, coach }) {
                       val = best > 0 ? displayWeight(best, unit) : "—";
                     } else val = displayWeight(pr[k], unit);
                     return (
-                      <div key={k} style={{ background: C.bg, borderRadius: T.radius.md, padding: "6px 8px", textAlign: "center" }}>
-                        <div style={{ fontSize: T.fontSize.bodySmall, fontWeight: T.fontWeight.heavy, color: k === "est1rm" ? C.pr : C.accent }}>{val}</div>
-                        <div style={{ fontSize: T.fontSize.micro, color: C.textDim, fontWeight: T.fontWeight.semi }}>{l}</div>
+                      <div key={k} style={{ background: C.bg, borderRadius: T.radius.md, padding: "8px 6px", textAlign: "center" }}>
+                        <div style={{ fontSize: T.fontSize.h3, fontWeight: T.fontWeight.heavy, color: k === "est1rm" ? C.pr : C.text, fontFamily: T.font.mono, letterSpacing: T.letterSpacing.tight }}>{val}</div>
+                        <div style={{ fontSize: T.fontSize.micro, color: C.textDim, fontWeight: T.fontWeight.bold, letterSpacing: T.letterSpacing.label, marginTop: 2 }}>{l}</div>
                       </div>
                     );
                   })}
@@ -255,7 +260,7 @@ export function ProgressPage({ data, save, onRepeatSession, coach }) {
           <Card>
             {muscleEntries.length === 0 && <div style={{ textAlign: "center", padding: T.space["2xl"], color: C.textDim }}>Complete a workout to see muscle breakdown</div>}
             {muscleEntries.map(([muscle, vol]) => (
-              <MuscleBar key={muscle} label={muscle} value={vol} max={maxMuscleVol} icon={MUSCLE_ICONS[muscle] || ""} unit={unit} />
+              <MuscleBar key={muscle} label={muscle} value={vol} max={maxMuscleVol} unit={unit} />
             ))}
             {muscleEntries.length > 0 && (
               <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: T.space.base, textAlign: "center" }}>Total volume across all sessions</div>
@@ -301,12 +306,12 @@ export function ProgressPage({ data, save, onRepeatSession, coach }) {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: T.fontWeight.bold, fontSize: T.fontSize.body }}>{set?.name || "Deleted Set"}</div>
-                    <div style={{ fontSize: T.fontSize.small, color: C.textDim }}>{fmtDateFull(s.date)} {s.duration ? `· ${Math.floor(s.duration / 60)}min` : ""}</div>
+                    <div style={{ fontSize: T.fontSize.small, color: C.textDim }}>{fmtDateFull(s.date)} {s.duration ? `· ${s.duration < 60 ? "<1min" : `${Math.floor(s.duration / 60)}min`}` : ""}</div>
                   </div>
                   <button
                     onClick={() => setConfirmDeleteSession(s.id)}
-                    style={{ background: "none", border: "none", color: C.textDim, cursor: "pointer", fontSize: T.fontSize.small, padding: `${T.space.xs}px ${T.space.sm}px`, flexShrink: 0, opacity: 0.6 }}
-                  >✕</button>
+                    style={{ background: "none", border: "none", color: C.textDim, cursor: "pointer", fontSize: T.fontSize.small, padding: `${T.space.xs}px ${T.space.sm}px`, flexShrink: 0, opacity: 0.6, display: "flex", alignItems: "center" }}
+                  ><IcClose size={14} /></button>
                 </div>
                 <div style={{ display: "flex", gap: T.space.xl, marginTop: T.space.base, fontSize: T.fontSize.small, color: C.textDim }}>
                   <span>{s.entries.length} exercises</span>
@@ -315,7 +320,7 @@ export function ProgressPage({ data, save, onRepeatSession, coach }) {
                 </div>
                 {set && (
                   <div style={{ marginTop: T.space.lg }}>
-                    <Btn variant="secondary" onClick={() => onRepeatSession(set)} style={{ width: "100%", fontSize: T.fontSize.small }}>▶ Repeat This Workout</Btn>
+                    <Btn variant="secondary" onClick={() => onRepeatSession(set)} style={{ width: "100%", fontSize: T.fontSize.small }}>Repeat This Workout</Btn>
                   </div>
                 )}
               </Card>

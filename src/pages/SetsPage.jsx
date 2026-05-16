@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { T, C } from "../tokens";
-import { MUSCLE_GROUPS, MUSCLE_ICONS, uid } from "../data";
-import { Card, Btn, Input, ConfirmDialog, PillFilter } from "../components";
+import { MUSCLE_GROUPS, uid } from "../data";
+import { Card, Btn, Input, ConfirmDialog, ErrorBanner, PillFilter } from "../components";
+import { IcBarbell, IcCheck, IcClose, IcCaretUp, IcCaretDown } from "../icons";
 import { useCoach, coachError, prompts, MODELS } from "../useCoach";
 
 export function SetsPage({ data, save, onStartSession, coach }) {
@@ -19,7 +20,7 @@ export function SetsPage({ data, save, onStartSession, coach }) {
   const [lastOrderedKey, setLastOrderedKey] = useState("");
   const selectionKey = [...selected].sort().join(",");
 
-  const [supersetPairs, setSupersetPairs] = useState([]); // [[id1,id2], ...]
+  const [supersetPairs, setSupersetPairs] = useState([]);
 
   const startCreate = () => {
     setCreating(true); setEditingId(null); setName(""); setSelected([]);
@@ -40,7 +41,6 @@ export function SetsPage({ data, save, onStartSession, coach }) {
     if (paired) {
       setSupersetPairs(prev => prev.filter(([a, b]) => !((a === id1 && b === id2) || (a === id2 && b === id1))));
     } else {
-      // Remove any existing pairs involving either id (can't be in two supersets)
       const cleaned = supersetPairs.filter(([a, b]) => a !== id1 && b !== id1 && a !== id2 && b !== id2);
       setSupersetPairs([...cleaned, [id1, id2]]);
     }
@@ -52,7 +52,6 @@ export function SetsPage({ data, save, onStartSession, coach }) {
   };
   const isInAnySuperset = (id) => supersetPairs.some(([a, b]) => a === id || b === id);
 
-  // Auto-suggest order when selection changes, retries if key becomes available
   useEffect(() => {
     if (!coach.hasKey || selected.length < 2) return;
     if (selectionKey === lastOrderedKey) return;
@@ -66,7 +65,7 @@ export function SetsPage({ data, save, onStartSession, coach }) {
       );
       if (err) {
         setOrderError(coachError(err));
-        setLastOrderedKey(selectionKey); // don't retry same selection on error
+        setLastOrderedKey(selectionKey);
       } else {
         try {
           const match = text.match(/\[[\s\S]*?\]/);
@@ -85,6 +84,7 @@ export function SetsPage({ data, save, onStartSession, coach }) {
     const t = setTimeout(run, 1200);
     return () => clearTimeout(t);
   }, [selectionKey, coach.hasKey]);
+
   const saveSet = () => {
     if (!name.trim() && selected.length === 0) { setError("Give your set a name and select at least one exercise."); return; }
     if (!name.trim()) { setError("Give your set a name."); return; }
@@ -131,29 +131,25 @@ export function SetsPage({ data, save, onStartSession, coach }) {
 
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: T.space.lg }}>
-
-        {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <h2 style={{ fontSize: T.fontSize.h1, fontWeight: T.fontWeight.heavy, margin: 0 }}>{editingId ? "Edit" : "New"} Set</h2>
+          <h2 style={{ fontSize: T.fontSize.h1, fontWeight: T.fontWeight.heavy, margin: 0, letterSpacing: T.letterSpacing.tight }}>{editingId ? "Edit" : "New"} Set</h2>
           <Btn variant="ghost" onClick={() => setCreating(false)}>Cancel</Btn>
         </div>
 
-        {/* Name input */}
         <Input label="Set Name" placeholder="e.g. Push Day" value={name} onChange={e => { setName(e.target.value); setError(""); }} />
 
-        {/* Selected summary — fixed height, never shifts layout */}
-        <div style={{ background: C.surface, border: `1px solid ${selected.length > 0 ? C.accentBorder : C.border}`, borderRadius: T.radius.xl, padding: `${T.space.lg}px ${T.space.xl}px`, minHeight: 64, transition: `border-color ${T.transition.fast}` }}>
+        {/* Selected summary */}
+        <div style={{ background: C.surface, border: `1px solid ${selected.length > 0 ? C.accentBorder : C.border}`, borderRadius: T.radius.lg, padding: `${T.space.lg}px ${T.space.xl}px`, minHeight: 64, transition: `border-color ${T.transition.fast}` }}>
           {selected.length === 0 ? (
             <div style={{ color: C.textDim, fontSize: T.fontSize.caption, lineHeight: 1.5 }}>
               No exercises selected yet. Search or browse below.
             </div>
           ) : (
             <div>
-              {/* Muscle chips + suggest button */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: T.space.base }}>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: T.space.sm, flex: 1 }}>
                   {Object.entries(muscles).map(([m, count]) => (
-                    <div key={m} style={{ padding: "3px 10px", borderRadius: T.radius.full, fontSize: T.fontSize.xs, fontWeight: T.fontWeight.semi, background: C.accentDim, color: C.accent, border: `1px solid ${C.accentBorder}` }}>
+                    <div key={m} style={{ padding: "3px 10px", borderRadius: T.radius.full, fontSize: T.fontSize.xs, fontWeight: T.fontWeight.bold, letterSpacing: T.letterSpacing.label, textTransform: "uppercase", background: C.accentDim, color: C.accent, border: `1px solid ${C.accentBorder}` }}>
                       {m}{count > 1 ? ` ×${count}` : ""}
                     </div>
                   ))}
@@ -170,7 +166,6 @@ export function SetsPage({ data, save, onStartSession, coach }) {
                   </div>
                 )}
               </div>
-              {/* Selected exercise rows with reorder + superset + remove */}
               <div style={{ display: "flex", flexDirection: "column" }}>
                 {selectedExercises.map((ex, idx) => {
                   const linked = isPaired(idx);
@@ -180,19 +175,18 @@ export function SetsPage({ data, save, onStartSession, coach }) {
                       <div style={{ display: "flex", alignItems: "center", gap: T.space.base, padding: `${T.space.sm}px ${T.space.base}px`, background: inSS ? C.accentDim : C.bg, borderRadius: T.radius.lg, border: `1px solid ${inSS ? C.accentBorder : C.border}`, marginBottom: T.space.xs }}>
                         <span style={{ fontSize: T.fontSize.xs, color: C.accent, fontWeight: T.fontWeight.bold, width: 16, textAlign: "center", flexShrink: 0 }}>{idx + 1}</span>
                         <div style={{ flex: 1, fontSize: T.fontSize.bodySmall, fontWeight: T.fontWeight.semi }}>{ex.name}</div>
-                        {inSS && <span style={{ fontSize: T.fontSize.xxs, color: C.accent, fontWeight: T.fontWeight.bold, flexShrink: 0 }}>SS</span>}
-                        <div style={{ display: "flex", gap: 2, flexShrink: 0 }}>
-                          <button onClick={() => moveUp(ex.id)} disabled={idx === 0} style={{ background: "none", border: "none", color: idx === 0 ? C.border : C.textDim, cursor: idx === 0 ? "default" : "pointer", fontSize: T.fontSize.caption, padding: `${T.space.xs}px ${T.space.sm}px`, lineHeight: 1 }}>▲</button>
-                          <button onClick={() => moveDown(ex.id)} disabled={idx === selected.length - 1} style={{ background: "none", border: "none", color: idx === selected.length - 1 ? C.border : C.textDim, cursor: idx === selected.length - 1 ? "default" : "pointer", fontSize: T.fontSize.caption, padding: `${T.space.xs}px ${T.space.sm}px`, lineHeight: 1 }}>▼</button>
-                          <button onClick={() => removeFromSelected(ex.id)} style={{ background: "none", border: "none", color: C.danger, cursor: "pointer", fontSize: T.fontSize.caption, padding: `${T.space.xs}px ${T.space.sm}px`, lineHeight: 1 }}>✕</button>
+                        {inSS && <span style={{ fontSize: T.fontSize.xxs, color: C.accent, fontWeight: T.fontWeight.bold, flexShrink: 0, letterSpacing: T.letterSpacing.label }}>SS</span>}
+                        <div style={{ display: "flex", gap: 2, flexShrink: 0, alignItems: "center" }}>
+                          <button onClick={() => moveUp(ex.id)} disabled={idx === 0} style={{ background: "none", border: "none", color: idx === 0 ? C.border : C.textDim, cursor: idx === 0 ? "default" : "pointer", padding: `${T.space.xs}px ${T.space.sm}px`, lineHeight: 1, display: "flex", alignItems: "center" }}><IcCaretUp size={13} /></button>
+                          <button onClick={() => moveDown(ex.id)} disabled={idx === selected.length - 1} style={{ background: "none", border: "none", color: idx === selected.length - 1 ? C.border : C.textDim, cursor: idx === selected.length - 1 ? "default" : "pointer", padding: `${T.space.xs}px ${T.space.sm}px`, lineHeight: 1, display: "flex", alignItems: "center" }}><IcCaretDown size={13} /></button>
+                          <button onClick={() => removeFromSelected(ex.id)} style={{ background: "none", border: "none", color: C.danger, cursor: "pointer", padding: `${T.space.xs}px ${T.space.sm}px`, lineHeight: 1, display: "flex", alignItems: "center" }}><IcClose size={13} /></button>
                         </div>
                       </div>
-                      {/* Superset connector between this and next */}
                       {idx < selectedExercises.length - 1 && (
                         <div style={{ display: "flex", alignItems: "center", gap: T.space.sm, padding: `0 0 ${T.space.xs}px ${T.space["2xl"]}px` }}>
                           <div style={{ flex: 1, height: 1, background: linked ? C.accentBorder : C.border }} />
-                          <button onClick={() => toggleSuperset(idx)} style={{ background: linked ? C.accentDim : "none", border: `1px solid ${linked ? C.accentBorder : C.border}`, borderRadius: T.radius.full, color: linked ? C.accent : C.textDim, cursor: "pointer", fontSize: T.fontSize.xxs, padding: "2px 8px", fontWeight: T.fontWeight.bold, whiteSpace: "nowrap", flexShrink: 0 }}>
-                            {linked ? "⇆ SS ✕" : "+ SS"}
+                          <button onClick={() => toggleSuperset(idx)} style={{ background: linked ? C.accentDim : "none", border: `1px solid ${linked ? C.accentBorder : C.border}`, borderRadius: T.radius.full, color: linked ? C.accent : C.textDim, cursor: "pointer", fontSize: T.fontSize.xxs, padding: "2px 8px", fontWeight: T.fontWeight.bold, whiteSpace: "nowrap", flexShrink: 0, letterSpacing: T.letterSpacing.label }}>
+                            {linked ? "SS ✕" : "+ SS"}
                           </button>
                           <div style={{ flex: 1, height: 1, background: linked ? C.accentBorder : C.border }} />
                         </div>
@@ -205,13 +199,12 @@ export function SetsPage({ data, save, onStartSession, coach }) {
           )}
         </div>
 
-        {/* Picker — stable, never moves */}
+        {/* Exercise picker */}
         <div>
-          <label style={{ fontSize: T.fontSize.small, color: C.textDim, fontWeight: T.fontWeight.semi, textTransform: "uppercase", letterSpacing: T.letterSpacing.uppercase }}>
+          <label style={{ fontSize: T.fontSize.small, color: C.textDim, fontWeight: T.fontWeight.bold, textTransform: "uppercase", letterSpacing: T.letterSpacing.label }}>
             Add Exercises {selected.length > 0 && <span style={{ color: C.accent }}>· {selected.length} selected</span>}
           </label>
 
-          {/* Search */}
           <div style={{ position: "relative", marginTop: T.space.base, marginBottom: T.space.base }}>
             <input
               name="exercise-search"
@@ -219,22 +212,20 @@ export function SetsPage({ data, save, onStartSession, coach }) {
               placeholder="Search exercises..."
               value={search}
               onChange={e => { setSearch(e.target.value); if (e.target.value) setMuscleFilter("All"); }}
-              style={{ width: "100%", boxSizing: "border-box", background: C.surface, border: `1px solid ${search ? C.accent : C.border}`, borderRadius: T.radius.lg, padding: `10px ${search ? 36 : 14}px 10px 14px`, color: C.text, fontSize: T.fontSize.h3, outline: "none", transition: `border-color ${T.transition.fast}` }}
+              style={{ width: "100%", boxSizing: "border-box", background: C.bg, border: `1px solid ${search ? C.accentBorder : C.border}`, borderRadius: T.radius.lg, padding: `10px ${search ? 36 : 14}px 10px 14px`, color: C.text, fontSize: T.fontSize.h3, outline: "none", transition: `border-color ${T.transition.fast}` }}
             />
             {search.length > 0 && (
               <button
                 onMouseDown={e => { e.preventDefault(); setSearch(""); setMuscleFilter("All"); }}
-                style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: C.textDim, cursor: "pointer", fontSize: T.fontSize.small, padding: `${T.space.xs}px ${T.space.sm}px`, lineHeight: 1, borderRadius: T.radius.base }}
-              >✕</button>
+                style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: C.textDim, cursor: "pointer", padding: `${T.space.xs}px ${T.space.sm}px`, lineHeight: 1, borderRadius: T.radius.base, display: "flex", alignItems: "center" }}
+              ><IcClose size={14} /></button>
             )}
           </div>
 
-          {/* Muscle filter — always reserves same space */}
           <div style={{ marginBottom: T.space.base, opacity: search ? 0.3 : 1, pointerEvents: search ? "none" : "auto", transition: `opacity ${T.transition.fast}` }}>
             <PillFilter options={MUSCLE_GROUPS} active={muscleFilter} onChange={setMuscleFilter} small />
           </div>
 
-          {/* Exercise list — fixed scroll container, never changes height */}
           <div style={{ display: "flex", flexDirection: "column", gap: T.space.sm, maxHeight: 320, overflowY: "auto" }}>
             {filteredEx.length === 0 && (
               <div style={{ textAlign: "center", color: C.textDim, fontSize: T.fontSize.caption, padding: `${T.space["2xl"]}px 0` }}>
@@ -244,8 +235,10 @@ export function SetsPage({ data, save, onStartSession, coach }) {
             {filteredEx.map(ex => {
               const isSel = selected.includes(ex.id);
               return (
-                <div key={ex.id} onClick={() => toggle(ex.id)} style={{ display: "flex", alignItems: "center", gap: T.space.lg, padding: "10px 12px", borderRadius: T.radius.lg, background: isSel ? C.accentDim : C.surface, border: `1px solid ${isSel ? C.accent : C.border}`, cursor: "pointer", transition: `background ${T.transition.fast}, border-color ${T.transition.fast}` }}>
-                  <div style={{ width: 20, height: 20, borderRadius: T.radius.base, border: `2px solid ${isSel ? C.accent : C.textDim}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, background: isSel ? C.accent : "transparent", color: C.textOnAccent, fontSize: T.fontSize.small, fontWeight: T.fontWeight.black, transition: `background ${T.transition.fast}, border-color ${T.transition.fast}` }}>{isSel ? "✓" : ""}</div>
+                <div key={ex.id} onClick={() => toggle(ex.id)} style={{ display: "flex", alignItems: "center", gap: T.space.lg, padding: "10px 12px", borderRadius: T.radius.lg, background: isSel ? C.accentDim : C.surface, border: `1px solid ${isSel ? C.accentBorder : C.border}`, cursor: "pointer", transition: `background ${T.transition.fast}, border-color ${T.transition.fast}` }}>
+                  <div style={{ width: 20, height: 20, borderRadius: T.radius.base, border: `2px solid ${isSel ? C.accent : C.textDim}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, background: isSel ? C.accent : "transparent", color: C.textOnAccent, transition: `background ${T.transition.fast}, border-color ${T.transition.fast}` }}>
+                    {isSel && <IcCheck size={12} weight="bold" />}
+                  </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: T.fontWeight.semi, fontSize: T.fontSize.bodySmall }}>{ex.name}</div>
                     <div style={{ fontSize: T.fontSize.xs, color: C.textDim }}>{ex.muscle}</div>
@@ -269,14 +262,14 @@ export function SetsPage({ data, save, onStartSession, coach }) {
       {confirmDelete && <ConfirmDialog message={`Delete "${data.sets.find(s => s.id === confirmDelete)?.name}"? This cannot be undone.`} onConfirm={() => deleteSet(confirmDelete)} onCancel={() => setConfirmDelete(null)} />}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-          <h2 style={{ fontSize: T.fontSize.h1, fontWeight: T.fontWeight.heavy, margin: 0 }}>Workout Sets</h2>
-          <p style={{ color: C.textDim, fontSize: T.fontSize.caption, margin: `${T.space.sm}px 0 0` }}>{data.sets.length} sets</p>
+          <h2 style={{ fontSize: T.fontSize.h1, fontWeight: T.fontWeight.heavy, margin: 0, letterSpacing: T.letterSpacing.tight }}>Sets</h2>
+          <p style={{ color: C.textDim, fontSize: T.fontSize.caption, margin: `${T.space.sm}px 0 0` }}>{data.sets.length} {data.sets.length === 1 ? "set" : "sets"}</p>
         </div>
-        {data.sets.length > 0 && <Btn variant="ghost" onClick={startCreate} style={{ color: C.accent }}>+ New Set</Btn>}
+        {data.sets.length > 0 && <Btn variant="ghost" onClick={startCreate} style={{ color: C.accent }}>+ New</Btn>}
       </div>
       {data.sets.length === 0 && (
         <Card style={{ textAlign: "center", padding: T.space["4xl"] }}>
-          <div style={{ fontSize: T.fontSize.icon, marginBottom: T.space.lg }}>🏋️</div>
+          <div style={{ marginBottom: T.space.lg, display: "flex", justifyContent: "center", color: C.textDim }}><IcBarbell size={40} weight="thin" /></div>
           <div style={{ fontWeight: T.fontWeight.bold, fontSize: T.fontSize.body, marginBottom: T.space.sm }}>No workout sets yet</div>
           <div style={{ color: C.textDim, fontSize: T.fontSize.caption, marginBottom: T.space.xl }}>Create your first set to start training</div>
           <Btn onClick={startCreate}>Create Set</Btn>
@@ -294,19 +287,16 @@ export function SetsPage({ data, save, onStartSession, coach }) {
                 <div style={{ fontWeight: T.fontWeight.heavy, fontSize: T.fontSize.h3 }}>{s.name}</div>
                 <div style={{ fontSize: T.fontSize.small, color: C.textDim, marginTop: T.space.xs }}>{exNames.length} exercises · {sessionCount} sessions</div>
               </div>
-              {/* ··· toggle */}
               <button
                 onClick={() => setExpandedSet(expanded ? null : s.id)}
-                style={{ background: "none", border: "none", color: expanded ? C.accent : C.textDim, cursor: "pointer", fontSize: 18, padding: `0 ${T.space.sm}px`, lineHeight: 1, flexShrink: 0, letterSpacing: 1 }}
+                style={{ background: "none", border: "none", color: expanded ? C.accent : C.textDim, cursor: "pointer", fontSize: 18, padding: `0 ${T.space.sm}px`, lineHeight: 1, flexShrink: 0, letterSpacing: 2 }}
               >···</button>
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: T.space.sm, marginBottom: T.space.lg }}>
-              {exNames.slice(0, 5).map((n, i) => <span key={i} style={{ fontSize: T.fontSize.xs, background: C.bg, padding: "3px 8px", borderRadius: T.radius.md, color: C.textDim }}>{n}</span>)}
+              {exNames.slice(0, 5).map((n, i) => <span key={i} style={{ fontSize: T.fontSize.xs, background: C.bg, padding: "3px 10px", borderRadius: T.radius.full, color: C.textDim, border: `1px solid ${C.border}` }}>{n}</span>)}
               {exNames.length > 5 && <span style={{ fontSize: T.fontSize.xs, color: C.textDim, padding: "3px 4px" }}>+{exNames.length - 5} more</span>}
             </div>
-            {/* Primary action */}
-            <Btn variant="primary" onClick={() => onStartSession(s)} disabled={validCount === 0} style={{ width: "100%", marginTop: T.space.base }}>▶ Start</Btn>
-            {/* Edit + Delete — only visible when expanded */}
+            <Btn variant="primary" onClick={() => onStartSession(s)} disabled={validCount === 0} style={{ width: "100%", marginTop: T.space.base }}>Start</Btn>
             {expanded && (
               <div className="t-fade-in" style={{ display: "flex", gap: T.space.base, marginTop: T.space.lg }}>
                 <Btn variant="secondary" onClick={() => { startEdit(s); setExpandedSet(null); }} style={{ flex: 1 }}>Edit</Btn>
@@ -319,5 +309,3 @@ export function SetsPage({ data, save, onStartSession, coach }) {
     </div>
   );
 }
-
-

@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { T, C } from "../tokens";
 import { DEFAULT_SETTINGS, mkDefault } from "../data";
 import { Card, Btn, ConfirmDialog, ErrorBanner, Logo } from "../components";
+import { IcCheck } from "../icons";
+import { useSound } from "../useSound";
 
 function ApiKeyInput({ value, onChange }) {
   const [show, setShow] = useState(false);
@@ -33,7 +35,7 @@ function ApiKeyInput({ value, onChange }) {
         /* Key is saved and unchanged — show confirmation state */
         <div style={{ display: "flex", gap: T.space.base, alignItems: "center" }}>
           <div style={{ flex: 1, display: "flex", alignItems: "center", gap: T.space.base, padding: "12px 16px", background: C.accentDim, border: `1px solid ${C.accentBorder}`, borderRadius: T.radius.lg }}>
-            <span style={{ color: C.accent, fontWeight: T.fontWeight.bold, fontSize: T.fontSize.body }}>✓</span>
+            <IcCheck size={18} style={{ color: C.accent }} />
             <div>
               <div style={{ fontSize: T.fontSize.small, color: C.accent, fontWeight: T.fontWeight.semi }}>Key saved</div>
               <div style={{ fontSize: T.fontSize.xs, color: C.textDim, fontFamily: T.font.mono }}>{value.slice(0, 10)}···{value.slice(-4)}</div>
@@ -54,6 +56,7 @@ function ApiKeyInput({ value, onChange }) {
 
 
 export function SettingsPage({ data, save, drive }) {
+  const { enabled: soundEnabled, toggle: toggleSound } = useSound();
   const [confirmReset, setConfirmReset] = useState(false);
   const [importText, setImportText] = useState("");
   const [importStatus, setImportStatus] = useState("");
@@ -149,6 +152,21 @@ export function SettingsPage({ data, save, drive }) {
           <span style={{ fontSize: T.fontSize.body, color: C.textDim, fontWeight: T.fontWeight.semi, minWidth: 28 }}>{unit}</span>
         </div>
         <div style={{ fontSize: T.fontSize.xs, color: C.textDim, lineHeight: 1.5 }}>Used to estimate calories burnt per session. Stored locally, never shared.</div>
+      </Card>
+
+      {/* Sound Effects */}
+      <Card>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: T.fontSize.body, fontWeight: T.fontWeight.bold }}>Sound Effects</div>
+            <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: T.space.xs, lineHeight: 1.5 }}>Subtle audio feedback on set logging and session completion</div>
+          </div>
+          <div style={{ display: "flex", gap: T.space.sm, background: C.bg, borderRadius: T.radius.lg, padding: 3, flexShrink: 0, marginLeft: T.space.xl }}>
+            {[{ v: false, l: "OFF" }, { v: true, l: "ON" }].map(o => (
+              <button key={String(o.v)} onClick={toggleSound} style={{ border: "none", borderRadius: T.radius.md, padding: "8px 14px", fontSize: T.fontSize.xs, fontWeight: T.fontWeight.bold, cursor: "pointer", background: soundEnabled === o.v ? C.accentDim : "transparent", color: soundEnabled === o.v ? C.accent : C.textDim, transition: `background ${T.transition.fast}, color ${T.transition.fast}`, letterSpacing: T.letterSpacing.label }}>{o.l}</button>
+            ))}
+          </div>
+        </div>
       </Card>
 
       {/* Google Drive Backup */}
