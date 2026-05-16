@@ -203,7 +203,7 @@ export function ProgressPage({ data, save, onRepeatSession, coach }) {
                     return (
                       <div key={k} style={{ background: C.bg, borderRadius: T.radius.md, padding: "8px 6px", textAlign: "center" }}>
                         <div style={{ fontSize: T.fontSize.h3, fontWeight: T.fontWeight.heavy, color: k === "est1rm" ? C.pr : C.text, fontFamily: T.font.mono, letterSpacing: T.letterSpacing.tight }}>{val}</div>
-                        <div style={{ fontSize: T.fontSize.micro, color: C.textDim, fontWeight: T.fontWeight.bold, letterSpacing: T.letterSpacing.label, marginTop: 2 }}>{l}</div>
+                        <div style={{ fontSize: T.fontSize.micro, color: C.textDim, fontWeight: T.fontWeight.bold, letterSpacing: T.letterSpacing.label, marginTop: T.space.xs }}>{l}</div>
                       </div>
                     );
                   })}
@@ -310,7 +310,7 @@ export function ProgressPage({ data, save, onRepeatSession, coach }) {
                   </div>
                   <button
                     onClick={() => setConfirmDeleteSession(s.id)}
-                    style={{ background: "none", border: "none", color: C.textDim, cursor: "pointer", fontSize: T.fontSize.small, padding: `${T.space.xs}px ${T.space.sm}px`, flexShrink: 0, opacity: 0.6, display: "flex", alignItems: "center" }}
+                    style={{ background: "none", border: "none", color: C.textDim, cursor: "pointer", fontSize: T.fontSize.small, padding: `${T.space.xs}px ${T.space.sm}px`, flexShrink: 0, opacity: T.opacity.muted, display: "flex", alignItems: "center" }}
                   ><IcClose size={14} /></button>
                 </div>
                 <div style={{ display: "flex", gap: T.space.xl, marginTop: T.space.base, fontSize: T.fontSize.small, color: C.textDim }}>
@@ -366,9 +366,9 @@ function GapSheet({ muscleEntries, existingSets, exercises, coach, onCreateSet, 
         <div style={{ padding: `0 ${T.space.xl}px ${T.space.base}px`, display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
           <div>
             <div style={{ fontSize: T.fontSize.h3, fontWeight: T.fontWeight.bold }}>Training Gap Analysis</div>
-            <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: 2 }}>Based on your session history</div>
+            <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: T.space.xs }}>Based on your session history</div>
           </div>
-          <button onClick={onClose} style={{ background: C.bg, border: "none", color: C.textDim, cursor: "pointer", borderRadius: T.radius.full, width: 28, height: 28, fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+          <button onClick={onClose} style={{ background: C.bg, border: "none", color: C.textDim, cursor: "pointer", borderRadius: T.radius.full, width: T.size.iconBtn, height: T.size.iconBtn, display: "flex", alignItems: "center", justifyContent: "center" }}><IcClose size={16} /></button>
         </div>
         <div style={{ flex: 1, overflowY: "auto", padding: T.space.xl, display: "flex", flexDirection: "column", gap: T.space.xl }}>
           {loading && (

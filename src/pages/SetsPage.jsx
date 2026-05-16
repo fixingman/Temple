@@ -289,7 +289,7 @@ export function SetsPage({ data, save, onStartSession, coach }) {
               </div>
               <button
                 onClick={() => setExpandedSet(expanded ? null : s.id)}
-                style={{ background: "none", border: "none", color: expanded ? C.accent : C.textDim, cursor: "pointer", fontSize: 18, padding: `0 ${T.space.sm}px`, lineHeight: 1, flexShrink: 0, letterSpacing: 2 }}
+                style={{ background: "none", border: "none", color: expanded ? C.accent : C.textDim, cursor: "pointer", fontSize: T.fontSize.h2, padding: `0 ${T.space.sm}px`, lineHeight: 1, flexShrink: 0, letterSpacing: 2 }}
               >···</button>
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: T.space.sm, marginBottom: T.space.lg }}>

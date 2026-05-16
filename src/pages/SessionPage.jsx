@@ -51,9 +51,9 @@ function RecoverySheet({ onClose, recentExercises = [], coach, onGoToSettings })
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
             <div>
               <div style={{ fontSize: T.fontSize.body, fontWeight: T.fontWeight.bold }}>Body Check</div>
-              <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: 2 }}>Post-training discomfort guidance</div>
+              <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: T.space.xs }}>Post-training discomfort guidance</div>
             </div>
-            <button onClick={onClose} style={{ background: C.bg, border: "none", color: C.textDim, cursor: "pointer", borderRadius: T.radius.full, width: 28, height: 28, fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}><IcClose size={16} /></button>
+            <button onClick={onClose} style={{ background: C.bg, border: "none", color: C.textDim, cursor: "pointer", borderRadius: T.radius.full, width: T.size.iconBtn, height: T.size.iconBtn, display: "flex", alignItems: "center", justifyContent: "center" }}><IcClose size={16} /></button>
           </div>
         </div>
 
@@ -440,7 +440,7 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
         <div style={{ display: "flex", gap: T.space.base, alignItems: "center" }}>
           <div style={{ textAlign: "right" }}>
             <div style={{ fontFamily: T.font.mono, fontSize: T.fontSize.statMd, fontWeight: T.fontWeight.bold, letterSpacing: T.letterSpacing.tight, color: timerRunning ? C.accent : C.textDim, lineHeight: 1 }}>{fmt(timer)}</div>
-            {liveCalories !== null && <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: 3, fontWeight: T.fontWeight.bold, letterSpacing: T.letterSpacing.label }}>~{liveCalories} KCAL</div>}
+            {liveCalories !== null && <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: T.space.xs, fontWeight: T.fontWeight.bold, letterSpacing: T.letterSpacing.label }}>~{liveCalories} KCAL</div>}
           </div>
           <button onClick={() => setTimerRunning(!timerRunning)} style={{ background: "none", border: `1px solid ${C.border}`, borderRadius: T.radius.md, color: C.text, padding: "8px 10px", cursor: "pointer", display: "flex", alignItems: "center" }}>{timerRunning ? <IcPause size={16} /> : <IcPlay size={16} />}</button>
         </div>
@@ -557,7 +557,7 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
                   /* Active/done countdown */
                   <div style={{ textAlign: "center" }}>
                     <div style={{
-                      fontSize: 72, fontWeight: T.fontWeight.heavy, fontFamily: T.font.mono,
+                      fontSize: T.fontSize.display, fontWeight: T.fontWeight.heavy, fontFamily: T.font.mono,
                       color: mobCountdown === 0 ? C.accent : mobCountdown <= 5 ? C.danger : C.text,
                       lineHeight: 1, marginBottom: T.space.base,
                       transition: `color ${T.transition.fast}`,
@@ -567,7 +567,7 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
                 ) : (
                   /* Idle: show adjustable target */
                   <div style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: 72, fontWeight: T.fontWeight.heavy, fontFamily: T.font.mono, color: C.textDim, lineHeight: 1, marginBottom: T.space.base }}>
+                    <div style={{ fontSize: T.fontSize.display, fontWeight: T.fontWeight.heavy, fontFamily: T.font.mono, color: C.textDim, lineHeight: 1, marginBottom: T.space.base }}>
                       {Number(currentSet.reps) || 30}
                     </div>
                     <div style={{ fontSize: T.fontSize.small, color: C.textDim }}>seconds</div>
@@ -619,13 +619,13 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
                   <div style={{ flex: 1 }}>
                     <label style={{ fontSize: T.fontSize.xs, color: C.textDim, fontWeight: T.fontWeight.bold, textTransform: "uppercase", letterSpacing: T.letterSpacing.label, marginBottom: T.space.sm, display: "block" }}>Weight ({wl})</label>
                     <input name="set-weight" type="number" inputMode="decimal" min="0" value={currentSet.weight} onChange={e => updateCurrentSet("weight", e.target.value)} placeholder="0"
-                      style={{ background: "#181818", border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: "16px 12px", color: C.text, fontSize: T.fontSize.stat, fontWeight: T.fontWeight.bold, fontFamily: T.font.mono, outline: "none", width: "100%", boxSizing: "border-box", textAlign: "center", letterSpacing: T.letterSpacing.tight }} />
+                      style={{ background: C.inputBg, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: "16px 12px", color: C.text, fontSize: T.fontSize.stat, fontWeight: T.fontWeight.bold, fontFamily: T.font.mono, outline: "none", width: "100%", boxSizing: "border-box", textAlign: "center", letterSpacing: T.letterSpacing.tight }} />
                   </div>
                 )}
                 <div style={{ flex: 1 }}>
                   <label style={{ fontSize: T.fontSize.xs, color: C.textDim, fontWeight: T.fontWeight.bold, textTransform: "uppercase", letterSpacing: T.letterSpacing.label, marginBottom: T.space.sm, display: "block" }}>Reps</label>
                   <input name="set-reps" type="number" inputMode="numeric" min="0" value={currentSet.reps} onChange={e => updateCurrentSet("reps", e.target.value)} placeholder="0"
-                    style={{ background: "#181818", border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: "16px 12px", color: C.text, fontSize: T.fontSize.stat, fontWeight: T.fontWeight.bold, fontFamily: T.font.mono, outline: "none", width: "100%", boxSizing: "border-box", textAlign: "center", letterSpacing: T.letterSpacing.tight }} />
+                    style={{ background: C.inputBg, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: "16px 12px", color: C.text, fontSize: T.fontSize.stat, fontWeight: T.fontWeight.bold, fontFamily: T.font.mono, outline: "none", width: "100%", boxSizing: "border-box", textAlign: "center", letterSpacing: T.letterSpacing.tight }} />
                 </div>
               </div>
             )}
@@ -665,8 +665,8 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
           <Btn variant="secondary" onClick={goNextExercise} style={{ flex: 1, padding: 16 }}>Next</Btn>
         )}
       </div>
-      <button onClick={() => setConfirmCancel(true)} style={{ background: "none", border: "none", color: C.textDim, fontSize: T.fontSize.small, padding: `${T.space.sm}px 0`, cursor: "pointer", textAlign: "center", opacity: 0.6 }}>Cancel workout</button>
-      <button onClick={() => setShowRecoveryMid(true)} style={{ background: "none", border: "none", color: C.textDim, fontSize: T.fontSize.small, padding: `${T.space.sm}px 0 ${T.space.xl}px`, cursor: "pointer", textAlign: "center", opacity: 0.5 }}>Feeling pain? Body check →</button>
+      <button onClick={() => setConfirmCancel(true)} style={{ background: "none", border: "none", color: C.textDim, fontSize: T.fontSize.small, padding: `${T.space.sm}px 0`, cursor: "pointer", textAlign: "center", opacity: T.opacity.muted }}>Cancel workout</button>
+      <button onClick={() => setShowRecoveryMid(true)} style={{ background: "none", border: "none", color: C.textDim, fontSize: T.fontSize.small, padding: `${T.space.sm}px 0 ${T.space.xl}px`, cursor: "pointer", textAlign: "center", opacity: T.opacity.subtle }}>Feeling pain? Body check →</button>
     </div>
   );
 }
@@ -703,9 +703,9 @@ function SwapSheet({ exercise, allExercises, coach, onSwap, onClose }) {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
               <div style={{ fontSize: T.fontSize.h3, fontWeight: T.fontWeight.bold }}>Swap Exercise</div>
-              <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: 2 }}>Replacing: {exercise?.name}</div>
+              <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: T.space.xs }}>Replacing: {exercise?.name}</div>
             </div>
-            <button onClick={onClose} style={{ background: C.bg, border: "none", color: C.textDim, cursor: "pointer", borderRadius: T.radius.full, width: 28, height: 28, fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}><IcClose size={16} /></button>
+            <button onClick={onClose} style={{ background: C.bg, border: "none", color: C.textDim, cursor: "pointer", borderRadius: T.radius.full, width: T.size.iconBtn, height: T.size.iconBtn, display: "flex", alignItems: "center", justifyContent: "center" }}><IcClose size={16} /></button>
           </div>
 
           {!results ? (

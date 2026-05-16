@@ -89,7 +89,7 @@ function ErrorMonitor({ logs, onClear, open, setOpen }) {
                 {logs.length > 0 && (
                   <button onClick={() => { onClear(); }} style={{ background: "none", border: "none", color: C.textDim, cursor: "pointer", fontSize: T.fontSize.small }}>Clear</button>
                 )}
-                <button onClick={() => setOpen(false)} style={{ background: C.bg, border: "none", color: C.textDim, cursor: "pointer", borderRadius: T.radius.full, width: 28, height: 28, fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+                <button onClick={() => setOpen(false)} style={{ background: C.bg, border: "none", color: C.textDim, cursor: "pointer", borderRadius: T.radius.full, width: T.size.iconBtn, height: T.size.iconBtn, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
               </div>
             </div>
             {/* Log entries */}

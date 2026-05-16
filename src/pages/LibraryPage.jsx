@@ -2,7 +2,7 @@ import { useState } from "react";
 import { T, C } from "../tokens";
 import { MUSCLE_GROUPS, MUSCLE_GROUPS_NO_ALL, EQUIPMENT_TYPES, CATEGORY_TYPES, uid } from "../data";
 import { Card, Btn, Input, ConfirmDialog, ErrorBanner, PillFilter, YTButton } from "../components";
-import { IcPlus, IcEdit, IcTrash } from "../icons";
+import { IcPlus } from "../icons";
 
 function FilterBar({ muscle, onMuscle, equipment, onEquipment, category, onCategory, small }) {
   const pillStyle = (active) => ({
@@ -64,6 +64,7 @@ export function LibraryPage({ data, save }) {
   const [exYt, setExYt] = useState("");
   const [error, setError] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(null);
+  const [expandedEx, setExpandedEx] = useState(null);
 
   const filtered = data.exercises.filter(e => {
     if (filter !== "All" && e.muscle !== filter) return false;
@@ -149,30 +150,39 @@ export function LibraryPage({ data, save }) {
       <Input placeholder="Search exercises..." value={search} onChange={e => setSearch(e.target.value)} clearable onClear={() => setSearch("")} />
       <FilterBar muscle={filter} onMuscle={setFilter} equipment={eqFilter} onEquipment={setEqFilter} category={catFilter} onCategory={setCatFilter} small />
       <div style={{ display: "flex", flexDirection: "column", gap: T.space.sm }}>
-        {filtered.map(ex => (
-          <Card key={ex.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${T.space.lg}px ${T.space.xl}px` }}>
-            <div style={{ flex: 1, minWidth: 0, marginRight: T.space.base }}>
-              <div style={{ fontWeight: T.fontWeight.bold, fontSize: T.fontSize.body }}>{ex.name}</div>
-              <div style={{ display: "flex", gap: T.space.base, alignItems: "center", marginTop: T.space.xs }}>
-                <span style={{ fontSize: T.fontSize.small, color: C.textDim }}>{ex.muscle}</span>
-                {(ex.equipment === "bodyweight" || ex.category === "mobility") && (
-                  <span style={{ fontSize: T.fontSize.xs, color: C.textDim, background: C.bg, padding: "2px 8px", borderRadius: T.radius.base, border: `1px solid ${C.border}` }}>
-                    {ex.equipment === "bodyweight" ? "BW" : ""}{ex.equipment === "bodyweight" && ex.category === "mobility" ? " · " : ""}{ex.category === "mobility" ? "MOB" : ""}
-                  </span>
-                )}
+        {filtered.map(ex => {
+          const expanded = expandedEx === ex.id;
+          return (
+            <Card key={ex.id} style={{ padding: `${T.space.lg}px ${T.space.xl}px` }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ flex: 1, minWidth: 0, marginRight: T.space.base }}>
+                  <div style={{ fontWeight: T.fontWeight.bold, fontSize: T.fontSize.body }}>{ex.name}</div>
+                  <div style={{ display: "flex", gap: T.space.base, alignItems: "center", marginTop: T.space.xs }}>
+                    <span style={{ fontSize: T.fontSize.small, color: C.textDim }}>{ex.muscle}</span>
+                    {(ex.equipment === "bodyweight" || ex.category === "mobility") && (
+                      <span style={{ fontSize: T.fontSize.xs, color: C.textDim, background: C.bg, padding: "2px 8px", borderRadius: T.radius.base, border: `1px solid ${C.border}` }}>
+                        {ex.equipment === "bodyweight" ? "BW" : ""}{ex.equipment === "bodyweight" && ex.category === "mobility" ? " · " : ""}{ex.category === "mobility" ? "MOB" : ""}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: T.space.sm, alignItems: "center" }}>
+                  <YTButton query={ex.yt} label={ex.name} />
+                  <button
+                    onClick={() => setExpandedEx(expanded ? null : ex.id)}
+                    style={{ background: "none", border: "none", color: expanded ? C.accent : C.textDim, cursor: "pointer", fontSize: T.fontSize.h2, padding: `0 ${T.space.sm}px`, lineHeight: 1, flexShrink: 0, letterSpacing: 2 }}
+                  >···</button>
+                </div>
               </div>
-            </div>
-            <div style={{ display: "flex", gap: T.space.sm, alignItems: "center" }}>
-              <YTButton query={ex.yt} label={ex.name} />
-              <button onClick={() => startEdit(ex)} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: T.radius.md, color: C.textDim, cursor: "pointer", padding: "7px 9px", lineHeight: 1, display: "flex", alignItems: "center" }}>
-                <IcEdit size={15} />
-              </button>
-              <button onClick={() => setConfirmDelete(ex.id)} style={{ background: C.dangerDim, border: `1px solid ${C.dangerBorder}`, borderRadius: T.radius.md, color: C.danger, cursor: "pointer", padding: "7px 9px", lineHeight: 1, display: "flex", alignItems: "center" }}>
-                <IcTrash size={15} />
-              </button>
-            </div>
-          </Card>
-        ))}
+              {expanded && (
+                <div className="t-fade-in" style={{ display: "flex", gap: T.space.base, marginTop: T.space.lg }}>
+                  <Btn variant="secondary" onClick={() => { startEdit(ex); setExpandedEx(null); }} style={{ flex: 1 }}>Edit</Btn>
+                  <Btn variant="danger" onClick={() => { setConfirmDelete(ex.id); setExpandedEx(null); }} style={{ flex: 1 }}>Delete</Btn>
+                </div>
+              )}
+            </Card>
+          );
+        })}
         {filtered.length === 0 && <p style={{ color: C.textDim, textAlign: "center", padding: T.space["3xl"] }}>No exercises found</p>}
       </div>
     </div>
