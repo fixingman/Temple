@@ -194,7 +194,7 @@ export function SettingsPage({ data, save, drive }) {
                 {drive.user.name && <div style={{ fontSize: T.fontSize.bodySmall, fontWeight: T.fontWeight.bold, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{drive.user.name}</div>}
                 {drive.user.email && <div style={{ fontSize: T.fontSize.xs, color: C.textDim, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{drive.user.email}</div>}
                 {!drive.user.name && !drive.user.email && <div style={{ fontSize: T.fontSize.bodySmall, color: drive.connected ? C.accent : C.textDim, fontWeight: T.fontWeight.semi }}>{drive.connected ? "Google Drive connected" : "Google Drive"}</div>}
-                {!drive.connected && <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: 2 }}>Authorization required</div>}
+                {!drive.connected && <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: T.space.xs }}>Authorization required</div>}
               </div>
             </div>
 

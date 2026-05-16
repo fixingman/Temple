@@ -44,7 +44,6 @@ export function Tabs({ active, onChange }) {
         return (
           <motion.button key={t.id} onClick={() => onChange(t.id)} whileTap={{ scale: 0.88 }} transition={T.motion.snap} style={{ flex: 1, border: "none", background: "none", padding: "12px 0 10px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: T.space.sm, color: isActive ? C.accent : C.textDim, transition: `color ${T.transition.fast}`, position: "relative" }}>
             <t.Icon size={T.size.tabIcon} weight={isActive ? "fill" : "bold"} />
-            {isActive && <div style={{ position: "absolute", bottom: 6, width: 4, height: 4, borderRadius: T.radius.full, background: C.accent }} />}
           </motion.button>
         );
       })}
@@ -200,11 +199,11 @@ export function VideoSheet({ query, label, onClose }) {
         <div style={{ padding: `0 ${T.space.xl}px ${T.space.base}px`, display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
           <div>
             <div style={{ fontSize: T.fontSize.h3, fontWeight: T.fontWeight.bold }}>{label || "Form Guide"}</div>
-            <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: 2 }}>{selectedIndex !== null ? `${selectedIndex + 1} of ${videos.length}` : `${videos.length || ""} results`}</div>
+            <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: T.space.xs }}>{selectedIndex !== null ? `${selectedIndex + 1} of ${videos.length}` : `${videos.length || ""} results`}</div>
           </div>
           <div style={{ display: "flex", gap: T.space.base, alignItems: "center" }}>
             {selectedIndex !== null && <button onClick={() => setSelectedIndex(null)} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: T.radius.md, color: C.textDim, cursor: "pointer", padding: `${T.space.sm}px ${T.space.lg}px`, fontSize: T.fontSize.small }}>← List</button>}
-            <button onClick={onClose} style={{ background: C.bg, border: "none", color: C.textDim, cursor: "pointer", borderRadius: T.radius.full, width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center" }}><IcClose size={16} /></button>
+            <button onClick={onClose} style={{ background: C.bg, border: "none", color: C.textDim, cursor: "pointer", borderRadius: T.radius.full, width: T.size.iconBtn, height: T.size.iconBtn, display: "flex", alignItems: "center", justifyContent: "center" }}><IcClose size={16} /></button>
           </div>
         </div>
 
@@ -212,7 +211,7 @@ export function VideoSheet({ query, label, onClose }) {
           <div style={{ flex: 1, background: C.bg, display: "flex", flexDirection: "column" }}>
             <iframe key={selected?.id} src={`https://www.youtube.com/embed/${selected?.id}?autoplay=1&rel=0&modestbranding=1`} style={{ flex: 1, width: "100%", border: "none", minHeight: 260 }} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen title={selected?.title} />
             <div style={{ background: C.surface, padding: `${T.space.lg}px ${T.space.xl}px`, display: "flex", flexDirection: "column", gap: T.space.base }}>
-              <div style={{ fontSize: T.fontSize.small, fontWeight: T.fontWeight.semi, lineHeight: 1.4 }}>{selected?.title}</div>
+              <div style={{ fontSize: T.fontSize.small, fontWeight: T.fontWeight.semi, color: C.text, lineHeight: 1.4 }}>{selected?.title}</div>
               <div style={{ fontSize: T.fontSize.xs, color: C.textDim }}>{selected?.channel}</div>
               <div style={{ display: "flex", gap: T.space.base }}>
                 <button onClick={() => setSelectedIndex(i => Math.max(0, i - 1))} disabled={selectedIndex === 0} style={{ flex: 1, background: C.bg, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: "12px", color: selectedIndex === 0 ? C.border : C.text, cursor: selectedIndex === 0 ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: T.space.sm }}><IcBack size={16} /><span>Prev</span></button>
@@ -234,17 +233,17 @@ export function VideoSheet({ query, label, onClose }) {
             ))}
             {error && <div style={{ padding: T.space.xl, textAlign: "center" }}><div style={{ color: C.danger, fontSize: T.fontSize.small, marginBottom: T.space.xl }}>{error}</div><a href={fallback} target="_blank" rel="noopener noreferrer" style={{ color: C.accent, fontSize: T.fontSize.small }}>Open YouTube →</a></div>}
             {!loading && !error && videos.map((v, i) => (
-              <button key={v.id} onClick={() => setSelectedIndex(i)} style={{ width: "100%", background: "none", border: "none", display: "flex", gap: T.space.lg, alignItems: "center", padding: `${T.space.base}px ${T.space.sm}px`, borderRadius: T.radius.lg, cursor: "pointer", textAlign: "left", marginBottom: T.space.sm }}>
+              <button key={v.id} onClick={() => setSelectedIndex(i)} style={{ width: "100%", background: "none", border: "none", color: C.text, fontFamily: T.font.body, display: "flex", gap: T.space.lg, alignItems: "center", padding: `${T.space.base}px ${T.space.sm}px`, borderRadius: T.radius.lg, cursor: "pointer", textAlign: "left", marginBottom: T.space.sm }}>
                 <div style={{ position: "relative", flexShrink: 0 }}>
                   <img src={v.thumbnail} alt="" style={{ width: 120, height: 68, borderRadius: T.radius.md, objectFit: "cover", display: "block", background: C.border }} />
                   <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <div style={{ width: 28, height: 28, background: "rgba(0,0,0,0.7)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <span style={{ color: C.text, fontSize: 10, paddingLeft: 2 }}>▶</span>
+                    <div style={{ width: T.size.iconBtn, height: T.size.iconBtn, background: C.videoOverlay, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <span style={{ color: C.text, fontSize: T.fontSize.xxs, paddingLeft: T.space.xs }}>▶</span>
                     </div>
                   </div>
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: T.fontSize.small, fontWeight: T.fontWeight.semi, lineHeight: 1.4, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{v.title}</div>
+                  <div style={{ fontSize: T.fontSize.small, fontWeight: T.fontWeight.semi, color: C.text, lineHeight: 1.4, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{v.title}</div>
                   <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: T.space.xs }}>{v.channel}</div>
                 </div>
               </button>
