@@ -1,23 +1,30 @@
 import { useState } from "react";
 import { T, C } from "../tokens";
-import { MUSCLE_GROUPS, MUSCLE_GROUPS_NO_ALL, MUSCLE_ICONS, EQUIPMENT_TYPES, CATEGORY_TYPES, uid } from "../data";
+import { MUSCLE_GROUPS, MUSCLE_GROUPS_NO_ALL, EQUIPMENT_TYPES, CATEGORY_TYPES, uid } from "../data";
 import { Card, Btn, Input, ConfirmDialog, ErrorBanner, PillFilter, YTButton } from "../components";
+import { IcPlus, IcEdit, IcTrash } from "../icons";
 
 function FilterBar({ muscle, onMuscle, equipment, onEquipment, category, onCategory, small }) {
   const pillStyle = (active) => ({
     border: "none", borderRadius: T.radius.full,
     padding: small ? "5px 12px" : "6px 14px",
     fontSize: small ? T.fontSize.xs : T.fontSize.small,
-    fontWeight: T.fontWeight.semi, cursor: "pointer",
+    fontWeight: T.fontWeight.bold,
+    letterSpacing: T.letterSpacing.label,
+    textTransform: "uppercase",
+    cursor: "pointer",
     transition: `background ${T.transition.fast}, color ${T.transition.fast}`,
     background: active ? C.accentDim : C.surface,
     color: active ? C.accent : C.textDim,
   });
   const outlineStyle = (active) => ({
-    border: `1px solid ${active ? C.accent : C.border}`, borderRadius: T.radius.full,
+    border: `1px solid ${active ? C.accentBorder : C.border}`, borderRadius: T.radius.full,
     padding: small ? "4px 11px" : "5px 13px",
     fontSize: small ? T.fontSize.xs : T.fontSize.small,
-    fontWeight: T.fontWeight.semi, cursor: "pointer",
+    fontWeight: T.fontWeight.bold,
+    letterSpacing: T.letterSpacing.label,
+    textTransform: "uppercase",
+    cursor: "pointer",
     transition: `background ${T.transition.fast}, color ${T.transition.fast}, border-color ${T.transition.fast}`,
     background: active ? C.accentDim : "transparent",
     color: active ? C.accent : C.textDim,
@@ -41,7 +48,8 @@ function FilterBar({ muscle, onMuscle, equipment, onEquipment, category, onCateg
   );
 }
 
-
+const labelStyle = { fontSize: T.fontSize.small, color: C.textDim, fontWeight: T.fontWeight.bold, textTransform: "uppercase", letterSpacing: T.letterSpacing.label, marginBottom: T.space.base, display: "block" };
+const toggleBtnStyle = (active) => ({ flex: 1, border: `1px solid ${active ? C.accentBorder : C.border}`, borderRadius: T.radius.lg, padding: "8px 0", fontSize: T.fontSize.xs, fontWeight: T.fontWeight.bold, letterSpacing: T.letterSpacing.label, textTransform: "uppercase", cursor: "pointer", background: active ? C.accentDim : "transparent", color: active ? C.accent : C.textDim, transition: `background ${T.transition.fast}, color ${T.transition.fast}, border-color ${T.transition.fast}` });
 
 export function LibraryPage({ data, save }) {
   const [filter, setFilter] = useState("All");
@@ -93,28 +101,28 @@ export function LibraryPage({ data, save }) {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: T.space.xl }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <h2 style={{ fontSize: T.fontSize.h1, fontWeight: T.fontWeight.heavy, margin: 0 }}>{editing === "new" ? "New" : "Edit"} Exercise</h2>
+          <h2 style={{ fontSize: T.fontSize.h1, fontWeight: T.fontWeight.heavy, margin: 0, letterSpacing: T.letterSpacing.tight }}>{editing === "new" ? "New" : "Edit"} Exercise</h2>
           <Btn variant="ghost" onClick={cancelEdit}>Cancel</Btn>
         </div>
         <Input label="Exercise Name" placeholder="e.g. Dumbbell Fly" value={exName} onChange={e => { setExName(e.target.value); setError(""); }} />
         <div>
-          <label style={{ fontSize: T.fontSize.small, color: C.textDim, fontWeight: T.fontWeight.semi, textTransform: "uppercase", letterSpacing: T.letterSpacing.uppercase, marginBottom: T.space.base, display: "block" }}>Muscle Group</label>
+          <label style={labelStyle}>Muscle Group</label>
           <PillFilter options={MUSCLE_GROUPS_NO_ALL} active={exMuscle} onChange={setExMuscle} small />
         </div>
         <div style={{ display: "flex", gap: T.space.xl }}>
           <div style={{ flex: 1 }}>
-            <label style={{ fontSize: T.fontSize.small, color: C.textDim, fontWeight: T.fontWeight.semi, textTransform: "uppercase", letterSpacing: T.letterSpacing.uppercase, marginBottom: T.space.base, display: "block" }}>Equipment</label>
+            <label style={labelStyle}>Equipment</label>
             <div style={{ display: "flex", gap: T.space.md }}>
               {[["weighted", "Weighted"], ["bodyweight", "Bodyweight"]].map(([v, l]) => (
-                <button key={v} onClick={() => setExEquipment(v)} style={{ flex: 1, border: `1px solid ${exEquipment === v ? C.accent : C.border}`, borderRadius: T.radius.lg, padding: "8px 0", fontSize: T.fontSize.xs, fontWeight: T.fontWeight.semi, cursor: "pointer", background: exEquipment === v ? C.accentDim : "transparent", color: exEquipment === v ? C.accent : C.textDim, transition: `background ${T.transition.fast}, color ${T.transition.fast}, border-color ${T.transition.fast}` }}>{l}</button>
+                <button key={v} onClick={() => setExEquipment(v)} style={toggleBtnStyle(exEquipment === v)}>{l}</button>
               ))}
             </div>
           </div>
           <div style={{ flex: 1 }}>
-            <label style={{ fontSize: T.fontSize.small, color: C.textDim, fontWeight: T.fontWeight.semi, textTransform: "uppercase", letterSpacing: T.letterSpacing.uppercase, marginBottom: T.space.base, display: "block" }}>Type</label>
+            <label style={labelStyle}>Type</label>
             <div style={{ display: "flex", gap: T.space.md }}>
               {[["strength", "Strength"], ["mobility", "Mobility"]].map(([v, l]) => (
-                <button key={v} onClick={() => setExCategory(v)} style={{ flex: 1, border: `1px solid ${exCategory === v ? C.accent : C.border}`, borderRadius: T.radius.lg, padding: "8px 0", fontSize: T.fontSize.xs, fontWeight: T.fontWeight.semi, cursor: "pointer", background: exCategory === v ? C.accentDim : "transparent", color: exCategory === v ? C.accent : C.textDim, transition: `background ${T.transition.fast}, color ${T.transition.fast}, border-color ${T.transition.fast}` }}>{l}</button>
+                <button key={v} onClick={() => setExCategory(v)} style={toggleBtnStyle(exCategory === v)}>{l}</button>
               ))}
             </div>
           </div>
@@ -131,22 +139,24 @@ export function LibraryPage({ data, save }) {
       {confirmDelete && <ConfirmDialog message={`Delete "${data.exercises.find(e => e.id === confirmDelete)?.name}"? It will be removed from all sets.`} onConfirm={() => deleteExercise(confirmDelete)} onCancel={() => setConfirmDelete(null)} />}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-          <h2 style={{ fontSize: T.fontSize.h1, fontWeight: T.fontWeight.heavy, margin: 0, letterSpacing: T.letterSpacing.tight }}>Exercise Library</h2>
+          <h2 style={{ fontSize: T.fontSize.h1, fontWeight: T.fontWeight.heavy, margin: 0, letterSpacing: T.letterSpacing.tight }}>Library</h2>
           <p style={{ color: C.textDim, fontSize: T.fontSize.caption, margin: `${T.space.sm}px 0 0` }}>{filtered.length} of {data.exercises.length} exercises</p>
         </div>
-        <Btn onClick={startNew}>+ New</Btn>
+        <Btn onClick={startNew} style={{ display: "flex", alignItems: "center", gap: T.space.sm }}>
+          <IcPlus size={16} /> New
+        </Btn>
       </div>
       <Input placeholder="Search exercises..." value={search} onChange={e => setSearch(e.target.value)} clearable onClear={() => setSearch("")} />
       <FilterBar muscle={filter} onMuscle={setFilter} equipment={eqFilter} onEquipment={setEqFilter} category={catFilter} onCategory={setCatFilter} small />
-      <div style={{ display: "flex", flexDirection: "column", gap: T.space.base }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: T.space.sm }}>
         {filtered.map(ex => (
           <Card key={ex.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${T.space.lg}px ${T.space.xl}px` }}>
             <div style={{ flex: 1, minWidth: 0, marginRight: T.space.base }}>
               <div style={{ fontWeight: T.fontWeight.bold, fontSize: T.fontSize.body }}>{ex.name}</div>
               <div style={{ display: "flex", gap: T.space.base, alignItems: "center", marginTop: T.space.xs }}>
-                <span style={{ fontSize: T.fontSize.small, color: C.textDim }}>{MUSCLE_ICONS[ex.muscle] || ""} {ex.muscle}</span>
+                <span style={{ fontSize: T.fontSize.small, color: C.textDim }}>{ex.muscle}</span>
                 {(ex.equipment === "bodyweight" || ex.category === "mobility") && (
-                  <span style={{ fontSize: T.fontSize.xs, color: C.textDim, background: C.bg, padding: "2px 8px", borderRadius: T.radius.base }}>
+                  <span style={{ fontSize: T.fontSize.xs, color: C.textDim, background: C.bg, padding: "2px 8px", borderRadius: T.radius.base, border: `1px solid ${C.border}` }}>
                     {ex.equipment === "bodyweight" ? "BW" : ""}{ex.equipment === "bodyweight" && ex.category === "mobility" ? " · " : ""}{ex.category === "mobility" ? "MOB" : ""}
                   </span>
                 )}
@@ -154,8 +164,12 @@ export function LibraryPage({ data, save }) {
             </div>
             <div style={{ display: "flex", gap: T.space.sm, alignItems: "center" }}>
               <YTButton query={ex.yt} label={ex.name} />
-              <button onClick={() => startEdit(ex)} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: T.radius.md, color: C.textDim, cursor: "pointer", fontSize: T.fontSize.body, padding: "6px 10px", lineHeight: 1 }}>✎</button>
-              <button onClick={() => setConfirmDelete(ex.id)} style={{ background: C.dangerDim, border: `1px solid ${C.dangerBorder}`, borderRadius: T.radius.md, color: C.danger, cursor: "pointer", fontSize: T.fontSize.body, padding: "6px 10px", lineHeight: 1 }}>✕</button>
+              <button onClick={() => startEdit(ex)} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: T.radius.md, color: C.textDim, cursor: "pointer", padding: "7px 9px", lineHeight: 1, display: "flex", alignItems: "center" }}>
+                <IcEdit size={15} />
+              </button>
+              <button onClick={() => setConfirmDelete(ex.id)} style={{ background: C.dangerDim, border: `1px solid ${C.dangerBorder}`, borderRadius: T.radius.md, color: C.danger, cursor: "pointer", padding: "7px 9px", lineHeight: 1, display: "flex", alignItems: "center" }}>
+                <IcTrash size={15} />
+              </button>
             </div>
           </Card>
         ))}
@@ -164,5 +178,3 @@ export function LibraryPage({ data, save }) {
     </div>
   );
 }
-
-

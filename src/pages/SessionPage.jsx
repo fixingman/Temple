@@ -1,8 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { T, C } from "../tokens";
 import { DEFAULT_REST, uid, fmt, fmtDate, displayWeight, toKg, weightLabel, calcCalories } from "../data";
 import { Card, Btn, ConfirmDialog, YTButton, LogoIcon } from "../components";
+import { IcPause, IcPlay, IcRepeat, IcTrophy, IcBack, IcForward, IcClose } from "../icons";
 import { coachError, prompts } from "../useCoach";
+import { useSound } from "../useSound";
 
 // ─── Recovery / Body Check Sheet ───
 const BODY_AREAS = [
@@ -50,7 +53,7 @@ function RecoverySheet({ onClose, recentExercises = [], coach, onGoToSettings })
               <div style={{ fontSize: T.fontSize.body, fontWeight: T.fontWeight.bold }}>Body Check</div>
               <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: 2 }}>Post-training discomfort guidance</div>
             </div>
-            <button onClick={onClose} style={{ background: C.bg, border: "none", color: C.textDim, cursor: "pointer", borderRadius: T.radius.full, width: 28, height: 28, fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+            <button onClick={onClose} style={{ background: C.bg, border: "none", color: C.textDim, cursor: "pointer", borderRadius: T.radius.full, width: 28, height: 28, fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}><IcClose size={16} /></button>
           </div>
         </div>
 
@@ -124,6 +127,7 @@ function RecoverySheet({ onClose, recentExercises = [], coach, onGoToSettings })
 
 
 export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach }) {
+  const sound = useSound();
   const [sessionData, setSessionData] = useState(null);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [currentSetIdx, setCurrentSetIdx] = useState(0);
@@ -207,6 +211,7 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
   // Auto-dismiss "REST DONE" after 3 seconds
   useEffect(() => {
     if (restDone) {
+      sound.play("restDone");
       const t = setTimeout(() => setRestDone(false), 3000);
       return () => clearTimeout(t);
     }
@@ -276,13 +281,28 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
           <p style={{ color: C.textDim, marginTop: T.space.sm }}>{activeSet.name} · {fmt(timer)}</p>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: T.space.base }}>
-          <Card style={{ textAlign: "center" }}><div style={{ fontSize: T.fontSize.stat, fontWeight: T.fontWeight.heavy, color: C.accent }}>{totalSets}</div><div style={{ fontSize: T.fontSize.xs, color: C.textDim, fontWeight: T.fontWeight.semi }}>SETS</div></Card>
-          <Card style={{ textAlign: "center" }}><div style={{ fontSize: T.fontSize.stat, fontWeight: T.fontWeight.heavy, color: C.accent }}>{volDisplay.toLocaleString()}</div><div style={{ fontSize: T.fontSize.xs, color: C.textDim, fontWeight: T.fontWeight.semi }}>VOLUME ({wl})</div></Card>
-          {liveCalories !== null && <Card style={{ textAlign: "center", gridColumn: "1 / -1" }}><div style={{ fontSize: T.fontSize.stat, fontWeight: T.fontWeight.heavy, color: C.accent }}>{liveCalories}</div><div style={{ fontSize: T.fontSize.xs, color: C.textDim, fontWeight: T.fontWeight.semi }}>KCAL BURNT (EST.)</div></Card>}
+          {[
+            { value: totalSets, label: "SETS", span: false },
+            { value: volDisplay.toLocaleString(), label: `VOLUME (${wl})`, span: false },
+            ...(liveCalories !== null ? [{ value: liveCalories, label: "KCAL BURNT (EST.)", span: true }] : []),
+          ].map((stat, i) => (
+            <motion.div
+              key={stat.label}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ ...T.motion.default, delay: i * 0.07 }}
+              style={stat.span ? { gridColumn: "1 / -1" } : {}}
+            >
+              <Card style={{ textAlign: "center" }}>
+                <div style={{ fontSize: T.fontSize.stat, fontWeight: T.fontWeight.heavy, color: C.accent }}>{stat.value}</div>
+                <div style={{ fontSize: T.fontSize.xs, color: C.textDim, fontWeight: T.fontWeight.semi }}>{stat.label}</div>
+              </Card>
+            </motion.div>
+          ))}
         </div>
         {newPRs.length > 0 && (
           <Card style={{ border: `1px solid ${C.pr}`, background: C.prDim }}>
-            <div style={{ fontWeight: T.fontWeight.heavy, fontSize: T.fontSize.body, color: C.pr, marginBottom: T.space.base }}>🏆 New Personal Records</div>
+            <div style={{ fontWeight: T.fontWeight.heavy, fontSize: T.fontSize.body, color: C.pr, marginBottom: T.space.base, display: "flex", alignItems: "center", gap: 6 }}><IcTrophy size={16} /> New Personal Records</div>
             {newPRs.map((pr, i) => { const ex = data.exercises.find(e => e.id === pr.exerciseId); return <div key={i} style={{ fontSize: T.fontSize.caption, color: C.text, marginBottom: T.space.sm }}><strong>{ex?.name}</strong>: {pr.type === "weight" ? `${displayWeight(pr.value, unit)} ${wl}` : pr.type === "reps" ? `${pr.value} reps` : `${displayWeight(pr.value, unit)} ${wl} vol`}</div>; })}
           </Card>
         )}
@@ -328,6 +348,7 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
     const nd = [...sessionData];
     nd[currentIdx] = { ...nd[currentIdx], logged: [...nd[currentIdx].logged, { weight: w, reps: r }] };
     setSessionData(nd);
+    sound.play("logSet");
     setCurrentSetIdx(prev => prev + 1);
 
     // Superset navigation
@@ -377,6 +398,7 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
     const caloriesBurnt = calcCalories(clean.map(e => e.exerciseId), data.exercises, timer, bodyweightKg);
     save({ ...data, sessions: [...data.sessions, { id: uid(), setId: activeSet.id, date: Date.now(), duration: timer, entries: clean, caloriesBurnt }], prs });
     setNewPRs(found); setTimerRunning(false); setFinished(true);
+    sound.play(found.length > 0 ? "pr" : "sessionDone");
   };
 
   const isLastExercise = currentIdx >= sessionData.length - 1;
@@ -410,49 +432,50 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-          <h2 style={{ fontSize: T.fontSize.h2, fontWeight: T.fontWeight.heavy, margin: 0 }}>{activeSet.name}</h2>
-          <p style={{ color: C.textDim, fontSize: T.fontSize.small, margin: 0 }}>Exercise {currentIdx + 1} of {sessionData.length}</p>
+          <div>
+            <h2 style={{ fontSize: T.fontSize.h2, fontWeight: T.fontWeight.heavy, margin: 0, letterSpacing: T.letterSpacing.tight }}>{activeSet.name}</h2>
+            <p style={{ color: C.textDim, fontSize: T.fontSize.xs, margin: 0, fontWeight: T.fontWeight.bold, letterSpacing: T.letterSpacing.label, textTransform: "uppercase", marginTop: T.space.xs }}>Exercise {currentIdx + 1} of {sessionData.length}</p>
+          </div>
         </div>
         <div style={{ display: "flex", gap: T.space.base, alignItems: "center" }}>
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontFamily: T.font.mono, fontSize: T.fontSize.h2, fontWeight: T.fontWeight.bold, color: timerRunning ? C.accent : C.textDim }}>{fmt(timer)}</div>
-            {liveCalories !== null && <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: 1 }}>~{liveCalories} kcal</div>}
+            <div style={{ fontFamily: T.font.mono, fontSize: T.fontSize.statMd, fontWeight: T.fontWeight.bold, letterSpacing: T.letterSpacing.tight, color: timerRunning ? C.accent : C.textDim, lineHeight: 1 }}>{fmt(timer)}</div>
+            {liveCalories !== null && <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: 3, fontWeight: T.fontWeight.bold, letterSpacing: T.letterSpacing.label }}>~{liveCalories} KCAL</div>}
           </div>
-          <button onClick={() => setTimerRunning(!timerRunning)} style={{ background: "none", border: `1px solid ${C.border}`, borderRadius: T.radius.md, color: C.text, padding: "6px 10px", cursor: "pointer", fontSize: T.fontSize.body }}>{timerRunning ? "⏸" : "▶"}</button>
+          <button onClick={() => setTimerRunning(!timerRunning)} style={{ background: "none", border: `1px solid ${C.border}`, borderRadius: T.radius.md, color: C.text, padding: "8px 10px", cursor: "pointer", display: "flex", alignItems: "center" }}>{timerRunning ? <IcPause size={16} /> : <IcPlay size={16} />}</button>
         </div>
       </div>
 
-      {/* Progress bar */}
-      <div style={{ height: T.size.progressBar, background: C.border, borderRadius: T.radius.sm, overflow: "hidden" }}>
-        <div style={{ height: "100%", background: C.accent, width: `${((currentIdx + 1) / sessionData.length) * 100}%`, transition: `width ${T.duration.medium} ${T.easing.enter}`, borderRadius: T.radius.sm }} />
+      {/* Progress bar — 2px Athletic */}
+      <div style={{ height: 2, background: C.border, borderRadius: T.radius.sm, overflow: "hidden" }}>
+        <motion.div
+          style={{ height: "100%", background: C.accent, borderRadius: T.radius.sm }}
+          animate={{ width: `${((currentIdx + 1) / sessionData.length) * 100}%` }}
+          transition={T.motion.default}
+        />
       </div>
 
       {/* Superset flash */}
       {supersetFlash && (
         <div className="t-fade-in" style={{ background: C.accentDim, border: `1px solid ${C.accentBorder}`, color: C.accent, borderRadius: T.radius.xl, padding: `${T.space.lg}px ${T.space["2xl"]}px`, textAlign: "center", fontWeight: T.fontWeight.heavy, fontSize: T.fontSize.h3 }}>
-          ⇆ Superset — no rest, go!
+          Superset — no rest, go!
         </div>
       )}
 
       {/* Rest Done flash */}
-      {restDone && (
-        <div className="t-fade-in" style={{ background: C.accent, color: C.textOnAccent, borderRadius: T.radius.xl, padding: `${T.space.xl}px ${T.space["2xl"]}px`, textAlign: "center", fontWeight: T.fontWeight.heavy, fontSize: T.fontSize.h2, letterSpacing: T.letterSpacing.tight }}>
-          💪 REST DONE — GO!
-        </div>
-      )}
-
-      {/* Rest Timer */}
-      {resting && (
-        <Card className="t-fade-in" style={{ textAlign: "center", border: `1px solid ${C.accent}`, background: C.accentDim }}>
-          <div style={{ fontSize: T.fontSize.xs, color: C.accent, fontWeight: T.fontWeight.bold, textTransform: "uppercase", letterSpacing: T.letterSpacing.uppercase }}>Rest</div>
-          <div style={{ fontSize: T.fontSize.timer, fontWeight: T.fontWeight.heavy, fontFamily: T.font.mono, color: C.accent, margin: `${T.space.base}px 0` }}>{fmt(restTimer)}</div>
-          <div style={{ display: "flex", gap: T.space.base, justifyContent: "center", alignItems: "center" }}>
-            <button onClick={() => setRestTimer(t => Math.max(0, t - 30))} style={{ background: "none", border: `1px solid ${C.accentBorder}`, borderRadius: T.radius.md, color: C.accent, cursor: "pointer", fontSize: T.fontSize.small, padding: `${T.space.md}px ${T.space.lg}px` }}>−30s</button>
-            <Btn variant="ghost" onClick={() => { setResting(false); setRestTimer(0); setRestDone(false); }} style={{ color: C.textDim, fontSize: T.fontSize.small, padding: "8px 16px" }}>Skip</Btn>
-            <button onClick={() => setRestTimer(t => t + 30)} style={{ background: "none", border: `1px solid ${C.accentBorder}`, borderRadius: T.radius.md, color: C.accent, cursor: "pointer", fontSize: T.fontSize.small, padding: `${T.space.md}px ${T.space.lg}px` }}>+30s</button>
-          </div>
-        </Card>
-      )}
+      <AnimatePresence>
+        {restDone && (
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={T.motion.snap}
+            style={{ background: C.accent, color: C.textOnAccent, borderRadius: T.radius.xl, padding: `${T.space.xl}px ${T.space["2xl"]}px`, textAlign: "center", fontWeight: T.fontWeight.heavy, fontSize: T.fontSize.h2, letterSpacing: T.letterSpacing.tight }}
+          >
+            REST DONE — GO!
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Exercise Card */}
       <Card style={{ padding: T.space["2xl"] }}>
@@ -460,19 +483,19 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
           <div style={{ flex: 1, minWidth: 0, marginRight: T.space.base }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
             <div>
-              <div style={{ fontWeight: T.fontWeight.heavy, fontSize: T.fontSize.h2 }}>{exercise?.name}</div>
+              <div style={{ fontWeight: T.fontWeight.heavy, fontSize: T.fontSize.statMd, letterSpacing: T.letterSpacing.tight, lineHeight: 1.1 }}>{exercise?.name}</div>
               {/* Superset indicator */}
               {(isSupersetWith(entry.exerciseId, sessionData[currentIdx + 1]?.exerciseId) ||
                 isSupersetWith(entry.exerciseId, sessionData[currentIdx - 1]?.exerciseId)) && (
                 <div style={{ fontSize: T.fontSize.xs, color: C.accent, fontWeight: T.fontWeight.semi, marginTop: T.space.xs }}>
-                  ⇆ Superset
+                  Superset
                   {isSupersetWith(entry.exerciseId, sessionData[currentIdx + 1]?.exerciseId) &&
                     ` — next: ${data.exercises.find(e => e.id === sessionData[currentIdx + 1]?.exerciseId)?.name}`}
                 </div>
               )}
             </div>
             {coach.hasKey && (
-              <button onClick={() => setSwapOpen(true)} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: T.radius.md, color: C.textDim, cursor: "pointer", fontSize: T.fontSize.xs, padding: `${T.space.xs}px ${T.space.base}px`, flexShrink: 0, marginLeft: T.space.base, lineHeight: 1 }}>⇄ Swap</button>
+              <button onClick={() => setSwapOpen(true)} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: T.radius.md, color: C.textDim, cursor: "pointer", fontSize: T.fontSize.xs, padding: `${T.space.xs}px ${T.space.base}px`, flexShrink: 0, marginLeft: T.space.base, lineHeight: 1, display: "flex", alignItems: "center" }}><IcRepeat size={13} style={{marginRight: 4}} /> Swap</button>
             )}
           </div>
             <div style={{ fontSize: T.fontSize.small, color: C.textDim }}>{exercise?.muscle}</div>
@@ -491,14 +514,35 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
         {/* Logged sets history for this exercise */}
         {entry.logged.length > 0 && (
           <div style={{ marginBottom: T.space.xl }}>
-            <div style={{ fontSize: T.fontSize.xs, color: C.textDim, fontWeight: T.fontWeight.semi, textTransform: "uppercase", marginBottom: T.space.base }}>Completed</div>
-            {entry.logged.map((s, i) => (
-              <div key={i} style={{ display: "flex", gap: T.space.xl, padding: "6px 0", borderBottom: `1px solid ${C.border}`, fontSize: T.fontSize.bodySmall, color: C.textDim }}>
-                <span style={{ color: C.accent, fontWeight: T.fontWeight.bold, width: 28 }}>#{i + 1}</span>
-                <span>{isBodyweight || isMobility ? `${s.reps} ${isMobility ? "sec" : "reps"}` : `${s.weight} ${wl} × ${s.reps} reps`}</span>
-                {!isBodyweight && !isMobility && <span style={{ color: C.textDim, marginLeft: "auto" }}>{s.weight * s.reps} {wl}</span>}
-              </div>
-            ))}
+            <div style={{ fontSize: T.fontSize.xs, color: C.textDim, fontWeight: T.fontWeight.bold, textTransform: "uppercase", letterSpacing: T.letterSpacing.label, marginBottom: T.space.base }}>Completed</div>
+            <AnimatePresence initial={false}>
+              {entry.logged.map((s, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={T.motion.default}
+                  style={{ display: "flex", gap: T.space.xl, padding: "8px 0", borderBottom: `1px solid ${C.border}`, fontSize: T.fontSize.bodySmall, alignItems: "center" }}
+                >
+                  <span style={{ color: C.accent, fontWeight: T.fontWeight.bold, width: 28, fontFamily: T.font.mono }}>#{i + 1}</span>
+                  <span style={{ color: C.text, fontWeight: T.fontWeight.semi }}>{isBodyweight || isMobility ? `${s.reps} ${isMobility ? "sec" : "reps"}` : `${s.weight} ${wl} × ${s.reps}`}</span>
+                  {!isBodyweight && !isMobility && <span style={{ color: C.textDim, marginLeft: "auto", fontFamily: T.font.mono, fontSize: T.fontSize.xs }}>{s.weight * s.reps} {wl}</span>}
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+        )}
+
+        {/* Rest timer — inline in place of set input */}
+        {resting && (
+          <div className="t-fade-in" style={{ textAlign: "center", borderTop: `1px solid ${C.border}`, paddingTop: T.space.xl }}>
+            <div style={{ fontSize: T.fontSize.xs, color: C.accent, fontWeight: T.fontWeight.bold, textTransform: "uppercase", letterSpacing: T.letterSpacing.uppercase, marginBottom: T.space.base }}>Rest</div>
+            <div style={{ fontSize: T.fontSize.timer, fontWeight: T.fontWeight.heavy, fontFamily: T.font.mono, color: C.accent, margin: `${T.space.base}px 0` }}>{fmt(restTimer)}</div>
+            <div style={{ display: "flex", gap: T.space.base, justifyContent: "center", alignItems: "center" }}>
+              <button onClick={() => setRestTimer(t => Math.max(0, t - 30))} style={{ background: "none", border: `1px solid ${C.accentBorder}`, borderRadius: T.radius.md, color: C.accent, cursor: "pointer", fontSize: T.fontSize.small, padding: `${T.space.md}px ${T.space.lg}px` }}>−30s</button>
+              <Btn variant="ghost" onClick={() => { setResting(false); setRestTimer(0); setRestDone(false); }} style={{ color: C.textDim, fontSize: T.fontSize.small, padding: "8px 16px" }}>Skip</Btn>
+              <button onClick={() => setRestTimer(t => t + 30)} style={{ background: "none", border: `1px solid ${C.accentBorder}`, borderRadius: T.radius.md, color: C.accent, cursor: "pointer", fontSize: T.fontSize.small, padding: `${T.space.md}px ${T.space.lg}px` }}>+30s</button>
+            </div>
           </div>
         )}
 
@@ -564,7 +608,7 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
                       updateCurrentSet("reps", String(target));
                       setMobCountdown(target);
                       setMobRunning(true);
-                    }} style={{ flex: 1, padding: 16, fontSize: T.fontSize.body }}>▶ Start Timer</Btn>
+                    }} style={{ flex: 1, padding: 16, fontSize: T.fontSize.body }}>Start Timer</Btn>
                   )}
                 </div>
               </div>
@@ -573,15 +617,15 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
               <div style={{ display: "flex", gap: T.space.lg }}>
                 {!isBodyweight && (
                   <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: T.fontSize.xs, color: C.textDim, fontWeight: T.fontWeight.semi, textTransform: "uppercase", marginBottom: T.space.sm, display: "block" }}>Weight ({wl})</label>
+                    <label style={{ fontSize: T.fontSize.xs, color: C.textDim, fontWeight: T.fontWeight.bold, textTransform: "uppercase", letterSpacing: T.letterSpacing.label, marginBottom: T.space.sm, display: "block" }}>Weight ({wl})</label>
                     <input name="set-weight" type="number" inputMode="decimal" min="0" value={currentSet.weight} onChange={e => updateCurrentSet("weight", e.target.value)} placeholder="0"
-                      style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: "14px 16px", color: C.text, fontSize: T.fontSize.h2, fontWeight: T.fontWeight.bold, outline: "none", width: "100%", boxSizing: "border-box", textAlign: "center" }} />
+                      style={{ background: "#181818", border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: "16px 12px", color: C.text, fontSize: T.fontSize.stat, fontWeight: T.fontWeight.bold, fontFamily: T.font.mono, outline: "none", width: "100%", boxSizing: "border-box", textAlign: "center", letterSpacing: T.letterSpacing.tight }} />
                   </div>
                 )}
                 <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: T.fontSize.xs, color: C.textDim, fontWeight: T.fontWeight.semi, textTransform: "uppercase", marginBottom: T.space.sm, display: "block" }}>Reps</label>
+                  <label style={{ fontSize: T.fontSize.xs, color: C.textDim, fontWeight: T.fontWeight.bold, textTransform: "uppercase", letterSpacing: T.letterSpacing.label, marginBottom: T.space.sm, display: "block" }}>Reps</label>
                   <input name="set-reps" type="number" inputMode="numeric" min="0" value={currentSet.reps} onChange={e => updateCurrentSet("reps", e.target.value)} placeholder="0"
-                    style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: "14px 16px", color: C.text, fontSize: T.fontSize.h2, fontWeight: T.fontWeight.bold, outline: "none", width: "100%", boxSizing: "border-box", textAlign: "center" }} />
+                    style={{ background: "#181818", border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: "16px 12px", color: C.text, fontSize: T.fontSize.stat, fontWeight: T.fontWeight.bold, fontFamily: T.font.mono, outline: "none", width: "100%", boxSizing: "border-box", textAlign: "center", letterSpacing: T.letterSpacing.tight }} />
                 </div>
               </div>
             )}
@@ -614,11 +658,11 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
 
       {/* Exercise Navigation */}
       <div style={{ display: "flex", gap: T.space.base }}>
-        <Btn variant="ghost" onClick={() => { setCurrentIdx(i => Math.max(0, i - 1)); setCurrentSetIdx(0); setResting(false); setRestTimer(0); }} disabled={currentIdx === 0} style={{ flex: 1, padding: 16, opacity: currentIdx === 0 ? T.opacity.disabled : 1 }}>← Prev</Btn>
+        <Btn variant="ghost" onClick={() => { setCurrentIdx(i => Math.max(0, i - 1)); setCurrentSetIdx(0); setResting(false); setRestTimer(0); }} disabled={currentIdx === 0} style={{ flex: 1, padding: 16, opacity: currentIdx === 0 ? T.opacity.disabled : 1 }}>Prev</Btn>
         {isLastExercise ? (
           <Btn onClick={finishSession} disabled={sessionData.every(e => e.logged.length === 0)} style={{ flex: 2, padding: 16, fontSize: T.fontSize.body }}>Finish Workout</Btn>
         ) : (
-          <Btn variant="secondary" onClick={goNextExercise} style={{ flex: 1, padding: 16 }}>Next →</Btn>
+          <Btn variant="secondary" onClick={goNextExercise} style={{ flex: 1, padding: 16 }}>Next</Btn>
         )}
       </div>
       <button onClick={() => setConfirmCancel(true)} style={{ background: "none", border: "none", color: C.textDim, fontSize: T.fontSize.small, padding: `${T.space.sm}px 0`, cursor: "pointer", textAlign: "center", opacity: 0.6 }}>Cancel workout</button>
@@ -661,7 +705,7 @@ function SwapSheet({ exercise, allExercises, coach, onSwap, onClose }) {
               <div style={{ fontSize: T.fontSize.h3, fontWeight: T.fontWeight.bold }}>Swap Exercise</div>
               <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: 2 }}>Replacing: {exercise?.name}</div>
             </div>
-            <button onClick={onClose} style={{ background: C.bg, border: "none", color: C.textDim, cursor: "pointer", borderRadius: T.radius.full, width: 28, height: 28, fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+            <button onClick={onClose} style={{ background: C.bg, border: "none", color: C.textDim, cursor: "pointer", borderRadius: T.radius.full, width: 28, height: 28, fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}><IcClose size={16} /></button>
           </div>
 
           {!results ? (

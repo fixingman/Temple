@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { T, C } from "./tokens";
 import { uid } from "./data";
 import { useAppData, usePWA } from "./hooks";
@@ -200,7 +201,7 @@ export default function Temple() {
       <GlobalStyles />
       <div style={{ textAlign: "center" }}>
         <div className="t-logo-spin" style={{ marginBottom: T.space.xl, display: "inline-block" }}><LogoIcon size={64} /></div>
-        <div className="t-text-in" style={{ fontWeight: T.fontWeight.heavy, fontSize: T.fontSize.h1, color: C.accent, letterSpacing: T.letterSpacing.tight, animationDelay: "0.3s" }}>TEMPLE</div>
+        <div className="t-text-in" style={{ fontWeight: T.fontWeight.black, fontSize: T.fontSize.h1, color: C.accent, letterSpacing: T.letterSpacing.tight, animationDelay: "0.3s", fontFamily: T.font.body }}>TEMPLE</div>
       </div>
     </div>
   );
@@ -266,11 +267,21 @@ export default function Temple() {
               </div>
             )}
             {pwa.canInstall && <div style={{ marginBottom: T.space.xl }}><InstallBanner onInstall={pwa.install} onDismiss={pwa.dismiss} /></div>}
-            {tab === "library" && <LibraryPage data={data} save={save} />}
-            {tab === "sets" && <SetsPage data={data} save={save} onStartSession={handleStartSession} coach={coach} />}
-            {tab === "session" && <SessionPage data={data} save={save} activeSet={activeSet} setActiveSet={setActiveSet} setTab={setTab} coach={coach} />}
-            {tab === "progress" && <Suspense fallback={<div style={{ padding: T.space["3xl"], textAlign: "center", color: C.textDim }}>Loading...</div>}><ProgressPage data={data} save={save} onRepeatSession={handleStartSession} coach={coach} /></Suspense>}
-            {tab === "settings" && <SettingsPage data={data} save={save} drive={drive} />}
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={tab}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={T.motion.gentle}
+              >
+                {tab === "library" && <LibraryPage data={data} save={save} />}
+                {tab === "sets" && <SetsPage data={data} save={save} onStartSession={handleStartSession} coach={coach} />}
+                {tab === "session" && <SessionPage data={data} save={save} activeSet={activeSet} setActiveSet={setActiveSet} setTab={setTab} coach={coach} />}
+                {tab === "progress" && <Suspense fallback={<div style={{ padding: T.space["3xl"], textAlign: "center", color: C.textDim }}>Loading...</div>}><ProgressPage data={data} save={save} onRepeatSession={handleStartSession} coach={coach} /></Suspense>}
+                {tab === "settings" && <SettingsPage data={data} save={save} drive={drive} />}
+              </motion.div>
+            </AnimatePresence>
           </div>
         </div>
 

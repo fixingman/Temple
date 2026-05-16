@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
+import { motion } from "framer-motion";
 import { T, C } from "./tokens";
+import { IcLibrary, IcSets, IcTrain, IcProgress, IcSettings, IcClose, IcBack, IcForward } from "./icons";
 
 export function GlobalStyles() {
   return (
@@ -15,48 +17,75 @@ export function GlobalStyles() {
       @keyframes temple-pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
       @keyframes temple-scale-in { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
       @keyframes temple-slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+      @keyframes temple-rest-pulse { 0%, 100% { box-shadow: none; } 50% { box-shadow: 0 0 0 4px ${C.accentBorder}; } }
       .t-fade-in { animation: temple-fade-in 0.25s cubic-bezier(0,0,0.2,1) both; }
       .t-scale-in { animation: temple-scale-in 0.2s cubic-bezier(0,0,0.2,1) both; }
       .t-slide-up { animation: temple-slide-up 0.32s cubic-bezier(0.34,1.56,0.64,1) both; }
       .t-logo-spin { animation: temple-logo-spin 0.8s cubic-bezier(0.34,1.56,0.64,1) forwards; }
       .t-text-in { animation: temple-text-in 0.4s cubic-bezier(0,0,0.2,1) both; }
       .t-pulse { animation: temple-pulse 1.5s ease-in-out infinite; }
+      .t-rest-pulse { animation: temple-rest-pulse 1.5s ease-in-out infinite; }
     `}</style>
   );
 }
 
 export function Tabs({ active, onChange }) {
   const tabs = [
-    { id: "library", icon: "📖", label: "Library" },
-    { id: "sets",    icon: "📋", label: "Sets" },
-    { id: "session", icon: "▶️",  label: "Train" },
-    { id: "progress",icon: "📊", label: "Progress" },
-    { id: "settings",icon: "⚙️", label: "Settings" },
+    { id: "library",  Icon: IcLibrary  },
+    { id: "sets",     Icon: IcSets     },
+    { id: "session",  Icon: IcTrain    },
+    { id: "progress", Icon: IcProgress },
+    { id: "settings", Icon: IcSettings },
   ];
   return (
     <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: C.surface, borderTop: `1px solid ${C.border}`, display: "flex", zIndex: T.z.tabBar, paddingBottom: "env(safe-area-inset-bottom)" }}>
-      {tabs.map(t => (
-        <button key={t.id} onClick={() => onChange(t.id)} style={{ flex: 1, border: "none", background: "none", padding: "10px 0 8px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: T.space.xs, color: active === t.id ? C.accent : C.textDim, transition: `color ${T.transition.fast}` }}>
-          <span style={{ fontSize: T.size.tabIcon }}>{t.icon}</span>
-          <span style={{ fontSize: T.fontSize.xxs, fontWeight: T.fontWeight.semi, letterSpacing: T.letterSpacing.label, textTransform: "uppercase" }}>{t.label}</span>
-        </button>
-      ))}
+      {tabs.map(t => {
+        const isActive = active === t.id;
+        return (
+          <motion.button key={t.id} onClick={() => onChange(t.id)} whileTap={{ scale: 0.88 }} transition={T.motion.snap} style={{ flex: 1, border: "none", background: "none", padding: "12px 0 10px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: T.space.sm, color: isActive ? C.accent : C.textDim, transition: `color ${T.transition.fast}`, position: "relative" }}>
+            <t.Icon size={T.size.tabIcon} weight={isActive ? "fill" : "bold"} />
+            {isActive && <div style={{ position: "absolute", bottom: 6, width: 4, height: 4, borderRadius: T.radius.full, background: C.accent }} />}
+          </motion.button>
+        );
+      })}
     </div>
   );
 }
 
 export function Card({ children, style, onClick, className }) {
-  return <div className={className} onClick={onClick} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: T.radius.xl, padding: T.space.xl, ...style, cursor: onClick ? "pointer" : "default", transition: `border-color ${T.transition.fast}` }}>{children}</div>;
+  return (
+    <motion.div
+      className={className}
+      onClick={onClick}
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={T.motion.default}
+      style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: T.space.xl, ...style, cursor: onClick ? "pointer" : "default", transition: `border-color ${T.transition.fast}` }}
+    >
+      {children}
+    </motion.div>
+  );
 }
 
 export function Btn({ children, variant = "primary", style, disabled, onClick, ...props }) {
   const v = {
-    primary:   { background: C.accent,     color: C.textOnAccent, fontWeight: T.fontWeight.bold },
-    secondary: { background: C.accentDim,  color: C.accent,       fontWeight: T.fontWeight.semi },
+    primary:   { background: C.accent,     color: C.textOnAccent, fontWeight: T.fontWeight.bold, letterSpacing: T.letterSpacing.label },
+    secondary: { background: C.accentDim,  color: C.accent,       fontWeight: T.fontWeight.bold, letterSpacing: T.letterSpacing.label },
     danger:    { background: C.dangerDim,  color: C.danger,       fontWeight: T.fontWeight.semi },
     ghost:     { background: "transparent",color: C.textDim,      fontWeight: T.fontWeight.medium },
   };
-  return <button {...props} disabled={disabled} onClick={disabled ? undefined : onClick} style={{ border: "none", borderRadius: T.radius.lg, padding: "10px 18px", fontSize: T.fontSize.bodySmall, cursor: disabled ? "not-allowed" : "pointer", transition: `opacity ${T.transition.fast}`, opacity: disabled ? T.opacity.disabled : 1, ...v[variant], ...style }}>{children}</button>;
+  return (
+    <motion.button
+      {...props}
+      disabled={disabled}
+      onClick={disabled ? undefined : onClick}
+      whileTap={disabled ? undefined : { scale: 0.96 }}
+      transition={T.motion.snap}
+      style={{ border: "none", borderRadius: T.radius.lg, padding: "11px 20px", fontSize: T.fontSize.bodySmall, textTransform: variant === "primary" || variant === "secondary" ? "uppercase" : undefined, cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? T.opacity.disabled : 1, ...v[variant], ...style }}
+    >
+      {children}
+    </motion.button>
+  );
 }
 
 export function Input({ label, clearable, onClear, ...props }) {
@@ -69,9 +98,9 @@ export function Input({ label, clearable, onClear, ...props }) {
         <input {...props}
           onFocus={e => { setFocused(true); props.onFocus?.(e); }}
           onBlur={e => { setFocused(false); props.onBlur?.(e); }}
-          style={{ background: C.bg, border: `1px solid ${focused ? C.accent : C.border}`, borderRadius: T.radius.lg, padding: `10px ${showClear ? 36 : 12}px 10px 12px`, color: C.text, fontSize: T.fontSize.h3, outline: "none", transition: `border-color ${T.transition.fast}`, width: "100%", boxSizing: "border-box", ...props.style }} />
+          style={{ background: C.bg, border: `1px solid ${focused ? C.accentBorder : C.border}`, boxShadow: focused ? `0 0 0 2px ${C.accentBorder}` : "none", borderRadius: T.radius.lg, padding: `10px ${showClear ? 36 : 12}px 10px 12px`, color: C.text, fontSize: T.fontSize.h3, outline: "none", transition: `border-color ${T.transition.fast}, box-shadow ${T.transition.fast}`, width: "100%", boxSizing: "border-box", ...props.style }} />
         {showClear && (
-          <button onMouseDown={e => { e.preventDefault(); onClear?.(); }} style={{ position: "absolute", right: 10, background: "none", border: "none", color: C.textDim, cursor: "pointer", fontSize: T.fontSize.small, padding: `${T.space.xs}px ${T.space.sm}px`, lineHeight: 1 }}>✕</button>
+          <button onMouseDown={e => { e.preventDefault(); onClear?.(); }} style={{ position: "absolute", right: 10, background: "none", border: "none", color: C.textDim, cursor: "pointer", padding: `${T.space.xs}px ${T.space.sm}px`, display: "flex", alignItems: "center" }}><IcClose size={14} /></button>
         )}
       </div>
     </div>
@@ -130,7 +159,7 @@ export function PillFilter({ options, active, onChange, small }) {
   return (
     <div style={{ display: "flex", gap: T.space.sm, overflowX: "auto", paddingBottom: T.space.sm }}>
       {options.map(g => (
-        <button key={g} onClick={() => onChange(g)} style={{ flexShrink: 0, border: `1px solid ${active === g ? C.accent : C.border}`, borderRadius: T.radius.full, padding: small ? "4px 12px" : "6px 16px", fontSize: T.fontSize.small, fontWeight: T.fontWeight.semi, cursor: "pointer", background: active === g ? C.accentDim : "transparent", color: active === g ? C.accent : C.textDim, transition: `all ${T.transition.fast}`, whiteSpace: "nowrap" }}>{g}</button>
+        <button key={g} onClick={() => onChange(g)} style={{ flexShrink: 0, border: `1px solid ${active === g ? C.accentBorder : C.border}`, borderRadius: T.radius.full, padding: small ? "4px 14px" : "6px 18px", fontSize: T.fontSize.small, fontWeight: T.fontWeight.bold, letterSpacing: T.letterSpacing.label, textTransform: "uppercase", cursor: "pointer", background: active === g ? C.accentDim : "transparent", color: active === g ? C.accent : C.textDim, transition: `all ${T.transition.fast}`, whiteSpace: "nowrap" }}>{g}</button>
       ))}
     </div>
   );
@@ -141,7 +170,7 @@ export function InstallBanner({ onInstall, onDismiss }) {
     <div style={{ background: C.accentDim, border: `1px solid ${C.accentBorder}`, borderRadius: T.radius.xl, padding: T.space.xl, display: "flex", gap: T.space.base, alignItems: "center" }}>
       <div style={{ flex: 1, fontSize: T.fontSize.small, color: C.text }}>Add Temple to your home screen for the best experience.</div>
       <Btn onClick={onInstall} style={{ flexShrink: 0 }}>Install</Btn>
-      <button onClick={onDismiss} style={{ background: "none", border: "none", color: C.textDim, cursor: "pointer", fontSize: 18 }}>✕</button>
+      <button onClick={onDismiss} style={{ background: "none", border: "none", color: C.textDim, cursor: "pointer", display: "flex", alignItems: "center" }}><IcClose size={18} /></button>
     </div>
   );
 }
@@ -175,7 +204,7 @@ export function VideoSheet({ query, label, onClose }) {
           </div>
           <div style={{ display: "flex", gap: T.space.base, alignItems: "center" }}>
             {selectedIndex !== null && <button onClick={() => setSelectedIndex(null)} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: T.radius.md, color: C.textDim, cursor: "pointer", padding: `${T.space.sm}px ${T.space.lg}px`, fontSize: T.fontSize.small }}>← List</button>}
-            <button onClick={onClose} style={{ background: C.bg, border: "none", color: C.textDim, cursor: "pointer", borderRadius: T.radius.full, width: 28, height: 28, fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+            <button onClick={onClose} style={{ background: C.bg, border: "none", color: C.textDim, cursor: "pointer", borderRadius: T.radius.full, width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center" }}><IcClose size={16} /></button>
           </div>
         </div>
 
@@ -186,8 +215,8 @@ export function VideoSheet({ query, label, onClose }) {
               <div style={{ fontSize: T.fontSize.small, fontWeight: T.fontWeight.semi, lineHeight: 1.4 }}>{selected?.title}</div>
               <div style={{ fontSize: T.fontSize.xs, color: C.textDim }}>{selected?.channel}</div>
               <div style={{ display: "flex", gap: T.space.base }}>
-                <button onClick={() => setSelectedIndex(i => Math.max(0, i - 1))} disabled={selectedIndex === 0} style={{ flex: 1, background: C.bg, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: "12px", color: selectedIndex === 0 ? C.border : C.text, cursor: selectedIndex === 0 ? "default" : "pointer", fontSize: T.fontSize.body, fontWeight: T.fontWeight.bold }}>← Prev</button>
-                <button onClick={() => setSelectedIndex(i => Math.min(videos.length - 1, i + 1))} disabled={selectedIndex === videos.length - 1} style={{ flex: 1, background: C.bg, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: "12px", color: selectedIndex === videos.length - 1 ? C.border : C.accent, cursor: selectedIndex === videos.length - 1 ? "default" : "pointer", fontSize: T.fontSize.body, fontWeight: T.fontWeight.bold }}>Next →</button>
+                <button onClick={() => setSelectedIndex(i => Math.max(0, i - 1))} disabled={selectedIndex === 0} style={{ flex: 1, background: C.bg, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: "12px", color: selectedIndex === 0 ? C.border : C.text, cursor: selectedIndex === 0 ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: T.space.sm }}><IcBack size={16} /><span>Prev</span></button>
+                <button onClick={() => setSelectedIndex(i => Math.min(videos.length - 1, i + 1))} disabled={selectedIndex === videos.length - 1} style={{ flex: 1, background: C.bg, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: "12px", color: selectedIndex === videos.length - 1 ? C.border : C.accent, cursor: selectedIndex === videos.length - 1 ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: T.space.sm }}><span>Next</span><IcForward size={16} /></button>
               </div>
             </div>
             <div style={{ height: "env(safe-area-inset-bottom)", background: C.surface }} />
