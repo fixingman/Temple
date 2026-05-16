@@ -4,6 +4,7 @@ import { T, C } from "../tokens";
 import { DEFAULT_REST, uid, fmt, fmtDate, displayWeight, toKg, weightLabel, calcCalories } from "../data";
 import { Card, Btn, ConfirmDialog, YTButton, LogoIcon } from "../components";
 import { IcPause, IcPlay, IcRepeat, IcTrophy, IcBack, IcForward, IcClose } from "../icons";
+import { MuscleMap } from "../MuscleMap";
 import { coachError, prompts } from "../useCoach";
 import { useSound } from "../useSound";
 
@@ -268,6 +269,13 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
   if (finished) {
     const totalSets = sessionData.reduce((a, e) => a + e.logged.length, 0);
     const totalVol = sessionData.reduce((a, e) => a + e.logged.reduce((b, s) => b + (Number(s.reps) || 0) * (Number(s.weight) || 0), 0), 0);
+    const sessionMuscleVol = {};
+    sessionData.forEach(e => {
+      const ex = data.exercises.find(x => x.id === e.exerciseId);
+      if (!ex || !e.logged.length) return;
+      const vol = e.logged.reduce((a, s) => a + (Number(s.reps) || 0) * (Number(s.weight) || 0), 0);
+      sessionMuscleVol[ex.muscle] = (sessionMuscleVol[ex.muscle] || 0) + vol;
+    });
     const volDisplay = displayWeight(totalVol, unit);
     const completedExercises = sessionData
       .filter(e => e.logged.length > 0)
@@ -306,6 +314,7 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
             {newPRs.map((pr, i) => { const ex = data.exercises.find(e => e.id === pr.exerciseId); return <div key={i} style={{ fontSize: T.fontSize.caption, color: C.text, marginBottom: T.space.sm }}><strong>{ex?.name}</strong>: {pr.type === "weight" ? `${displayWeight(pr.value, unit)} ${wl}` : pr.type === "reps" ? `${pr.value} reps` : `${displayWeight(pr.value, unit)} ${wl} vol`}</div>; })}
           </Card>
         )}
+        <MuscleMap volume={sessionMuscleVol} size={110} />
         <Btn onClick={() => { setActiveSet(null); setTab("progress"); }} style={{ width: "100%", padding: 18 }}>View Progress</Btn>
         <Btn variant="secondary" onClick={() => setActiveSet(null)} style={{ width: "100%" }}>Done</Btn>
         <button onClick={() => setShowRecovery(true)} style={{ background: "none", border: "none", color: C.textDim, fontSize: T.fontSize.small, cursor: "pointer", padding: `${T.space.sm}px 0`, textAlign: "center" }}>Feeling pain or discomfort? →</button>
@@ -735,7 +744,7 @@ function SwapSheet({ exercise, allExercises, coach, onSwap, onClose }) {
                   </button>
                 );
               })}
-              <button onClick={() => { setResults(null); setError(""); }} style={{ background: "none", border: "none", color: C.textDim, cursor: "pointer", fontSize: T.fontSize.small, padding: `${T.space.sm}px 0` }}>← Try again</button>
+              <button onClick={() => { setResults(null); setError(""); }} style={{ background: "none", border: "none", color: C.textDim, cursor: "pointer", fontSize: T.fontSize.small, padding: `${T.space.sm}px 0`, display: "inline-flex", alignItems: "center", gap: T.space.sm }}><IcBack size={14} />Try again</button>
             </div>
           )}
         </div>

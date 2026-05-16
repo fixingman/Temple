@@ -6,6 +6,7 @@ import { T, C } from "../tokens";
 import { fmtDateFull, displayWeight, weightLabel, est1RM, uid } from "../data";
 import { Card, Btn, ConfirmDialog } from "../components";
 import { IcTrophy, IcClose } from "../icons";
+import { MuscleMap } from "../MuscleMap";
 import { coachError, prompts } from "../useCoach";
 
 function PRBadge() { return <span style={{ background: C.prDim, color: C.pr, fontSize: T.fontSize.xxs, fontWeight: T.fontWeight.heavy, padding: "2px 8px", borderRadius: T.radius.full, letterSpacing: T.letterSpacing.label, display: "inline-flex", alignItems: "center", gap: 3 }}><IcTrophy size={10} /> PR</span>; }
@@ -257,6 +258,9 @@ export function ProgressPage({ data, save, onRepeatSession, coach }) {
       {/* Muscles tab */}
       {view === "muscles" && (
         <>
+          {muscleEntries.length > 0 && (
+            <MuscleMap volume={Object.fromEntries(muscleEntries)} size={110} />
+          )}
           <Card>
             {muscleEntries.length === 0 && <div style={{ textAlign: "center", padding: T.space["2xl"], color: C.textDim }}>Complete a workout to see muscle breakdown</div>}
             {muscleEntries.map(([muscle, vol]) => (

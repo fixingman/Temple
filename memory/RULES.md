@@ -4,22 +4,18 @@
 
 ## Where We Left Off
 ```
-Version:     v0.9.3
-Date:        2026-05-15
-Shipped:     Bugs B30-B35 fixed (crashes on Train/Progress/completion tabs) ·
-             Google Drive token persistence (no reconnect per session) ·
-             Inline SVG Logo/LogoIcon — mobile logo was blank ·
-             YouTube netlify.toml routing + better error messages ·
-             Error dot moved to top-right, scrolls with content ·
-             Set CTA margin · swap button style · pull-to-refresh text removed ·
-             SPA + /api/youtube redirects in netlify.toml
-Tested:      Build passes. YouTube 503 on dev-- context — API key needs
-             "All contexts" in Netlify env vars (not just Production)
-Next:        Test YouTube on production · test AI features (Anthropic key in Settings) ·
-             verify Google Drive token persistence on real device ·
-             session detail view · post-session recovery tip
+Version:     v1.1.1
+Date:        2026-05-16
+Shipped:     Athletic UI overhaul (v1.1) — Phosphor icons, Framer Motion, Tone.js sound ·
+             UI polish — exercise 3-dots menu, token audit & fix ·
+             Google Drive silent reconnect — no manual re-auth each session
+Tested:      Build passes (confirm after this session)
+Next:        Test Google Drive silent reconnect on real device ·
+             Test YouTube on production ·
+             Test AI features (Anthropic key in Settings) ·
+             Session detail view · post-session recovery tip
 Open issues: Google OAuth still in testing mode (OAuth consent screen)
-             YouTube may still 503 on dev previews if env var not set for all contexts
+             YouTube may 503 on dev previews if YOUTUBE_API_KEY not set for all contexts
 ```
 
 ---
@@ -139,10 +135,6 @@ Commit format: "vX.X — one-line summary of what shipped"
 ```
 
 **Current series:** `0.9.x` — patch fixes · `1.0` — first feature-complete minor
-
-**This session so far (unbumped):**
-- AI CORS fix (patch) · auto-ordering loop fix (patch) · session delete (feature)
-- Sets `···` menu (UX) · search clear X (UX) → **bump to v0.9.1**
 
 ---
 

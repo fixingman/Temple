@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { T, C } from "../tokens";
 import { MUSCLE_GROUPS, uid } from "../data";
 import { Card, Btn, Input, ConfirmDialog, ErrorBanner, PillFilter } from "../components";
-import { IcBarbell, IcCheck, IcClose, IcCaretUp, IcCaretDown } from "../icons";
+import { IcBarbell, IcCheck, IcClose, IcCaretUp, IcCaretDown, IcMore } from "../icons";
 import { useCoach, coachError, prompts, MODELS } from "../useCoach";
 
 export function SetsPage({ data, save, onStartSession, coach }) {
@@ -289,8 +289,8 @@ export function SetsPage({ data, save, onStartSession, coach }) {
               </div>
               <button
                 onClick={() => setExpandedSet(expanded ? null : s.id)}
-                style={{ background: "none", border: "none", color: expanded ? C.accent : C.textDim, cursor: "pointer", fontSize: T.fontSize.h2, padding: `0 ${T.space.sm}px`, lineHeight: 1, flexShrink: 0, letterSpacing: 2 }}
-              >···</button>
+                style={{ background: "none", border: "none", color: expanded ? C.accent : C.textDim, cursor: "pointer", padding: `0 ${T.space.sm}px`, flexShrink: 0, display: "flex", alignItems: "center" }}
+              ><IcMore size={20} /></button>
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: T.space.sm, marginBottom: T.space.lg }}>
               {exNames.slice(0, 5).map((n, i) => <span key={i} style={{ fontSize: T.fontSize.xs, background: C.bg, padding: "3px 10px", borderRadius: T.radius.full, color: C.textDim, border: `1px solid ${C.border}` }}>{n}</span>)}

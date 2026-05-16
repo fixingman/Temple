@@ -1,6 +1,15 @@
 # 🟁 Temple — Changelog
 
-## v0.9.3 (Current)
+## v1.1.1 (Current)
+- **Google Drive**: Silent token reconnect on app open — no manual "Connect" needed each session when token is expired but Google account session is still active
+- **UI polish**: Exercise 3-dots menu (edit/delete behind per-card toggle), token audit & fix
+- **SW cache**: Bumped to `temple-v1.1.1`
+
+## v1.1
+- **UI overhaul**: Athletic Direction B redesign — Phosphor icons, Framer Motion animations, Tone.js sound feedback
+- **SW cache**: Bumped to `temple-v1.1`
+
+## v0.9.3
 - **Bug fix**: `fmtDate` missing import in SessionPage → crash on Train tab
 - **Bug fix**: `liveCalories` temporal dead zone → crash on workout completion screen
 - **Bug fix**: `MUSCLE_ICONS` missing import in ProgressPage → crash on Progress tab

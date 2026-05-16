@@ -2,7 +2,8 @@ import { useState } from "react";
 import { T, C } from "../tokens";
 import { MUSCLE_GROUPS, MUSCLE_GROUPS_NO_ALL, EQUIPMENT_TYPES, CATEGORY_TYPES, uid } from "../data";
 import { Card, Btn, Input, ConfirmDialog, ErrorBanner, PillFilter, YTButton } from "../components";
-import { IcPlus } from "../icons";
+import { IcPlus, IcMore } from "../icons";
+import { MuscleMap } from "../MuscleMap";
 
 function FilterBar({ muscle, onMuscle, equipment, onEquipment, category, onCategory, small }) {
   const pillStyle = (active) => ({
@@ -170,14 +171,17 @@ export function LibraryPage({ data, save }) {
                   <YTButton query={ex.yt} label={ex.name} />
                   <button
                     onClick={() => setExpandedEx(expanded ? null : ex.id)}
-                    style={{ background: "none", border: "none", color: expanded ? C.accent : C.textDim, cursor: "pointer", fontSize: T.fontSize.h2, padding: `0 ${T.space.sm}px`, lineHeight: 1, flexShrink: 0, letterSpacing: 2 }}
-                  >···</button>
+                    style={{ background: "none", border: "none", color: expanded ? C.accent : C.textDim, cursor: "pointer", padding: `0 ${T.space.sm}px`, flexShrink: 0, display: "flex", alignItems: "center" }}
+                  ><IcMore size={20} /></button>
                 </div>
               </div>
               {expanded && (
-                <div className="t-fade-in" style={{ display: "flex", gap: T.space.base, marginTop: T.space.lg }}>
-                  <Btn variant="secondary" onClick={() => { startEdit(ex); setExpandedEx(null); }} style={{ flex: 1 }}>Edit</Btn>
-                  <Btn variant="danger" onClick={() => { setConfirmDelete(ex.id); setExpandedEx(null); }} style={{ flex: 1 }}>Delete</Btn>
+                <div className="t-fade-in" style={{ display: "flex", flexDirection: "column", gap: T.space.lg, marginTop: T.space.lg }}>
+                  <MuscleMap highlighted={ex.muscle} size={80} />
+                  <div style={{ display: "flex", gap: T.space.base }}>
+                    <Btn variant="secondary" onClick={() => { startEdit(ex); setExpandedEx(null); }} style={{ flex: 1 }}>Edit</Btn>
+                    <Btn variant="danger" onClick={() => { setConfirmDelete(ex.id); setExpandedEx(null); }} style={{ flex: 1 }}>Delete</Btn>
+                  </div>
                 </div>
               )}
             </Card>

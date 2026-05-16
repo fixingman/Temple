@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { T, C } from "./tokens";
-import { IcLibrary, IcSets, IcTrain, IcProgress, IcSettings, IcClose, IcBack, IcForward } from "./icons";
+import { IcLibrary, IcSets, IcTrain, IcProgress, IcSettings, IcClose, IcBack, IcForward, IcPlay, IcVideo } from "./icons";
 
 export function GlobalStyles() {
   return (
@@ -202,7 +202,7 @@ export function VideoSheet({ query, label, onClose }) {
             <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: T.space.xs }}>{selectedIndex !== null ? `${selectedIndex + 1} of ${videos.length}` : `${videos.length || ""} results`}</div>
           </div>
           <div style={{ display: "flex", gap: T.space.base, alignItems: "center" }}>
-            {selectedIndex !== null && <button onClick={() => setSelectedIndex(null)} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: T.radius.md, color: C.textDim, cursor: "pointer", padding: `${T.space.sm}px ${T.space.lg}px`, fontSize: T.fontSize.small }}>← List</button>}
+            {selectedIndex !== null && <button onClick={() => setSelectedIndex(null)} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: T.radius.md, color: C.textDim, cursor: "pointer", padding: `${T.space.sm}px ${T.space.lg}px`, fontSize: T.fontSize.small, display: "inline-flex", alignItems: "center", gap: T.space.sm }}><IcBack size={14} />List</button>}
             <button onClick={onClose} style={{ background: C.bg, border: "none", color: C.textDim, cursor: "pointer", borderRadius: T.radius.full, width: T.size.iconBtn, height: T.size.iconBtn, display: "flex", alignItems: "center", justifyContent: "center" }}><IcClose size={16} /></button>
           </div>
         </div>
@@ -238,7 +238,7 @@ export function VideoSheet({ query, label, onClose }) {
                   <img src={v.thumbnail} alt="" style={{ width: 120, height: 68, borderRadius: T.radius.md, objectFit: "cover", display: "block", background: C.border }} />
                   <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <div style={{ width: T.size.iconBtn, height: T.size.iconBtn, background: C.videoOverlay, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <span style={{ color: C.text, fontSize: T.fontSize.xxs, paddingLeft: T.space.xs }}>▶</span>
+                      <IcPlay size={14} weight="fill" style={{ color: C.text }} />
                     </div>
                   </div>
                 </div>
@@ -261,7 +261,7 @@ export function YTButton({ query, label }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button onClick={() => setOpen(true)} style={{ display: "inline-flex", alignItems: "center", gap: T.space.sm, background: C.youtubeDim, color: C.youtube, border: "none", borderRadius: T.radius.md, padding: "5px 10px", fontSize: T.fontSize.xs, fontWeight: T.fontWeight.bold, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>▶ Form</button>
+      <button onClick={() => setOpen(true)} style={{ display: "inline-flex", alignItems: "center", gap: T.space.sm, background: C.youtubeDim, color: C.youtube, border: "none", borderRadius: T.radius.md, padding: "5px 10px", fontSize: T.fontSize.xs, fontWeight: T.fontWeight.bold, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}><IcVideo size={13} />Form</button>
       {open && <VideoSheet query={query} label={label} onClose={() => setOpen(false)} />}
     </>
   );

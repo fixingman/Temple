@@ -55,12 +55,16 @@ export function useGoogleDrive() {
       // Check if user was previously connected
       const savedUser = await get(DRIVE_USER_KEY);
 
+      let silentReconnect = false;
+
       const onToken = async (tokenResponse) => {
         if (tokenResponse.error) {
-          setStatus("error");
-          setMessage("Sign-in failed. Please try again.");
+          // Silent reconnect failures are not errors — just fall back to idle
+          setStatus("idle");
+          if (!silentReconnect) setMessage("Sign-in failed. Please try again.");
           return;
         }
+        silentReconnect = false;
         const token = tokenResponse.access_token;
         const expiresAt = Date.now() + (tokenResponse.expires_in || 3600) * 1000;
         setAccessToken(token);
@@ -74,7 +78,7 @@ export function useGoogleDrive() {
       const tc = window.google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID,
         scope: SCOPE,
-        callback: (tokenResponse) => onToken(tokenResponse, false),
+        callback: onToken,
       });
       setTokenClient(tc);
 
@@ -86,7 +90,9 @@ export function useGoogleDrive() {
           setAccessToken(savedToken.token);
           setStatus("ready");
         } else {
-          setStatus("idle");
+          // Token expired — silently request a new one; no popup if Google session is active
+          silentReconnect = true;
+          tc.requestAccessToken({ prompt: "" });
         }
       }
     };
