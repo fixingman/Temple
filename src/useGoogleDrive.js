@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { get, set, del } from "idb-keyval";
 
 const CLIENT_ID = "186862100308-4lfr928avpodulpf4d70m9jteh1qgm2r.apps.googleusercontent.com";
-const SCOPE = "https://www.googleapis.com/auth/drive.file";
+const SCOPE = "https://www.googleapis.com/auth/drive.file openid profile email";
 const FILE_NAME = "temple-backup.json";
 const DISCOVERY_DOC = "https://www.googleapis.com/discovery/v1/apis/drive/v3/rest";
 const DRIVE_USER_KEY = "temple-drive-user";
