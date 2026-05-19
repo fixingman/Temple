@@ -183,7 +183,7 @@ export function SettingsPage({ data, save, drive }) {
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: T.space.base }}>
             {/* Connected user */}
-            <div style={{ display: "flex", alignItems: "center", gap: T.space.lg, padding: "12px 14px", background: drive.connected ? C.accentDim : C.surface, borderRadius: T.radius.lg, border: `1px solid ${drive.connected ? C.accentBorder : C.border}`, opacity: drive.connected ? 1 : 0.7 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: T.space.lg, padding: "12px 14px", background: C.accentDim, borderRadius: T.radius.lg, border: `1px solid ${C.accentBorder}` }}>
               {drive.user.picture
                 ? <img src={drive.user.picture} alt="" style={{ width: 36, height: 36, borderRadius: "50%", flexShrink: 0 }} />
                 : <div style={{ width: 36, height: 36, borderRadius: "50%", background: drive.connected ? C.accent : C.textDim, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: T.fontSize.body, fontWeight: T.fontWeight.bold, color: C.bg }}>
@@ -193,8 +193,7 @@ export function SettingsPage({ data, save, drive }) {
               <div style={{ flex: 1, minWidth: 0 }}>
                 {drive.user.name && <div style={{ fontSize: T.fontSize.bodySmall, fontWeight: T.fontWeight.bold, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{drive.user.name}</div>}
                 {drive.user.email && <div style={{ fontSize: T.fontSize.xs, color: C.textDim, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{drive.user.email}</div>}
-                {!drive.user.name && !drive.user.email && <div style={{ fontSize: T.fontSize.bodySmall, color: drive.connected ? C.accent : C.textDim, fontWeight: T.fontWeight.semi }}>{drive.connected ? "Google Drive connected" : "Google Drive"}</div>}
-                {!drive.connected && <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: T.space.xs }}>Authorization required</div>}
+                {!drive.user.name && !drive.user.email && <div style={{ fontSize: T.fontSize.bodySmall, color: C.accent, fontWeight: T.fontWeight.semi }}>Google Drive connected</div>}
               </div>
             </div>
 
@@ -202,20 +201,14 @@ export function SettingsPage({ data, save, drive }) {
               <div style={{ fontSize: T.fontSize.xs, color: C.textDim }}>Last backup: {drive.lastSync.toLocaleString()}</div>
             )}
 
-            {drive.connected ? (
-              <div style={{ display: "flex", gap: T.space.base }}>
-                <Btn onClick={() => drive.backup(data)} disabled={driveBusy} style={{ flex: 1 }}>
-                  {drive.status === "syncing" ? "Saving..." : "Back Up Now"}
-                </Btn>
-                <Btn variant="secondary" onClick={() => setConfirmRestore(true)} disabled={driveBusy} style={{ flex: 1 }}>
-                  Restore
-                </Btn>
-              </div>
-            ) : (
-              <Btn onClick={drive.signIn} disabled={driveBusy} style={{ width: "100%" }}>
-                {driveBusy ? "Signing in..." : "Authorize to Back Up"}
+            <div style={{ display: "flex", gap: T.space.base }}>
+              <Btn onClick={() => drive.backup(data)} disabled={driveBusy} style={{ flex: 1 }}>
+                {drive.status === "syncing" ? "Saving..." : "Back Up Now"}
               </Btn>
-            )}
+              <Btn variant="secondary" onClick={() => setConfirmRestore(true)} disabled={driveBusy} style={{ flex: 1 }}>
+                Restore
+              </Btn>
+            </div>
 
             <Btn variant="danger" onClick={drive.signOut} style={{ width: "100%" }}>
               Disconnect Google Drive

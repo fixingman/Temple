@@ -23,13 +23,14 @@ export default async (req) => {
   try {
     const ytUrl = new URL("https://www.googleapis.com/youtube/v3/search");
     ytUrl.searchParams.set("key", apiKey);
-    ytUrl.searchParams.set("q", query);
+    ytUrl.searchParams.set("q", `${query} shorts`);
     ytUrl.searchParams.set("part", "snippet");
     ytUrl.searchParams.set("type", "video");
     ytUrl.searchParams.set("maxResults", "8");
     ytUrl.searchParams.set("videoEmbeddable", "true");
     ytUrl.searchParams.set("relevanceLanguage", "en");
     ytUrl.searchParams.set("safeSearch", "moderate");
+    ytUrl.searchParams.set("videoDuration", "short");
 
     const res = await fetch(ytUrl.toString());
     if (!res.ok) {

@@ -6,24 +6,22 @@ const SCOPE = "https://www.googleapis.com/auth/drive.file";
 const FILE_NAME = "temple-backup.json";
 const DISCOVERY_DOC = "https://www.googleapis.com/discovery/v1/apis/drive/v3/rest";
 const DRIVE_USER_KEY = "temple-drive-user";
-const DRIVE_TOKEN_KEY = "temple-drive-token";
+const DRIVE_REFRESH_KEY = "temple-drive-refresh";
 
 export function useGoogleDrive() {
   const [status, setStatus] = useState("idle");
   const [user, setUser] = useState(null);
   const [message, setMessage] = useState("");
   const [lastSync, setLastSync] = useState(null);
-  const [tokenClient, setTokenClient] = useState(null);
+  const [codeClient, setCodeClient] = useState(null);
   const [accessToken, setAccessToken] = useState(null);
 
-  // Persist user info to idb-keyval
   const persistUser = useCallback(async (u) => {
     setUser(u);
     if (u) await set(DRIVE_USER_KEY, u);
     else await del(DRIVE_USER_KEY);
   }, []);
 
-  // Fetch and store user info
   const fetchUser = useCallback(async (token) => {
     try {
       const r = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
@@ -36,7 +34,30 @@ export function useGoogleDrive() {
     }
   }, [persistUser]);
 
-  // Load GIS + GAPI, then attempt silent reconnect if user was previously connected
+  const silentRefresh = useCallback(async (refreshToken) => {
+    try {
+      const res = await fetch("/api/google-token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "refresh", refresh_token: refreshToken }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.access_token) {
+        // Refresh token revoked — clear everything, require re-auth
+        await persistUser(null);
+        await del(DRIVE_REFRESH_KEY);
+        setStatus("idle");
+        return;
+      }
+      setAccessToken(data.access_token);
+      window.gapi?.client?.setToken?.({ access_token: data.access_token });
+      setStatus("ready");
+    } catch {
+      // Network error — keep user visible but no access token; backup will show error if tried
+      setStatus("idle");
+    }
+  }, [persistUser]);
+
   useEffect(() => {
     let gapiReady = false;
     let gisReady = false;
@@ -52,52 +73,54 @@ export function useGoogleDrive() {
         }
       });
 
-      // Check if user was previously connected
-      const savedUser = await get(DRIVE_USER_KEY);
-
-      let silentReconnect = false;
-
-      const onToken = async (tokenResponse) => {
-        if (tokenResponse.error) {
-          // Silent reconnect failures are not errors — just fall back to idle
+      const onCode = async (response) => {
+        if (response.error) {
           setStatus("idle");
-          if (!silentReconnect) setMessage("Sign-in failed. Please try again.");
+          setMessage("Sign-in failed. Please try again.");
           return;
         }
-        silentReconnect = false;
-        const token = tokenResponse.access_token;
-        const expiresAt = Date.now() + (tokenResponse.expires_in || 3600) * 1000;
-        setAccessToken(token);
-        await set(DRIVE_TOKEN_KEY, { token, expiresAt });
-        setUser({ name: "", email: "", picture: "" });
-        await fetchUser(token);
-        setStatus("ready");
-        setMessage("");
+        try {
+          const res = await fetch("/api/google-token", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "exchange", code: response.code }),
+          });
+          const data = await res.json();
+          if (!res.ok || !data.access_token) {
+            setStatus("idle");
+            setMessage("Authorization failed. Please try again.");
+            return;
+          }
+          setAccessToken(data.access_token);
+          window.gapi.client.setToken({ access_token: data.access_token });
+          if (data.refresh_token) await set(DRIVE_REFRESH_KEY, data.refresh_token);
+          setUser({ name: "", email: "", picture: "" });
+          await fetchUser(data.access_token);
+          setStatus("ready");
+          setMessage("");
+        } catch {
+          setStatus("idle");
+          setMessage("Authorization failed. Please try again.");
+        }
       };
 
-      const tc = window.google.accounts.oauth2.initTokenClient({
+      const cc = window.google.accounts.oauth2.initCodeClient({
         client_id: CLIENT_ID,
         scope: SCOPE,
-        callback: onToken,
+        ux_mode: "popup",
+        callback: onCode,
       });
-      setTokenClient(tc);
+      setCodeClient(cc);
 
-      // Restore token from storage if still valid (with 5min buffer)
-      const savedToken = await get(DRIVE_TOKEN_KEY);
-      if (savedUser) {
+      // Silent refresh on load if previously connected
+      const savedUser = await get(DRIVE_USER_KEY);
+      const savedRefresh = await get(DRIVE_REFRESH_KEY);
+      if (savedUser && savedRefresh) {
         setUser(savedUser);
-        if (savedToken && savedToken.expiresAt - Date.now() > 5 * 60 * 1000) {
-          setAccessToken(savedToken.token);
-          setStatus("ready");
-        } else {
-          // Token expired — silently request a new one; no popup if Google session is active
-          silentReconnect = true;
-          tc.requestAccessToken({ prompt: "" });
-        }
+        await silentRefresh(savedRefresh);
       }
     };
 
-    // Load GAPI
     if (!window.gapi) {
       const s1 = document.createElement("script");
       s1.src = "https://apis.google.com/js/api.js";
@@ -108,7 +131,6 @@ export function useGoogleDrive() {
       gapiReady = true;
     }
 
-    // Load GIS
     if (!window.google?.accounts) {
       const s2 = document.createElement("script");
       s2.src = "https://accounts.google.com/gsi/client";
@@ -119,17 +141,17 @@ export function useGoogleDrive() {
       gisReady = true;
       tryInit();
     }
-  }, [fetchUser, persistUser]);
+  }, [fetchUser, persistUser, silentRefresh]);
 
   const signIn = useCallback(() => {
-    if (!tokenClient) {
+    if (!codeClient) {
       setMessage("Google Sign-In is still loading. Please wait a moment.");
       return;
     }
     setStatus("signing-in");
     setMessage("");
-    tokenClient.requestAccessToken({ prompt: "" });
-  }, [tokenClient]);
+    codeClient.requestCode();
+  }, [codeClient]);
 
   const signOut = useCallback(async () => {
     if (accessToken) {
@@ -137,13 +159,12 @@ export function useGoogleDrive() {
     }
     setAccessToken(null);
     await persistUser(null);
-    await del(DRIVE_TOKEN_KEY);
+    await del(DRIVE_REFRESH_KEY);
     setStatus("idle");
     setMessage("");
     setLastSync(null);
   }, [accessToken, persistUser]);
 
-  // Find existing backup file id
   const findFile = useCallback(async () => {
     const res = await window.gapi.client.drive.files.list({
       q: `name='${FILE_NAME}' and trashed=false`,
@@ -153,7 +174,6 @@ export function useGoogleDrive() {
     return res.result.files?.[0] || null;
   }, []);
 
-  // Backup: write data to Drive
   const backup = useCallback(async (data) => {
     if (!accessToken) { setMessage("Sign in to Google Drive first."); return false; }
     setStatus("syncing");
@@ -180,7 +200,7 @@ export function useGoogleDrive() {
       setMessage(`Saved to Drive — ${now.toLocaleTimeString()}`);
       setTimeout(() => setMessage(""), 4000);
       return true;
-    } catch (e) {
+    } catch {
       setStatus("ready");
       setMessage("Backup failed. Check your connection and try again.");
       setTimeout(() => setMessage(""), 5000);
@@ -188,7 +208,6 @@ export function useGoogleDrive() {
     }
   }, [accessToken, findFile]);
 
-  // Restore: read data from Drive
   const restore = useCallback(async () => {
     if (!accessToken) { setMessage("Sign in to Google Drive first."); return null; }
     setStatus("syncing");
@@ -211,7 +230,7 @@ export function useGoogleDrive() {
       setMessage("Backup restored from Google Drive.");
       setTimeout(() => setMessage(""), 4000);
       return parsed;
-    } catch (e) {
+    } catch {
       setStatus("ready");
       setMessage("Restore failed. Check your connection and try again.");
       setTimeout(() => setMessage(""), 5000);

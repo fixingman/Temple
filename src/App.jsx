@@ -275,7 +275,7 @@ export default function Temple() {
                 exit={{ opacity: 0, y: -4 }}
                 transition={T.motion.gentle}
               >
-                {tab === "library" && <LibraryPage data={data} save={save} />}
+                {tab === "library" && <LibraryPage data={data} save={save} coach={coach} />}
                 {tab === "sets" && <SetsPage data={data} save={save} onStartSession={handleStartSession} coach={coach} />}
                 {tab === "session" && <SessionPage data={data} save={save} activeSet={activeSet} setActiveSet={setActiveSet} setTab={setTab} coach={coach} />}
                 {tab === "progress" && <Suspense fallback={<div style={{ padding: T.space["3xl"], textAlign: "center", color: C.textDim }}>Loading...</div>}><ProgressPage data={data} save={save} onRepeatSession={handleStartSession} coach={coach} /></Suspense>}

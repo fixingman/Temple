@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import { T, C } from "./tokens";
 import { IcLibrary, IcSets, IcTrain, IcProgress, IcSettings, IcClose, IcBack, IcForward, IcPlay, IcVideo } from "./icons";
@@ -187,12 +188,12 @@ export function VideoSheet({ query, label, onClose }) {
     setLoading(true); setError(""); setVideos([]);
     fetch(`/api/youtube?q=${encodeURIComponent(query)}`)
       .then(r => r.json())
-      .then(d => { if (!cancelled) { setVideos(d.videos || []); if (d.error) setError(d.error); setLoading(false); } })
+      .then(d => { if (!cancelled) { const vids = d.videos || []; setVideos(vids); if (vids.length > 0) setSelectedIndex(0); if (d.error) setError(d.error); setLoading(false); } })
       .catch(() => { if (!cancelled) { setError("Could not load videos."); setLoading(false); } });
     return () => { cancelled = true; };
   }, [query]);
 
-  return (
+  return createPortal(
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: C.overlay, zIndex: T.z.modal + 10, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
       <div className="t-slide-up" onClick={e => e.stopPropagation()} style={{ background: C.surface, borderRadius: `${T.radius.xl}px ${T.radius.xl}px 0 0`, maxHeight: "92vh", display: "flex", flexDirection: "column" }}>
         <div style={{ width: 36, height: 4, borderRadius: T.radius.sm, background: C.border, margin: `${T.space.base}px auto`, flexShrink: 0 }} />
@@ -253,7 +254,8 @@ export function VideoSheet({ query, label, onClose }) {
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

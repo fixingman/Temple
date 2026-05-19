@@ -3,7 +3,12 @@ import { C } from "./tokens";
 // #1a1a1a — body parts that aren't muscle zones (head, forearms, shins)
 const NEUTRAL = "#1a1a1a";
 
-function muscleFill(name, highlighted, volume, maxVol) {
+function muscleFill(name, highlighted, volume, maxVol, muscles) {
+  if (muscles) {
+    if (muscles.primary?.includes(name))   return C.accent;
+    if (muscles.secondary?.includes(name)) return "rgba(200,255,0,0.35)";
+    return C.border;
+  }
   if (highlighted) return highlighted === name ? C.accent : C.border;
   if (!volume || !volume[name]) return C.border;
   const ratio = volume[name] / maxVol;
@@ -13,9 +18,9 @@ function muscleFill(name, highlighted, volume, maxVol) {
 }
 
 // viewBox: 0 0 150 175  (front figure 0–65, gap, back figure 85–150)
-export function MuscleMap({ highlighted, volume, size = 100 }) {
+export function MuscleMap({ highlighted, volume, muscles, size = 100 }) {
   const maxVol = volume ? Math.max(...Object.values(volume), 1) : 1;
-  const f = (m) => muscleFill(m, highlighted, volume, maxVol);
+  const f = (m) => muscleFill(m, highlighted, volume, maxVol, muscles);
 
   const h = Math.round(size * 175 / 150);
 
