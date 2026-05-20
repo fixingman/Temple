@@ -18,6 +18,21 @@ function ApiKeyInput({ value, onChange }) {
 
   const isSaved = value && !dirty;
 
+  if (isSaved) {
+    return (
+      <div style={{ display: "flex", gap: T.space.base, alignItems: "center" }}>
+        <div style={{ flex: 1, display: "flex", alignItems: "center", gap: T.space.base, padding: "12px 16px", background: C.accentDim, border: `1px solid ${C.accentBorder}`, borderRadius: T.radius.lg }}>
+          <IcCheck size={18} style={{ color: C.accent }} />
+          <div>
+            <div style={{ fontSize: T.fontSize.small, color: C.accent, fontWeight: T.fontWeight.semi }}>Key saved</div>
+            <div style={{ fontSize: T.fontSize.xs, color: C.textDim, fontFamily: T.font.mono }}>{value.slice(0, 10)}···{value.slice(-4)}</div>
+          </div>
+        </div>
+        <Btn variant="danger" onClick={clear}>Remove</Btn>
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: T.space.base }}>
       <div style={{ display: "flex", gap: T.space.base }}>
@@ -26,29 +41,13 @@ function ApiKeyInput({ value, onChange }) {
           value={draft}
           onChange={e => setDraft(e.target.value)}
           name="api-key" placeholder="sk-ant-..."
-          style={{ flex: 1, background: C.bg, border: `1px solid ${isSaved ? C.accentBorder : draft ? C.border : C.border}`, borderRadius: T.radius.lg, padding: "10px 12px", color: C.text, fontSize: T.fontSize.h3, outline: "none", fontFamily: T.font.mono, transition: `border-color ${T.transition.fast}` }}
+          style={{ flex: 1, background: C.bg, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: "10px 12px", color: C.text, fontSize: T.fontSize.h3, outline: "none", fontFamily: T.font.mono, transition: `border-color ${T.transition.fast}` }}
         />
         <button onClick={() => setShow(s => !s)} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, color: C.textDim, cursor: "pointer", padding: "10px 12px", fontSize: T.fontSize.small, flexShrink: 0 }}>{show ? "Hide" : "Show"}</button>
       </div>
-
-      {isSaved ? (
-        /* Key is saved and unchanged — show confirmation state */
-        <div style={{ display: "flex", gap: T.space.base, alignItems: "center" }}>
-          <div style={{ flex: 1, display: "flex", alignItems: "center", gap: T.space.base, padding: "12px 16px", background: C.accentDim, border: `1px solid ${C.accentBorder}`, borderRadius: T.radius.lg }}>
-            <IcCheck size={18} style={{ color: C.accent }} />
-            <div>
-              <div style={{ fontSize: T.fontSize.small, color: C.accent, fontWeight: T.fontWeight.semi }}>Key saved</div>
-              <div style={{ fontSize: T.fontSize.xs, color: C.textDim, fontFamily: T.font.mono }}>{value.slice(0, 10)}···{value.slice(-4)}</div>
-            </div>
-          </div>
-          <Btn variant="danger" onClick={clear}>Remove</Btn>
-        </div>
-      ) : (
-        /* Unsaved or dirty — show save button */
-        <Btn onClick={save} disabled={!dirty || !draft.trim()} style={{ width: "100%" }}>
-          Save Key
-        </Btn>
-      )}
+      <Btn onClick={save} disabled={!draft.trim()} style={{ width: "100%" }}>
+        Save Key
+      </Btn>
     </div>
   );
 }
