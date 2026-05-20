@@ -254,7 +254,7 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
     setRecoveryTipLoading(true);
     coach.ask(
       prompts.recoveryTip(exercises, { totalSets, totalReps, totalKg }),
-      { model: MODELS.fast, maxTokens: 200 }
+      { model: MODELS.smart, maxTokens: 200 }
     ).then(({ text }) => {
       if (text) setRecoveryTip(text);
       setRecoveryTipLoading(false);
