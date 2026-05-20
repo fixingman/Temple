@@ -32,6 +32,7 @@ export function ProgressPage({ data, save, onRepeatSession, coach }) {
   const [selectedExId, setSelectedExId] = useState(null);
   const [confirmDeleteSession, setConfirmDeleteSession] = useState(null);
   const [gapOpen, setGapOpen] = useState(false);
+  const [expandedSession, setExpandedSession] = useState(null);
   const unit = data.settings?.unit || "kg";
   const wl = weightLabel(unit);
 
@@ -305,24 +306,79 @@ export function ProgressPage({ data, save, onRepeatSession, coach }) {
           {[...data.sessions].reverse().map(s => {
             const set = data.sets.find(ws => ws.id === s.setId);
             const vol = s.entries.reduce((a, e) => a + e.sets.reduce((b, st) => b + st.reps * st.weight, 0), 0);
+            const isExpanded = expandedSession === s.id;
+            const sessionMuscleVol = {};
+            if (isExpanded) {
+              s.entries.forEach(e => {
+                const ex = data.exercises.find(x => x.id === e.exerciseId);
+                if (!ex) return;
+                const v = e.sets.reduce((a, st) => a + st.reps * st.weight, 0);
+                sessionMuscleVol[ex.muscle] = (sessionMuscleVol[ex.muscle] || 0) + v;
+              });
+            }
             return (
-              <Card key={s.id}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <Card key={s.id} style={{ border: isExpanded ? `1px solid ${C.accent}` : undefined }}>
+                {/* Header row — tappable */}
+                <div onClick={() => setExpandedSession(isExpanded ? null : s.id)} style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: T.fontWeight.bold, fontSize: T.fontSize.body }}>{set?.name || "Deleted Set"}</div>
                     <div style={{ fontSize: T.fontSize.small, color: C.textDim }}>{fmtDateFull(s.date)} {s.duration ? `· ${s.duration < 60 ? "<1min" : `${Math.floor(s.duration / 60)}min`}` : ""}</div>
                   </div>
-                  <button
-                    onClick={() => setConfirmDeleteSession(s.id)}
-                    style={{ background: "none", border: "none", color: C.textDim, cursor: "pointer", fontSize: T.fontSize.small, padding: `${T.space.xs}px ${T.space.sm}px`, flexShrink: 0, opacity: T.opacity.muted, display: "flex", alignItems: "center" }}
-                  ><IcClose size={14} /></button>
+                  <div style={{ display: "flex", alignItems: "center", gap: T.space.sm, flexShrink: 0 }}>
+                    <motion.span animate={{ rotate: isExpanded ? 45 : 0 }} transition={T.motion.snap} style={{ color: C.textDim, fontSize: T.fontSize.h2, lineHeight: 1, display: "inline-block" }}>+</motion.span>
+                    <button
+                      onClick={e => { e.stopPropagation(); setConfirmDeleteSession(s.id); }}
+                      style={{ background: "none", border: "none", color: C.textDim, cursor: "pointer", padding: `${T.space.xs}px ${T.space.sm}px`, opacity: T.opacity.muted, display: "flex", alignItems: "center" }}
+                    ><IcClose size={14} /></button>
+                  </div>
                 </div>
+
+                {/* Summary row */}
                 <div style={{ display: "flex", gap: T.space.xl, marginTop: T.space.base, fontSize: T.fontSize.small, color: C.textDim }}>
                   <span>{s.entries.length} exercises</span>
                   <span>{s.entries.reduce((a, e) => a + e.sets.length, 0)} sets</span>
                   <span style={{ color: C.accent, fontWeight: T.fontWeight.bold }}>{displayWeight(vol, unit).toLocaleString()} {wl}</span>
                 </div>
-                {set && (
+
+                {/* Expanded detail */}
+                {isExpanded && (
+                  <div className="t-fade-in" style={{ marginTop: T.space.xl, borderTop: `1px solid ${C.border}`, paddingTop: T.space.xl, display: "flex", flexDirection: "column", gap: T.space.xl }}>
+                    <MuscleMap volume={sessionMuscleVol} size={90} />
+                    <div style={{ display: "flex", flexDirection: "column", gap: T.space.lg }}>
+                      {s.entries.map((e, ei) => {
+                        const ex = data.exercises.find(x => x.id === e.exerciseId);
+                        const isBodyweight = ex?.equipment === "bodyweight";
+                        const isMobility = ex?.category === "mobility";
+                        const exVol = e.sets.reduce((a, st) => a + st.reps * st.weight, 0);
+                        return (
+                          <div key={ei}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: T.space.sm }}>
+                              <div style={{ fontWeight: T.fontWeight.semi, fontSize: T.fontSize.bodySmall }}>{ex?.name || "Unknown"}</div>
+                              {!isBodyweight && !isMobility && exVol > 0 && (
+                                <div style={{ fontSize: T.fontSize.xs, color: C.textDim, fontFamily: T.font.mono }}>{displayWeight(exVol, unit)} {wl}</div>
+                              )}
+                            </div>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: T.space.sm }}>
+                              {e.sets.map((st, si) => (
+                                <span key={si} style={{ fontSize: T.fontSize.xs, padding: "3px 10px", borderRadius: T.radius.full, background: C.bg, color: C.textDim, border: `1px solid ${C.border}`, fontFamily: T.font.mono }}>
+                                  {isBodyweight || isMobility
+                                    ? `${st.reps}${isMobility ? "s" : " reps"}`
+                                    : `${displayWeight(st.weight, unit)} × ${st.reps}`}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {set && (
+                      <Btn variant="secondary" onClick={() => onRepeatSession(set)} style={{ width: "100%", fontSize: T.fontSize.small }}>Repeat This Workout</Btn>
+                    )}
+                  </div>
+                )}
+
+                {/* Collapsed repeat button */}
+                {!isExpanded && set && (
                   <div style={{ marginTop: T.space.lg }}>
                     <Btn variant="secondary" onClick={() => onRepeatSession(set)} style={{ width: "100%", fontSize: T.fontSize.small }}>Repeat This Workout</Btn>
                   </div>
