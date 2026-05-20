@@ -5,7 +5,7 @@ import { DEFAULT_REST, uid, fmt, fmtDate, displayWeight, toKg, weightLabel, calc
 import { Card, Btn, ConfirmDialog, YTButton, LogoIcon } from "../components";
 import { IcPause, IcPlay, IcRepeat, IcTrophy, IcBack, IcForward, IcClose, IcEdit, IcTrash, IcCheck } from "../icons";
 import { MuscleMap } from "../MuscleMap";
-import { coachError, prompts } from "../useCoach";
+import { coachError, prompts, MODELS } from "../useCoach";
 import { useSound } from "../useSound";
 
 // ─── Recovery / Body Check Sheet ───
@@ -147,6 +147,8 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
   const [supersetFlash, setSupersetFlash] = useState(false);
   const [swapOpen, setSwapOpen] = useState(false);
   const [editingLog, setEditingLog] = useState(null); // { idx: number, weight: string, reps: string }
+  const [recoveryTip, setRecoveryTip] = useState("");
+  const [recoveryTipLoading, setRecoveryTipLoading] = useState(false);
   const intervalRef = useRef(null);
   const restRef = useRef(null);
   const mobRef = useRef(null);
@@ -189,6 +191,7 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
       setSessionData(entries);
       setCurrentIdx(0); setCurrentSetIdx(0); setTimer(0); setTimerRunning(true);
       setFinished(false); setNewPRs([]); setResting(false); setRestTimer(0); setRestDone(false);
+      setRecoveryTip(""); setRecoveryTipLoading(false);
     } else { setSessionData(null); setTimerRunning(false); }
   }, [activeSet]);
 
@@ -236,6 +239,27 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
     }
     return () => clearInterval(mobRef.current);
   }, [mobRunning]);
+
+  // Auto-fetch recovery tip on session completion
+  useEffect(() => {
+    if (!finished || !coach?.hasKey || !sessionData) return;
+    const exercises = sessionData
+      .filter(e => e.logged.length > 0)
+      .map(e => data.exercises.find(ex => ex.id === e.exerciseId)?.name)
+      .filter(Boolean);
+    if (exercises.length === 0) return;
+    const totalSets = sessionData.reduce((a, e) => a + e.logged.length, 0);
+    const totalReps = sessionData.reduce((a, e) => a + e.logged.reduce((b, s) => b + (Number(s.reps) || 0), 0), 0);
+    const totalKg = sessionData.reduce((a, e) => a + e.logged.reduce((b, s) => b + (Number(s.reps) || 0) * (Number(s.weight) || 0), 0), 0);
+    setRecoveryTipLoading(true);
+    coach.ask(
+      prompts.recoveryTip(exercises, { totalSets, totalReps, totalKg }),
+      { model: MODELS.fast, maxTokens: 200 }
+    ).then(({ text }) => {
+      if (text) setRecoveryTip(text);
+      setRecoveryTipLoading(false);
+    });
+  }, [finished]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Empty state ──
   if (!activeSet) {
@@ -316,6 +340,15 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
           </Card>
         )}
         <MuscleMap volume={sessionMuscleVol} size={110} />
+        {(recoveryTipLoading || recoveryTip) && (
+          <Card style={{ background: C.surface, border: `1px solid ${C.border}` }}>
+            <div style={{ fontSize: T.fontSize.xs, color: C.accent, fontWeight: T.fontWeight.bold, textTransform: "uppercase", letterSpacing: T.letterSpacing.label, marginBottom: T.space.base }}>Recovery Tip</div>
+            {recoveryTipLoading
+              ? <div style={{ display: "flex", alignItems: "center", gap: T.space.base, color: C.textDim, fontSize: T.fontSize.small }}><span className="t-pulse" style={{ width: 6, height: 6, borderRadius: "50%", background: C.accent, display: "inline-block", flexShrink: 0 }} />Getting your recovery tip...</div>
+              : <div style={{ fontSize: T.fontSize.bodySmall, color: C.text, lineHeight: 1.6 }}>{recoveryTip}</div>
+            }
+          </Card>
+        )}
         <Btn onClick={() => { setActiveSet(null); setTab("progress"); }} style={{ width: "100%", padding: 18 }}>View Progress</Btn>
         <Btn variant="secondary" onClick={() => setActiveSet(null)} style={{ width: "100%" }}>Done</Btn>
         <button onClick={() => setShowRecovery(true)} style={{ background: "none", border: "none", color: C.textDim, fontSize: T.fontSize.small, cursor: "pointer", padding: `${T.space.sm}px 0`, textAlign: "center" }}>Feeling pain or discomfort? →</button>
