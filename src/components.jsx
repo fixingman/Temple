@@ -30,7 +30,7 @@ export function GlobalStyles() {
   );
 }
 
-export function Tabs({ active, onChange }) {
+export function Tabs({ active, onChange, hasActiveSession }) {
   const tabs = [
     { id: "library",  Icon: IcLibrary  },
     { id: "sets",     Icon: IcSets     },
@@ -42,9 +42,15 @@ export function Tabs({ active, onChange }) {
     <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: C.surface, borderTop: `1px solid ${C.border}`, display: "flex", zIndex: T.z.tabBar, paddingBottom: "env(safe-area-inset-bottom)" }}>
       {tabs.map(t => {
         const isActive = active === t.id;
+        const showDot = t.id === "session" && hasActiveSession && !isActive;
         return (
           <motion.button key={t.id} onClick={() => onChange(t.id)} whileTap={{ scale: 0.88 }} transition={T.motion.snap} style={{ flex: 1, border: "none", background: "none", padding: "12px 0 10px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: T.space.sm, color: isActive ? C.accent : C.textDim, transition: `color ${T.transition.fast}`, position: "relative" }}>
-            <t.Icon size={T.size.tabIcon} weight={isActive ? "fill" : "bold"} />
+            <div style={{ position: "relative", display: "inline-flex" }}>
+              <t.Icon size={T.size.tabIcon} weight={isActive ? "fill" : "bold"} />
+              {showDot && (
+                <span className="t-pulse" style={{ position: "absolute", top: -2, right: -4, width: 7, height: 7, borderRadius: "50%", background: C.accent, border: `1.5px solid ${C.surface}` }} />
+              )}
+            </div>
           </motion.button>
         );
       })}

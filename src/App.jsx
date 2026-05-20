@@ -285,7 +285,7 @@ export default function Temple() {
           </div>
         </div>
 
-        <Tabs active={tab} onChange={setTab} />
+        <Tabs active={tab} onChange={setTab} hasActiveSession={!!activeSet} />
         <ErrorMonitor logs={errorMonitor.logs} onClear={errorMonitor.clear} open={errorOpen} setOpen={setErrorOpen} />
       </div>
     </ErrorBoundary>
