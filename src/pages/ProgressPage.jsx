@@ -410,7 +410,8 @@ function GapSheet({ muscleEntries, existingSets, exercises, coach, onCreateSet, 
     );
     if (err) { setError(coachError(err)); setLoading(false); return; }
     try {
-      const match = text.match(/\[[\s\S]*?\]/);
+      const cleaned = text.trim().replace(/^```json\n?/, "").replace(/\n?```$/, "");
+      const match = cleaned.match(/\[[\s\S]*\]/);
       setResults(JSON.parse(match[0]));
     } catch { setError("Could not parse suggestions. Try again."); }
     setLoading(false);
