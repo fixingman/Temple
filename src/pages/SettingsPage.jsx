@@ -270,7 +270,7 @@ export function SettingsPage({ data, save, drive }) {
       <Card>
         <div style={{ fontSize: T.fontSize.body, fontWeight: T.fontWeight.bold, marginBottom: T.space.base }}>About</div>
         <div style={{ fontSize: T.fontSize.caption, color: C.textDim, lineHeight: 1.5 }}>
-          <strong style={{ color: C.accent, display: "inline-flex", alignItems: "center", gap: 6 }}><Logo size={16} />Temple v0.9.3</strong><br />
+          <strong style={{ color: C.accent, display: "inline-flex", alignItems: "center", gap: 6 }}><Logo size={16} />Temple v1.3</strong><br />
           Your body is a temple. Train it.<br /><br />
           Built to replace subscription-gated workout apps. Free, private, all data stays on your device.
         </div>

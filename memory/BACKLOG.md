@@ -27,8 +27,6 @@ Status tags: `[shipped]` = deployed untested · `[tested]` = verified on device 
 ## Feature Backlog
 | Feature | Priority | Notes |
 |---------|----------|-------|
-| Session detail view | Medium | tap history entry → full breakdown |
-| Post-session recovery tip | Medium | prompt written, needs UI |
 | Session notes + RPE | Medium | — |
 | Superset / circuit mode | Medium | — |
 | Weekly/monthly volume charts | Medium | — |

@@ -4,16 +4,14 @@
 
 ## Where We Left Off
 ```
-Version:     v1.1.1
-Date:        2026-05-16
-Shipped:     Athletic UI overhaul (v1.1) — Phosphor icons, Framer Motion, Tone.js sound ·
-             UI polish — exercise 3-dots menu, token audit & fix ·
-             Google Drive silent reconnect — no manual re-auth each session
-Tested:      Build passes (confirm after this session)
-Next:        Test Google Drive silent reconnect on real device ·
-             Test YouTube on production ·
-             Test AI features (Anthropic key in Settings) ·
-             Session detail view · post-session recovery tip
+Version:     v1.3
+Date:        2026-06-15
+Shipped:     v1.2 — Permanent Drive auth, AI muscle map, Shorts filter, session log editing ·
+             v1.3 — Gap analysis, session detail view, post-session recovery tip,
+                    active session indicator, API key UX, Drive 401 fix
+Tested:      Not yet tested on device — all [shipped] status
+Next:        Test all v1.2/v1.3 features on real device ·
+             Session notes + RPE · Superset/circuit mode
 Open issues: Google OAuth still in testing mode (OAuth consent screen)
              YouTube may 503 on dev previews if YOUTUBE_API_KEY not set for all contexts
 ```
