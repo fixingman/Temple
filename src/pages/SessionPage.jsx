@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { T, C } from "../tokens";
 import { DEFAULT_REST, uid, fmt, fmtDate, displayWeight, toKg, weightLabel, calcCalories } from "../data";
-import { Card, Btn, ConfirmDialog, YTButton, LogoIcon } from "../components";
+import { Card, Btn, ConfirmDialog, YTButton, LogoIcon, Pulse } from "../components";
 import { IcPause, IcPlay, IcRepeat, IcTrophy, IcBack, IcForward, IcClose, IcEdit, IcTrash, IcCheck } from "../icons";
 import { MuscleMap } from "../MuscleMap";
 import { coachError, prompts, MODELS } from "../useCoach";
@@ -344,7 +344,7 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
           <Card style={{ background: C.surface, border: `1px solid ${C.border}` }}>
             <div style={{ fontSize: T.fontSize.xs, color: C.accent, fontWeight: T.fontWeight.bold, textTransform: "uppercase", letterSpacing: T.letterSpacing.label, marginBottom: T.space.base }}>Recovery Tip</div>
             {recoveryTipLoading
-              ? <div style={{ display: "flex", alignItems: "center", gap: T.space.base, color: C.textDim, fontSize: T.fontSize.small }}><span className="t-pulse" style={{ width: 6, height: 6, borderRadius: "50%", background: C.accent, display: "inline-block", flexShrink: 0 }} />Getting your recovery tip...</div>
+              ? <div style={{ display: "flex", alignItems: "center", gap: T.space.base, color: C.textDim, fontSize: T.fontSize.small }}><Pulse style={{ width: 6, height: 6, borderRadius: "50%", background: C.accent, display: "inline-block", flexShrink: 0 }} />Getting your recovery tip...</div>
               : <div style={{ fontSize: T.fontSize.bodySmall, color: C.text, lineHeight: 1.6 }}>{recoveryTip}</div>
             }
           </Card>

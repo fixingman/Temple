@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { T, C } from "../tokens";
 import { MUSCLE_GROUPS, uid } from "../data";
-import { Card, Btn, Input, ConfirmDialog, ErrorBanner, PillFilter } from "../components";
+import { Card, Btn, Input, ConfirmDialog, ErrorBanner, PillFilter, Pulse } from "../components";
 import { IcBarbell, IcCheck, IcClose, IcCaretUp, IcCaretDown, IcMore } from "../icons";
 import { useCoach, coachError, prompts, MODELS } from "../useCoach";
 
@@ -157,7 +157,7 @@ export function SetsPage({ data, save, onStartSession, coach }) {
                 {coach.hasKey && selected.length >= 2 && (
                   <div style={{ flexShrink: 0, marginLeft: T.space.base, fontSize: T.fontSize.xs, display: "flex", alignItems: "center", gap: T.space.xs }}>
                     {orderLoading
-                      ? <span style={{ color: C.accent }}><span className="t-pulse" style={{ display: "inline-block" }}>✦</span> Ordering...</span>
+                      ? <span style={{ color: C.accent }}><Pulse style={{ display: "inline-block" }}>✦</Pulse> Ordering...</span>
                       : orderError
                       ? <span style={{ color: C.danger }}>✦ {orderError}</span>
                       : lastOrderedKey

@@ -1,3 +1,7 @@
+// Single source of truth for the app version.
+// public/sw.js cache names are kept in sync by scripts/sync-version.mjs (runs on prebuild).
+export const APP_VERSION = "1.3";
+
 export const T = {
   color: {
     bg: "#000000", surface: "#111111", border: "#222222",

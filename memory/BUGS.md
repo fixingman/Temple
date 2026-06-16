@@ -1,12 +1,26 @@
 # 🟁 Temple — Bug Tracker
 
-Status: `[open]` · `[fixed]`
+Status: `[open]` · `[fixed]` · `[unverified]` (fix shipped, not yet confirmed on device)
 Severity: `[crit]` crash · `[high]` broken feature · `[med]` degraded UX · `[low]` cosmetic
+
+**Open / unverified entry format** (full detail; the compact `Fixed (vX.X)` tables below are history, leave them as-is):
+```
+### BUG-NNN [sev] — one-line title
+- **Symptom:** what the user sees
+- **Root cause:** what actually causes it
+- **Fix:** version + what changed
+- **Verify:** exact reproduction + expected result
+- **Verified fixed:** ☐
+```
+Numbering is sequential, never reused.
 
 ---
 
 ## Open
 *None currently known.*
+
+## Unverified (fix shipped, awaiting device confirmation)
+All v1.2/v1.3 fixes are shipped but untested on a real device (RULES.md "Where We Left Off"). When verifying, record each as the format above and tick **Verified fixed: ☑** once confirmed.
 
 ---
 

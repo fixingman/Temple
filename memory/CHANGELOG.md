@@ -1,6 +1,10 @@
 # 🟁 Temple — Changelog
 
 ## v1.3 (Current)
+- **Tooling**: Single `APP_VERSION` source of truth in `tokens.js` — `scripts/sync-version.mjs` rewrites sw.js cache names on `prebuild` (fixes version drift that left SettingsPage stuck at v0.9.3)
+- **Tooling**: Automated Playwright smoke test (`npm run test:smoke`) — boots the built app, visits every tab, fails on any uncaught error; catches the boot-crash class (B33–B35) that `npm run build` misses
+- **Motion**: Looping pulse moved from CSS `infinite` to a WAAPI `<Pulse>` component — no keyframe-0 flash on display toggle (mobile wake / tab switch)
+- **Accessibility**: `prefers-reduced-motion` honoured app-wide (`MotionConfig reducedMotion="user"` + reduced-motion CSS + `<Pulse>` opt-out); tab buttons given `aria-label`s
 - **Gap analysis**: AI identifies undertrained muscle groups from session history — JSON parse fix (greedy regex + markdown fence stripping)
 - **Session detail view**: Tap any history entry to expand full exercise/set breakdown
 - **Post-session recovery tip**: Auto-surfaces on workout completion screen (Sonnet for quality)

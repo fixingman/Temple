@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { T, C } from "./tokens";
 import { IcLibrary, IcSets, IcTrain, IcProgress, IcSettings, IcClose, IcBack, IcForward, IcPlay, IcVideo } from "./icons";
 
@@ -15,28 +15,50 @@ export function GlobalStyles() {
       @keyframes temple-logo-spin { 0% { transform: rotate(0deg) scale(0.8); opacity: 0; } 40% { opacity: 1; } 100% { transform: rotate(360deg) scale(1); opacity: 1; } }
       @keyframes temple-text-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
       @keyframes temple-fade-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-      @keyframes temple-pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
       @keyframes temple-scale-in { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
       @keyframes temple-slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
-      @keyframes temple-rest-pulse { 0%, 100% { box-shadow: none; } 50% { box-shadow: 0 0 0 4px ${C.accentBorder}; } }
+      /* One-shot animations only — cleared mid-flight, never looped.
+         Looping animations live in the WAAPI <Pulse> component (see below). */
       .t-fade-in { animation: temple-fade-in 0.25s cubic-bezier(0,0,0.2,1) both; }
       .t-scale-in { animation: temple-scale-in 0.2s cubic-bezier(0,0,0.2,1) both; }
       .t-slide-up { animation: temple-slide-up 0.32s cubic-bezier(0.34,1.56,0.64,1) both; }
       .t-logo-spin { animation: temple-logo-spin 0.8s cubic-bezier(0.34,1.56,0.64,1) forwards; }
       .t-text-in { animation: temple-text-in 0.4s cubic-bezier(0,0,0.2,1) both; }
-      .t-pulse { animation: temple-pulse 1.5s ease-in-out infinite; }
-      .t-rest-pulse { animation: temple-rest-pulse 1.5s ease-in-out infinite; }
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          animation-duration: 0.001ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.001ms !important;
+        }
+      }
     `}</style>
   );
 }
 
+// Looping pulse via WAAPI — survives display:none/block toggles (mobile wake, tab
+// switch) without restarting from keyframe 0, unlike a CSS `infinite` animation.
+// Gated on prefers-reduced-motion (the WAAPI object is skipped entirely when reduced).
+export function Pulse({ children, style }) {
+  const ref = useRef(null);
+  const reduce = useReducedMotion();
+  useEffect(() => {
+    if (reduce || !ref.current) return;
+    const anim = ref.current.animate(
+      [{ opacity: 0.4 }, { opacity: 1 }, { opacity: 0.4 }],
+      { duration: 1500, easing: "ease-in-out", iterations: Infinity }
+    );
+    return () => anim.cancel();
+  }, [reduce]);
+  return <span ref={ref} style={style}>{children}</span>;
+}
+
 export function Tabs({ active, onChange, hasActiveSession }) {
   const tabs = [
-    { id: "library",  Icon: IcLibrary  },
-    { id: "sets",     Icon: IcSets     },
-    { id: "session",  Icon: IcTrain    },
-    { id: "progress", Icon: IcProgress },
-    { id: "settings", Icon: IcSettings },
+    { id: "library",  Icon: IcLibrary,  label: "Library"  },
+    { id: "sets",     Icon: IcSets,     label: "Sets"     },
+    { id: "session",  Icon: IcTrain,    label: "Train"    },
+    { id: "progress", Icon: IcProgress, label: "Progress" },
+    { id: "settings", Icon: IcSettings, label: "Settings" },
   ];
   return (
     <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: C.surface, borderTop: `1px solid ${C.border}`, display: "flex", zIndex: T.z.tabBar, paddingBottom: "env(safe-area-inset-bottom)" }}>
@@ -44,11 +66,11 @@ export function Tabs({ active, onChange, hasActiveSession }) {
         const isActive = active === t.id;
         const showDot = t.id === "session" && hasActiveSession && !isActive;
         return (
-          <motion.button key={t.id} onClick={() => onChange(t.id)} whileTap={{ scale: 0.88 }} transition={T.motion.snap} style={{ flex: 1, border: "none", background: "none", padding: "12px 0 10px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: T.space.sm, color: isActive ? C.accent : C.textDim, transition: `color ${T.transition.fast}`, position: "relative" }}>
+          <motion.button key={t.id} onClick={() => onChange(t.id)} aria-label={t.label} whileTap={{ scale: 0.88 }} transition={T.motion.snap} style={{ flex: 1, border: "none", background: "none", padding: "12px 0 10px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: T.space.sm, color: isActive ? C.accent : C.textDim, transition: `color ${T.transition.fast}`, position: "relative" }}>
             <div style={{ position: "relative", display: "inline-flex" }}>
               <t.Icon size={T.size.tabIcon} weight={isActive ? "fill" : "bold"} />
               {showDot && (
-                <span className="t-pulse" style={{ position: "absolute", top: -2, right: -4, width: 7, height: 7, borderRadius: "50%", background: C.accent, border: `1.5px solid ${C.surface}` }} />
+                <Pulse style={{ position: "absolute", top: -2, right: -4, width: 7, height: 7, borderRadius: "50%", background: C.accent, border: `1.5px solid ${C.surface}` }} />
               )}
             </div>
           </motion.button>

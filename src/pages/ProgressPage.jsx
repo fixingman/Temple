@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { T, C } from "../tokens";
 import { fmtDateFull, displayWeight, weightLabel, est1RM, uid } from "../data";
-import { Card, Btn, ConfirmDialog } from "../components";
+import { Card, Btn, ConfirmDialog, Pulse } from "../components";
 import { IcTrophy, IcClose } from "../icons";
 import { MuscleMap } from "../MuscleMap";
 import { coachError, prompts } from "../useCoach";
@@ -434,7 +434,7 @@ function GapSheet({ muscleEntries, existingSets, exercises, coach, onCreateSet, 
         <div style={{ flex: 1, overflowY: "auto", padding: T.space.xl, display: "flex", flexDirection: "column", gap: T.space.xl }}>
           {loading && (
             <div style={{ textAlign: "center", padding: T.space["3xl"], color: C.textDim }}>
-              <div className="t-pulse" style={{ fontSize: T.fontSize.h2, marginBottom: T.space.lg }}>✦</div>
+              <Pulse style={{ display: "block", fontSize: T.fontSize.h2, marginBottom: T.space.lg }}>✦</Pulse>
               <div style={{ fontSize: T.fontSize.small }}>Analysing your training history...</div>
             </div>
           )}

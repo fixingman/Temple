@@ -147,13 +147,26 @@ gentle:  { type: "spring", stiffness: 250, damping: 28 }   // page / tab transit
 |---|---|---|
 | Log a set | Card enters `y:8→0, opacity:0→1` | `default` |
 | Tab switch | `opacity:0→1, y:4→0` | `gentle` |
-| Rest timer end | Pulse `scale:1→1.04→1` | CSS keyframe |
+| Loading / saving pulse | Opacity loop `0.4→1→0.4` | `<Pulse>` (WAAPI) |
 | PR achieved | Badge `scale:0→1.15→1` | `snap` |
 | Button tap | `whileTap:{ scale:0.96 }` | instant |
 | Modal/sheet open | `y:100%→0` slide-up | `gentle` |
 | Item delete | `x:0→-40, opacity:1→0` | `default` |
 
 Use `<AnimatePresence>` on all list renders so exit animations play on removal.
+
+### Looping animations → WAAPI, never CSS `infinite`
+
+**Hard rule:** any animation that loops (`iterations: Infinity`) must use WAAPI (`el.animate(...)`), not a CSS `infinite` keyframe. A CSS infinite animation restarts from keyframe 0 on every `display:none/block` repaint cycle (mobile wake, tab toggle, panel open) — a visible flash that suppress/restore cannot fix. A WAAPI timeline survives display toggles untouched.
+
+- The only looping animation in Temple is the pulse (loading/saving/active-session dots). It lives in the shared `<Pulse>` component (`src/components.jsx`) — WAAPI, gated on `useReducedMotion()`.
+- **One-shots stay CSS** (`t-fade-in`, `t-scale-in`, `t-slide-up`, `t-logo-spin`, `t-text-in`) — they clear mid-flight, never loop, so the flash never applies.
+
+### Reduced motion
+
+- App root is wrapped in `<MotionConfig reducedMotion="user">` — all Framer Motion animations collapse to instant when the OS requests reduced motion.
+- `<Pulse>` skips its WAAPI loop entirely under reduced motion.
+- `GlobalStyles` includes a `@media (prefers-reduced-motion: reduce)` block neutralizing CSS animation/transition durations.
 
 ---
 
