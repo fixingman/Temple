@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { T, C } from "../tokens";
+import { T, C, APP_VERSION } from "../tokens";
 import { DEFAULT_SETTINGS, mkDefault } from "../data";
 import { Card, Btn, ConfirmDialog, ErrorBanner, Logo } from "../components";
 import { IcCheck } from "../icons";
@@ -18,6 +18,21 @@ function ApiKeyInput({ value, onChange }) {
 
   const isSaved = value && !dirty;
 
+  if (isSaved) {
+    return (
+      <div style={{ display: "flex", gap: T.space.base, alignItems: "center" }}>
+        <div style={{ flex: 1, display: "flex", alignItems: "center", gap: T.space.base, padding: "12px 16px", background: C.accentDim, border: `1px solid ${C.accentBorder}`, borderRadius: T.radius.lg }}>
+          <IcCheck size={18} style={{ color: C.accent }} />
+          <div>
+            <div style={{ fontSize: T.fontSize.small, color: C.accent, fontWeight: T.fontWeight.semi }}>Key saved</div>
+            <div style={{ fontSize: T.fontSize.xs, color: C.textDim, fontFamily: T.font.mono }}>{value.slice(0, 10)}···{value.slice(-4)}</div>
+          </div>
+        </div>
+        <Btn variant="danger" onClick={clear}>Remove</Btn>
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: T.space.base }}>
       <div style={{ display: "flex", gap: T.space.base }}>
@@ -26,29 +41,13 @@ function ApiKeyInput({ value, onChange }) {
           value={draft}
           onChange={e => setDraft(e.target.value)}
           name="api-key" placeholder="sk-ant-..."
-          style={{ flex: 1, background: C.bg, border: `1px solid ${isSaved ? C.accentBorder : draft ? C.border : C.border}`, borderRadius: T.radius.lg, padding: "10px 12px", color: C.text, fontSize: T.fontSize.h3, outline: "none", fontFamily: T.font.mono, transition: `border-color ${T.transition.fast}` }}
+          style={{ flex: 1, background: C.bg, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: "10px 12px", color: C.text, fontSize: T.fontSize.h3, outline: "none", fontFamily: T.font.mono, transition: `border-color ${T.transition.fast}` }}
         />
         <button onClick={() => setShow(s => !s)} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, color: C.textDim, cursor: "pointer", padding: "10px 12px", fontSize: T.fontSize.small, flexShrink: 0 }}>{show ? "Hide" : "Show"}</button>
       </div>
-
-      {isSaved ? (
-        /* Key is saved and unchanged — show confirmation state */
-        <div style={{ display: "flex", gap: T.space.base, alignItems: "center" }}>
-          <div style={{ flex: 1, display: "flex", alignItems: "center", gap: T.space.base, padding: "12px 16px", background: C.accentDim, border: `1px solid ${C.accentBorder}`, borderRadius: T.radius.lg }}>
-            <IcCheck size={18} style={{ color: C.accent }} />
-            <div>
-              <div style={{ fontSize: T.fontSize.small, color: C.accent, fontWeight: T.fontWeight.semi }}>Key saved</div>
-              <div style={{ fontSize: T.fontSize.xs, color: C.textDim, fontFamily: T.font.mono }}>{value.slice(0, 10)}···{value.slice(-4)}</div>
-            </div>
-          </div>
-          <Btn variant="danger" onClick={clear}>Remove</Btn>
-        </div>
-      ) : (
-        /* Unsaved or dirty — show save button */
-        <Btn onClick={save} disabled={!dirty || !draft.trim()} style={{ width: "100%" }}>
-          Save Key
-        </Btn>
-      )}
+      <Btn onClick={save} disabled={!draft.trim()} style={{ width: "100%" }}>
+        Save Key
+      </Btn>
     </div>
   );
 }
@@ -183,7 +182,7 @@ export function SettingsPage({ data, save, drive }) {
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: T.space.base }}>
             {/* Connected user */}
-            <div style={{ display: "flex", alignItems: "center", gap: T.space.lg, padding: "12px 14px", background: drive.connected ? C.accentDim : C.surface, borderRadius: T.radius.lg, border: `1px solid ${drive.connected ? C.accentBorder : C.border}`, opacity: drive.connected ? 1 : 0.7 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: T.space.lg, padding: "12px 14px", background: C.accentDim, borderRadius: T.radius.lg, border: `1px solid ${C.accentBorder}` }}>
               {drive.user.picture
                 ? <img src={drive.user.picture} alt="" style={{ width: 36, height: 36, borderRadius: "50%", flexShrink: 0 }} />
                 : <div style={{ width: 36, height: 36, borderRadius: "50%", background: drive.connected ? C.accent : C.textDim, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: T.fontSize.body, fontWeight: T.fontWeight.bold, color: C.bg }}>
@@ -193,8 +192,7 @@ export function SettingsPage({ data, save, drive }) {
               <div style={{ flex: 1, minWidth: 0 }}>
                 {drive.user.name && <div style={{ fontSize: T.fontSize.bodySmall, fontWeight: T.fontWeight.bold, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{drive.user.name}</div>}
                 {drive.user.email && <div style={{ fontSize: T.fontSize.xs, color: C.textDim, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{drive.user.email}</div>}
-                {!drive.user.name && !drive.user.email && <div style={{ fontSize: T.fontSize.bodySmall, color: drive.connected ? C.accent : C.textDim, fontWeight: T.fontWeight.semi }}>{drive.connected ? "Google Drive connected" : "Google Drive"}</div>}
-                {!drive.connected && <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: T.space.xs }}>Authorization required</div>}
+                {!drive.user.name && !drive.user.email && <div style={{ fontSize: T.fontSize.bodySmall, color: C.accent, fontWeight: T.fontWeight.semi }}>Google Drive connected</div>}
               </div>
             </div>
 
@@ -202,20 +200,14 @@ export function SettingsPage({ data, save, drive }) {
               <div style={{ fontSize: T.fontSize.xs, color: C.textDim }}>Last backup: {drive.lastSync.toLocaleString()}</div>
             )}
 
-            {drive.connected ? (
-              <div style={{ display: "flex", gap: T.space.base }}>
-                <Btn onClick={() => drive.backup(data)} disabled={driveBusy} style={{ flex: 1 }}>
-                  {drive.status === "syncing" ? "Saving..." : "Back Up Now"}
-                </Btn>
-                <Btn variant="secondary" onClick={() => setConfirmRestore(true)} disabled={driveBusy} style={{ flex: 1 }}>
-                  Restore
-                </Btn>
-              </div>
-            ) : (
-              <Btn onClick={drive.signIn} disabled={driveBusy} style={{ width: "100%" }}>
-                {driveBusy ? "Signing in..." : "Authorize to Back Up"}
+            <div style={{ display: "flex", gap: T.space.base }}>
+              <Btn onClick={() => drive.backup(data)} disabled={driveBusy} style={{ flex: 1 }}>
+                {drive.status === "syncing" ? "Saving..." : "Back Up Now"}
               </Btn>
-            )}
+              <Btn variant="secondary" onClick={() => setConfirmRestore(true)} disabled={driveBusy} style={{ flex: 1 }}>
+                Restore
+              </Btn>
+            </div>
 
             <Btn variant="danger" onClick={drive.signOut} style={{ width: "100%" }}>
               Disconnect Google Drive
@@ -278,7 +270,7 @@ export function SettingsPage({ data, save, drive }) {
       <Card>
         <div style={{ fontSize: T.fontSize.body, fontWeight: T.fontWeight.bold, marginBottom: T.space.base }}>About</div>
         <div style={{ fontSize: T.fontSize.caption, color: C.textDim, lineHeight: 1.5 }}>
-          <strong style={{ color: C.accent, display: "inline-flex", alignItems: "center", gap: 6 }}><Logo size={16} />Temple v0.9.3</strong><br />
+          <strong style={{ color: C.accent, display: "inline-flex", alignItems: "center", gap: 6 }}><Logo size={16} />Temple v{APP_VERSION}</strong><br />
           Your body is a temple. Train it.<br /><br />
           Built to replace subscription-gated workout apps. Free, private, all data stays on your device.
         </div>

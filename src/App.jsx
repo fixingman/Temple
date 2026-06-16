@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, MotionConfig } from "framer-motion";
 import { T, C } from "./tokens";
 import { uid } from "./data";
 import { useAppData, usePWA } from "./hooks";
 import { useGoogleDrive } from "./useGoogleDrive";
 import { useCoach } from "./useCoach";
-import { GlobalStyles, Tabs, InstallBanner, Logo, LogoIcon } from "./components";
+import { GlobalStyles, Tabs, InstallBanner, Logo, LogoIcon, Pulse } from "./components";
 import { LibraryPage } from "./pages/LibraryPage";
 import { SetsPage } from "./pages/SetsPage";
 import { SessionPage } from "./pages/SessionPage";
@@ -207,6 +207,7 @@ export default function Temple() {
   );
 
   return (
+    <MotionConfig reducedMotion="user">
     <ErrorBoundary>
       <GlobalStyles />
       <div
@@ -263,7 +264,7 @@ export default function Temple() {
             <ErrorDot logs={errorMonitor.logs} onClick={() => setErrorOpen(o => !o)} />
             {saving && (
               <div style={{ position: "fixed", top: "calc(env(safe-area-inset-top) + 8px)", right: T.space.xl, zIndex: T.z.header }}>
-                <div className="t-pulse" style={{ width: 6, height: 6, borderRadius: "50%", background: C.accent }} />
+                <Pulse style={{ display: "block", width: 6, height: 6, borderRadius: "50%", background: C.accent }} />
               </div>
             )}
             {pwa.canInstall && <div style={{ marginBottom: T.space.xl }}><InstallBanner onInstall={pwa.install} onDismiss={pwa.dismiss} /></div>}
@@ -275,7 +276,7 @@ export default function Temple() {
                 exit={{ opacity: 0, y: -4 }}
                 transition={T.motion.gentle}
               >
-                {tab === "library" && <LibraryPage data={data} save={save} />}
+                {tab === "library" && <LibraryPage data={data} save={save} coach={coach} />}
                 {tab === "sets" && <SetsPage data={data} save={save} onStartSession={handleStartSession} coach={coach} />}
                 {tab === "session" && <SessionPage data={data} save={save} activeSet={activeSet} setActiveSet={setActiveSet} setTab={setTab} coach={coach} />}
                 {tab === "progress" && <Suspense fallback={<div style={{ padding: T.space["3xl"], textAlign: "center", color: C.textDim }}>Loading...</div>}><ProgressPage data={data} save={save} onRepeatSession={handleStartSession} coach={coach} /></Suspense>}
@@ -285,9 +286,10 @@ export default function Temple() {
           </div>
         </div>
 
-        <Tabs active={tab} onChange={setTab} />
+        <Tabs active={tab} onChange={setTab} hasActiveSession={!!activeSet} />
         <ErrorMonitor logs={errorMonitor.logs} onClear={errorMonitor.clear} open={errorOpen} setOpen={setErrorOpen} />
       </div>
     </ErrorBoundary>
+    </MotionConfig>
   );
 }

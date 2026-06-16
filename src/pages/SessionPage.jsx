@@ -2,10 +2,10 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { T, C } from "../tokens";
 import { DEFAULT_REST, uid, fmt, fmtDate, displayWeight, toKg, weightLabel, calcCalories } from "../data";
-import { Card, Btn, ConfirmDialog, YTButton, LogoIcon } from "../components";
-import { IcPause, IcPlay, IcRepeat, IcTrophy, IcBack, IcForward, IcClose } from "../icons";
+import { Card, Btn, ConfirmDialog, YTButton, LogoIcon, Pulse } from "../components";
+import { IcPause, IcPlay, IcRepeat, IcTrophy, IcBack, IcForward, IcClose, IcEdit, IcTrash, IcCheck } from "../icons";
 import { MuscleMap } from "../MuscleMap";
-import { coachError, prompts } from "../useCoach";
+import { coachError, prompts, MODELS } from "../useCoach";
 import { useSound } from "../useSound";
 
 // ─── Recovery / Body Check Sheet ───
@@ -146,6 +146,9 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
   const [mobRunning, setMobRunning] = useState(false);
   const [supersetFlash, setSupersetFlash] = useState(false);
   const [swapOpen, setSwapOpen] = useState(false);
+  const [editingLog, setEditingLog] = useState(null); // { idx: number, weight: string, reps: string }
+  const [recoveryTip, setRecoveryTip] = useState("");
+  const [recoveryTipLoading, setRecoveryTipLoading] = useState(false);
   const intervalRef = useRef(null);
   const restRef = useRef(null);
   const mobRef = useRef(null);
@@ -188,6 +191,7 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
       setSessionData(entries);
       setCurrentIdx(0); setCurrentSetIdx(0); setTimer(0); setTimerRunning(true);
       setFinished(false); setNewPRs([]); setResting(false); setRestTimer(0); setRestDone(false);
+      setRecoveryTip(""); setRecoveryTipLoading(false);
     } else { setSessionData(null); setTimerRunning(false); }
   }, [activeSet]);
 
@@ -235,6 +239,27 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
     }
     return () => clearInterval(mobRef.current);
   }, [mobRunning]);
+
+  // Auto-fetch recovery tip on session completion
+  useEffect(() => {
+    if (!finished || !coach?.hasKey || !sessionData) return;
+    const exercises = sessionData
+      .filter(e => e.logged.length > 0)
+      .map(e => data.exercises.find(ex => ex.id === e.exerciseId)?.name)
+      .filter(Boolean);
+    if (exercises.length === 0) return;
+    const totalSets = sessionData.reduce((a, e) => a + e.logged.length, 0);
+    const totalReps = sessionData.reduce((a, e) => a + e.logged.reduce((b, s) => b + (Number(s.reps) || 0), 0), 0);
+    const totalKg = sessionData.reduce((a, e) => a + e.logged.reduce((b, s) => b + (Number(s.reps) || 0) * (Number(s.weight) || 0), 0), 0);
+    setRecoveryTipLoading(true);
+    coach.ask(
+      prompts.recoveryTip(exercises, { totalSets, totalReps, totalKg }),
+      { model: MODELS.smart, maxTokens: 200 }
+    ).then(({ text }) => {
+      if (text) setRecoveryTip(text);
+      setRecoveryTipLoading(false);
+    });
+  }, [finished]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Empty state ──
   if (!activeSet) {
@@ -315,6 +340,15 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
           </Card>
         )}
         <MuscleMap volume={sessionMuscleVol} size={110} />
+        {(recoveryTipLoading || recoveryTip) && (
+          <Card style={{ background: C.surface, border: `1px solid ${C.border}` }}>
+            <div style={{ fontSize: T.fontSize.xs, color: C.accent, fontWeight: T.fontWeight.bold, textTransform: "uppercase", letterSpacing: T.letterSpacing.label, marginBottom: T.space.base }}>Recovery Tip</div>
+            {recoveryTipLoading
+              ? <div style={{ display: "flex", alignItems: "center", gap: T.space.base, color: C.textDim, fontSize: T.fontSize.small }}><Pulse style={{ width: 6, height: 6, borderRadius: "50%", background: C.accent, display: "inline-block", flexShrink: 0 }} />Getting your recovery tip...</div>
+              : <div style={{ fontSize: T.fontSize.bodySmall, color: C.text, lineHeight: 1.6 }}>{recoveryTip}</div>
+            }
+          </Card>
+        )}
         <Btn onClick={() => { setActiveSet(null); setTab("progress"); }} style={{ width: "100%", padding: 18 }}>View Progress</Btn>
         <Btn variant="secondary" onClick={() => setActiveSet(null)} style={{ width: "100%" }}>Done</Btn>
         <button onClick={() => setShowRecovery(true)} style={{ background: "none", border: "none", color: C.textDim, fontSize: T.fontSize.small, cursor: "pointer", padding: `${T.space.sm}px 0`, textAlign: "center" }}>Feeling pain or discomfort? →</button>
@@ -335,12 +369,13 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
     : { weight: entry.logged.length > 0 ? String(entry.logged[entry.logged.length - 1].weight) : "", reps: entry.logged.length > 0 ? String(entry.logged[entry.logged.length - 1].reps) : "" };
 
   const updateCurrentSet = (field, val) => {
-    if (val !== "" && (isNaN(Number(val)) || Number(val) < 0)) return;
+    const v = field === "weight" ? val.replace(",", ".") : val;
+    if (v !== "" && (isNaN(Number(v)) || Number(v) < 0)) return;
     const nd = [...sessionData];
     if (currentSetIdx < entry.sets.length) {
-      nd[currentIdx] = { ...nd[currentIdx], sets: nd[currentIdx].sets.map((s, i) => i === currentSetIdx ? { ...s, [field]: val } : s) };
+      nd[currentIdx] = { ...nd[currentIdx], sets: nd[currentIdx].sets.map((s, i) => i === currentSetIdx ? { ...s, [field]: v } : s) };
     } else {
-      const newSets = [...nd[currentIdx].sets, { ...currentSet, [field]: val }];
+      const newSets = [...nd[currentIdx].sets, { ...currentSet, [field]: v }];
       nd[currentIdx] = { ...nd[currentIdx], sets: newSets };
     }
     setSessionData(nd);
@@ -383,7 +418,7 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
       setCurrentIdx(i => i + 1);
       setCurrentSetIdx(0);
       setResting(false); setRestTimer(0); setRestDone(false);
-      setMobCountdown(null); setMobRunning(false);
+      setMobCountdown(null); setMobRunning(false); setEditingLog(null);
     }
   };
 
@@ -525,19 +560,70 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
           <div style={{ marginBottom: T.space.xl }}>
             <div style={{ fontSize: T.fontSize.xs, color: C.textDim, fontWeight: T.fontWeight.bold, textTransform: "uppercase", letterSpacing: T.letterSpacing.label, marginBottom: T.space.base }}>Completed</div>
             <AnimatePresence initial={false}>
-              {entry.logged.map((s, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={T.motion.default}
-                  style={{ display: "flex", gap: T.space.xl, padding: "8px 0", borderBottom: `1px solid ${C.border}`, fontSize: T.fontSize.bodySmall, alignItems: "center" }}
-                >
-                  <span style={{ color: C.accent, fontWeight: T.fontWeight.bold, width: 28, fontFamily: T.font.mono }}>#{i + 1}</span>
-                  <span style={{ color: C.text, fontWeight: T.fontWeight.semi }}>{isBodyweight || isMobility ? `${s.reps} ${isMobility ? "sec" : "reps"}` : `${s.weight} ${wl} × ${s.reps}`}</span>
-                  {!isBodyweight && !isMobility && <span style={{ color: C.textDim, marginLeft: "auto", fontFamily: T.font.mono, fontSize: T.fontSize.xs }}>{s.weight * s.reps} {wl}</span>}
-                </motion.div>
-              ))}
+              {entry.logged.map((s, i) => {
+                const isEditingThis = editingLog?.idx === i;
+                return (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={T.motion.default}
+                    style={{ display: "flex", gap: T.space.base, padding: "8px 0", borderBottom: `1px solid ${C.border}`, fontSize: T.fontSize.bodySmall, alignItems: "center" }}
+                  >
+                    <span style={{ color: C.accent, fontWeight: T.fontWeight.bold, width: 28, fontFamily: T.font.mono, flexShrink: 0 }}>#{i + 1}</span>
+                    {isEditingThis ? (
+                      <>
+                        {!isBodyweight && !isMobility && (
+                          <input
+                            type="text" inputMode="decimal"
+                            value={editingLog.weight}
+                            onChange={e => { const v = e.target.value.replace(",", "."); if (v === "" || (!isNaN(Number(v)) && Number(v) >= 0)) setEditingLog(el => ({ ...el, weight: v })); }}
+                            style={{ width: 60, background: C.inputBg, border: `1px solid ${C.accent}`, borderRadius: T.radius.md, padding: "4px 8px", color: C.text, fontSize: T.fontSize.bodySmall, fontFamily: T.font.mono, textAlign: "center", outline: "none" }}
+                          />
+                        )}
+                        <input
+                          type="text" inputMode="numeric"
+                          value={editingLog.reps}
+                          onChange={e => { const v = e.target.value; if (v === "" || (/^\d+$/.test(v) && Number(v) >= 0)) setEditingLog(el => ({ ...el, reps: v })); }}
+                          style={{ width: 48, background: C.inputBg, border: `1px solid ${C.accent}`, borderRadius: T.radius.md, padding: "4px 8px", color: C.text, fontSize: T.fontSize.bodySmall, fontFamily: T.font.mono, textAlign: "center", outline: "none" }}
+                        />
+                        <button onClick={() => {
+                          const w = Number(editingLog.weight);
+                          const r = Number(editingLog.reps);
+                          if (!r || r <= 0) return;
+                          if (!isBodyweight && !isMobility && (!w || w <= 0)) return;
+                          const nd = [...sessionData];
+                          nd[currentIdx] = { ...nd[currentIdx], logged: nd[currentIdx].logged.map((l, li) => li === i ? { weight: w, reps: r } : l) };
+                          setSessionData(nd);
+                          setEditingLog(null);
+                        }} style={{ background: "none", border: "none", color: C.accent, cursor: "pointer", padding: 4, display: "flex", alignItems: "center" }}>
+                          <IcCheck size={16} />
+                        </button>
+                        <button onClick={() => setEditingLog(null)} style={{ background: "none", border: "none", color: C.textDim, cursor: "pointer", padding: 4, display: "flex", alignItems: "center" }}>
+                          <IcClose size={16} />
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <span style={{ color: C.text, fontWeight: T.fontWeight.semi, flex: 1 }}>{isBodyweight || isMobility ? `${s.reps} ${isMobility ? "sec" : "reps"}` : `${s.weight} ${wl} × ${s.reps}`}</span>
+                        {!isBodyweight && !isMobility && <span style={{ color: C.textDim, fontFamily: T.font.mono, fontSize: T.fontSize.xs }}>{s.weight * s.reps} {wl}</span>}
+                        <button onClick={() => setEditingLog({ idx: i, weight: String(s.weight), reps: String(s.reps) })} style={{ background: "none", border: "none", color: C.textDim, cursor: "pointer", padding: 4, display: "flex", alignItems: "center" }}>
+                          <IcEdit size={14} />
+                        </button>
+                        <button onClick={() => {
+                          const nd = [...sessionData];
+                          nd[currentIdx] = { ...nd[currentIdx], logged: nd[currentIdx].logged.filter((_, li) => li !== i) };
+                          setSessionData(nd);
+                          setCurrentSetIdx(prev => Math.max(0, prev - 1));
+                          setEditingLog(null);
+                        }} style={{ background: "none", border: "none", color: C.textDim, cursor: "pointer", padding: 4, display: "flex", alignItems: "center" }}>
+                          <IcTrash size={14} />
+                        </button>
+                      </>
+                    )}
+                  </motion.div>
+                );
+              })}
             </AnimatePresence>
           </div>
         )}
@@ -627,7 +713,7 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
                 {!isBodyweight && (
                   <div style={{ flex: 1 }}>
                     <label style={{ fontSize: T.fontSize.xs, color: C.textDim, fontWeight: T.fontWeight.bold, textTransform: "uppercase", letterSpacing: T.letterSpacing.label, marginBottom: T.space.sm, display: "block" }}>Weight ({wl})</label>
-                    <input name="set-weight" type="number" inputMode="decimal" min="0" value={currentSet.weight} onChange={e => updateCurrentSet("weight", e.target.value)} placeholder="0"
+                    <input name="set-weight" type="text" inputMode="decimal" value={currentSet.weight} onChange={e => updateCurrentSet("weight", e.target.value)} placeholder="0"
                       style={{ background: C.inputBg, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: "16px 12px", color: C.text, fontSize: T.fontSize.stat, fontWeight: T.fontWeight.bold, fontFamily: T.font.mono, outline: "none", width: "100%", boxSizing: "border-box", textAlign: "center", letterSpacing: T.letterSpacing.tight }} />
                   </div>
                 )}
@@ -667,7 +753,7 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
 
       {/* Exercise Navigation */}
       <div style={{ display: "flex", gap: T.space.base }}>
-        <Btn variant="ghost" onClick={() => { setCurrentIdx(i => Math.max(0, i - 1)); setCurrentSetIdx(0); setResting(false); setRestTimer(0); }} disabled={currentIdx === 0} style={{ flex: 1, padding: 16, opacity: currentIdx === 0 ? T.opacity.disabled : 1 }}>Prev</Btn>
+        <Btn variant="ghost" onClick={() => { setCurrentIdx(i => Math.max(0, i - 1)); setCurrentSetIdx(0); setResting(false); setRestTimer(0); setEditingLog(null); }} disabled={currentIdx === 0} style={{ flex: 1, padding: 16, opacity: currentIdx === 0 ? T.opacity.disabled : 1 }}>Prev</Btn>
         {isLastExercise ? (
           <Btn onClick={finishSession} disabled={sessionData.every(e => e.logged.length === 0)} style={{ flex: 2, padding: 16, fontSize: T.fontSize.body }}>Finish Workout</Btn>
         ) : (

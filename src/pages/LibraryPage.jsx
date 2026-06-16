@@ -1,9 +1,29 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { T, C } from "../tokens";
 import { MUSCLE_GROUPS, MUSCLE_GROUPS_NO_ALL, EQUIPMENT_TYPES, CATEGORY_TYPES, uid } from "../data";
 import { Card, Btn, Input, ConfirmDialog, ErrorBanner, PillFilter, YTButton } from "../components";
 import { IcPlus, IcMore } from "../icons";
 import { MuscleMap } from "../MuscleMap";
+import { prompts, MODELS } from "../useCoach";
+
+const VALID_MUSCLES = ["Chest", "Back", "Shoulders", "Legs", "Arms", "Core", "Glutes"];
+
+async function analyzeExercise(coach, ex) {
+  if (!coach?.hasKey) return null;
+  const { text, error } = await coach.ask(
+    prompts.muscleAnalysis(ex.name, ex.equipment || "weighted", ex.category || "strength"),
+    { model: MODELS.fast, maxTokens: 100 }
+  );
+  if (error || !text) return null;
+  try {
+    const cleaned = text.trim().replace(/^```json\n?/, "").replace(/\n?```$/, "");
+    const parsed = JSON.parse(cleaned);
+    return {
+      primary:   (parsed.primary   || []).filter(m => VALID_MUSCLES.includes(m)),
+      secondary: (parsed.secondary || []).filter(m => VALID_MUSCLES.includes(m)),
+    };
+  } catch { return null; }
+}
 
 function FilterBar({ muscle, onMuscle, equipment, onEquipment, category, onCategory, small }) {
   const pillStyle = (active) => ({
@@ -52,7 +72,7 @@ function FilterBar({ muscle, onMuscle, equipment, onEquipment, category, onCateg
 const labelStyle = { fontSize: T.fontSize.small, color: C.textDim, fontWeight: T.fontWeight.bold, textTransform: "uppercase", letterSpacing: T.letterSpacing.label, marginBottom: T.space.base, display: "block" };
 const toggleBtnStyle = (active) => ({ flex: 1, border: `1px solid ${active ? C.accentBorder : C.border}`, borderRadius: T.radius.lg, padding: "8px 0", fontSize: T.fontSize.xs, fontWeight: T.fontWeight.bold, letterSpacing: T.letterSpacing.label, textTransform: "uppercase", cursor: "pointer", background: active ? C.accentDim : "transparent", color: active ? C.accent : C.textDim, transition: `background ${T.transition.fast}, color ${T.transition.fast}, border-color ${T.transition.fast}` });
 
-export function LibraryPage({ data, save }) {
+export function LibraryPage({ data, save, coach }) {
   const [filter, setFilter] = useState("All");
   const [eqFilter, setEqFilter] = useState(null);
   const [catFilter, setCatFilter] = useState(null);
@@ -66,6 +86,36 @@ export function LibraryPage({ data, save }) {
   const [error, setError] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [expandedEx, setExpandedEx] = useState(null);
+
+  const dataRef = useRef(data);
+  useEffect(() => { dataRef.current = data; }, [data]);
+
+  const batchRunning = useRef(false);
+  useEffect(() => {
+    if (!coach?.hasKey) return;
+    if (batchRunning.current) return;
+    const unchecked = data.exercises.filter(e => !e.aiChecked);
+    if (unchecked.length === 0) return;
+    batchRunning.current = true;
+    let mounted = true;
+    (async () => {
+      for (const ex of unchecked) {
+        if (!mounted) break;
+        const muscles = await analyzeExercise(coach, ex);
+        if (muscles) {
+          const latest = dataRef.current;
+          await save({
+            ...latest,
+            exercises: latest.exercises.map(e =>
+              e.id === ex.id ? { ...e, muscles, aiChecked: true } : e
+            ),
+          });
+        }
+      }
+      batchRunning.current = false;
+    })();
+    return () => { mounted = false; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filtered = data.exercises.filter(e => {
     if (filter !== "All" && e.muscle !== filter) return false;
@@ -82,13 +132,22 @@ export function LibraryPage({ data, save }) {
   const saveExercise = () => {
     if (!exName.trim()) { setError("Give the exercise a name."); return; }
     const ytQuery = exYt.trim() || exName.trim().toLowerCase().replace(/\s+/g, "+") + "+form";
+    let savedEx;
     if (editing === "new") {
-      const ex = { id: "ex_" + uid(), name: exName.trim(), muscle: exMuscle, equipment: exEquipment, category: exCategory, yt: ytQuery };
-      save({ ...data, exercises: [...data.exercises, ex] });
+      savedEx = { id: "ex_" + uid(), name: exName.trim(), muscle: exMuscle, equipment: exEquipment, category: exCategory, yt: ytQuery };
+      save({ ...data, exercises: [...data.exercises, savedEx] });
     } else {
-      save({ ...data, exercises: data.exercises.map(e => e.id === editing.id ? { ...e, name: exName.trim(), muscle: exMuscle, equipment: exEquipment, category: exCategory, yt: ytQuery } : e) });
+      savedEx = { ...editing, name: exName.trim(), muscle: exMuscle, equipment: exEquipment, category: exCategory, yt: ytQuery };
+      save({ ...data, exercises: data.exercises.map(e => e.id === editing.id ? savedEx : e) });
     }
     setEditing(null);
+    if (coach?.hasKey) {
+      analyzeExercise(coach, savedEx).then(muscles => {
+        if (!muscles) return;
+        const latest = dataRef.current;
+        save({ ...latest, exercises: latest.exercises.map(e => e.id === savedEx.id ? { ...e, muscles, aiChecked: true } : e) });
+      });
+    }
   };
 
   const deleteExercise = (id) => {
@@ -177,7 +236,7 @@ export function LibraryPage({ data, save }) {
               </div>
               {expanded && (
                 <div className="t-fade-in" style={{ display: "flex", flexDirection: "column", gap: T.space.lg, marginTop: T.space.lg }}>
-                  <MuscleMap highlighted={ex.muscle} size={80} />
+                  <MuscleMap muscles={ex.muscles} highlighted={ex.muscle} size={80} />
                   <div style={{ display: "flex", gap: T.space.base }}>
                     <Btn variant="secondary" onClick={() => { startEdit(ex); setExpandedEx(null); }} style={{ flex: 1 }}>Edit</Btn>
                     <Btn variant="danger" onClick={() => { setConfirmDelete(ex.id); setExpandedEx(null); }} style={{ flex: 1 }}>Delete</Btn>

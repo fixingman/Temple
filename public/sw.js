@@ -1,5 +1,5 @@
-const CACHE = 'temple-v1.1.1';
-const ASSETS_CACHE = 'temple-assets-v1.1.1';
+const CACHE = 'temple-v1.3';
+const ASSETS_CACHE = 'temple-assets-v1.3';
 
 self.addEventListener('install', (e) => {
   e.waitUntil(

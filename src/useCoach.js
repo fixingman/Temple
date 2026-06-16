@@ -155,4 +155,17 @@ Respond with these sections:
 
 End with one line: this is general guidance, not medical advice.`;
   },
+
+  muscleAnalysis: (name, equipment, category) =>
+    `Classify the exercise "${name}" (equipment: ${equipment}, type: ${category}) by muscle groups.
+
+Valid groups (use ONLY these exact strings): Chest, Back, Shoulders, Legs, Arms, Core, Glutes
+
+Return ONLY a JSON object, no explanation:
+{"primary": ["..."], "secondary": ["..."]}
+
+Rules:
+- primary: main movers, 1–3 groups
+- secondary: stabilizers/synergists, 0–3 groups, can be empty array
+- A muscle cannot appear in both lists`,
 };

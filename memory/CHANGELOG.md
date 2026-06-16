@@ -1,6 +1,26 @@
 # 🟁 Temple — Changelog
 
-## v1.1.1 (Current)
+## v1.3 (Current)
+- **Tooling**: Single `APP_VERSION` source of truth in `tokens.js` — `scripts/sync-version.mjs` rewrites sw.js cache names on `prebuild` (fixes version drift that left SettingsPage stuck at v0.9.3)
+- **Tooling**: Automated Playwright smoke test (`npm run test:smoke`) — boots the built app, visits every tab, fails on any uncaught error; catches the boot-crash class (B33–B35) that `npm run build` misses
+- **Motion**: Looping pulse moved from CSS `infinite` to a WAAPI `<Pulse>` component — no keyframe-0 flash on display toggle (mobile wake / tab switch)
+- **Accessibility**: `prefers-reduced-motion` honoured app-wide (`MotionConfig reducedMotion="user"` + reduced-motion CSS + `<Pulse>` opt-out); tab buttons given `aria-label`s
+- **Gap analysis**: AI identifies undertrained muscle groups from session history — JSON parse fix (greedy regex + markdown fence stripping)
+- **Session detail view**: Tap any history entry to expand full exercise/set breakdown
+- **Post-session recovery tip**: Auto-surfaces on workout completion screen (Sonnet for quality)
+- **Active session indicator**: Pulsing dot on session tab while workout is in progress
+- **API key UX**: Key input hidden after save — shows preview + Remove button only
+- **Bug fix**: Google Drive userinfo 401 — added `openid profile email` to OAuth scope
+- **SW cache**: Bumped to `temple-v1.3`
+
+## v1.2
+- **Google Drive**: Permanent auth via refresh tokens — no re-auth needed across sessions
+- **AI muscle map**: Body diagram highlights trained muscles from recent sessions
+- **YouTube**: Shorts filter — exclude short-form videos from workout search results
+- **Session editing**: Edit/delete logged sets within a session
+- **SW cache**: Bumped to `temple-v1.2`
+
+## v1.1.1
 - **Google Drive**: Silent token reconnect on app open — no manual "Connect" needed each session when token is expired but Google account session is still active
 - **UI polish**: Exercise 3-dots menu (edit/delete behind per-card toggle), token audit & fix
 - **SW cache**: Bumped to `temple-v1.1.1`

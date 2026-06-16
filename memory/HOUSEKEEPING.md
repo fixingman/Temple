@@ -2,6 +2,19 @@
 
 Run before every deploy. Update Last Run when done.
 
+## Before every commit
+- [ ] `npm run build` — zero errors (auto-syncs sw.js version via `scripts/sync-version.mjs`)
+- [ ] `npm run test:smoke` — Playwright boot test passes (catches render/boot crashes the build misses)
+- [ ] No debug `console.log` left in · no hardcoded test values
+- [ ] `APP_VERSION` in `src/tokens.js` matches CHANGELOG top entry
+
+## Per-version checklist (every version ship, not just session end)
+1. Bump `APP_VERSION` in `src/tokens.js` (sw.js cache names auto-sync on build)
+2. Add entry to `memory/CHANGELOG.md`
+3. Update affected memory docs — ask: "Does this change documented behavior?"
+4. `npm run build` + `npm run test:smoke` before committing
+5. Update RULES.md "Where We Left Off"
+
 ## Checklist
 
 **Syntax:** No bare `catch{}` · default export present · no duplicate exercise IDs · SW cache names match app version · no unused imports · no useState after early returns
@@ -27,6 +40,10 @@ Run before every deploy. Update Last Run when done.
 
 ## Smoke Tests
 
+**Automated (`npm run test:smoke`, ~5s):** Playwright boots the built app and visits every tab, failing on any uncaught page error or `console.error`. Catches the boot-crash class (missing imports, TDZ — bugs B33/B34/B35) that `npm run build` passes straight through. Hermetic: all external network blocked. See `tests/smoke.spec.js`. Run before every commit touching `src/`.
+
+**Manual (device, the table below):** the automated test does not log a real set or exercise device-specific behavior (iOS zoom, Drive auth, YouTube). Run these by hand before a release.
+
 | # | Scenario | Steps | Expected |
 |---|----------|-------|----------|
 | S1 | **Weighted set** | Sets → Train → weight + reps → Log Set | Logs · rest timer starts |
@@ -49,3 +66,9 @@ Run before every deploy. Update Last Run when done.
 - **Date**: 2026-05-11
 - **Smoke tests**: Not run
 - **Code checks**: B27–B29 fixed · ASSETS_CACHE bumped · recovery.js removed · all pages split · build clean
+
+## Last Run (2026-06-16 — standards adoption)
+- **Automated smoke test**: ✅ passing (Playwright boot test added — visits all 5 tabs, asserts no page errors; verified it fails on an injected render crash)
+- **Build**: clean · prebuild version-sync confirmed
+- **Changes**: single `APP_VERSION` source · WAAPI `<Pulse>` replaces CSS infinite pulse · `prefers-reduced-motion` gating · tab `aria-label`s · Performance-audit.md added
+- **Manual device smoke tests (S1–S10)**: Still not run — needs a real device pass for v1.2/v1.3 features

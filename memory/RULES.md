@@ -4,16 +4,17 @@
 
 ## Where We Left Off
 ```
-Version:     v1.1.1
-Date:        2026-05-16
-Shipped:     Athletic UI overhaul (v1.1) — Phosphor icons, Framer Motion, Tone.js sound ·
-             UI polish — exercise 3-dots menu, token audit & fix ·
-             Google Drive silent reconnect — no manual re-auth each session
-Tested:      Build passes (confirm after this session)
-Next:        Test Google Drive silent reconnect on real device ·
-             Test YouTube on production ·
-             Test AI features (Anthropic key in Settings) ·
-             Session detail view · post-session recovery tip
+Version:     v1.3
+Date:        2026-06-16
+Shipped:     v1.3 — Gap analysis, session detail, recovery tip, active-session dot, API key UX ·
+             Standards adoption — single APP_VERSION source + sync script ·
+             Playwright smoke test · WAAPI <Pulse> · reduced-motion · tab aria-labels ·
+             Performance-audit.md
+Tested:      Build clean · `npm run test:smoke` passing (verified it fails on injected crash) ·
+             NOT yet tested on real device — all features [shipped]
+Next:        Manual device pass of v1.2/v1.3 features (S1–S10) ·
+             Day-14 Wallpaper Test on AI surfaces (~2026-06-30) ·
+             Session notes + RPE · Superset/circuit mode
 Open issues: Google OAuth still in testing mode (OAuth consent screen)
              YouTube may 503 on dev previews if YOUTUBE_API_KEY not set for all contexts
 ```
@@ -44,18 +45,18 @@ Open issues: Google OAuth still in testing mode (OAuth consent screen)
 1. Read RULES.md (this file)
 2. Read CHANGELOG.md + BACKLOG.md + BUGS.md
 3. `git clone https://github.com/fixingman/Temple.git`
-4. Check version in App.jsx About card + SW cache names both match CHANGELOG
+4. Check `APP_VERSION` in `src/tokens.js` matches CHANGELOG top entry (sw.js auto-syncs from it)
 5. Tell user: "On v[X]. Last: [summary]. Next: [top backlog item]. Open issues: [none/list]."
 
 ## End of Session
-1. Bump version in App.jsx About card
-2. Bump SW cache names in `public/sw.js` (`temple-vX.X`)
+1. Bump `APP_VERSION` in `src/tokens.js` (single source — SettingsPage About card + sw.js cache names both derive from it)
+2. `npm run build` auto-runs `scripts/sync-version.mjs` → rewrites sw.js cache names to match
 3. CHANGELOG.md → new version at top, list everything shipped
 4. BACKLOG.md → remove completed, add discovered, update tags
 5. BUGS.md → move fixed to Fixed table, add newly discovered
 6. ARCHITECTURE.md → update if structure/data model/files changed
 7. Housekeeping checks (HOUSEKEEPING.md) — run all, update Last Run
-8. `npm run build` — must pass zero errors
+8. `npm run build` — zero errors — **and** `npm run test:smoke` — must pass
 9. Commit: `"vX.X — one-line summary"`
 10. Push → confirm Netlify deploy → run smoke tests → update results
 11. **Update "Where We Left Off" above — mandatory**
@@ -98,15 +99,19 @@ These areas are error-prone — always read the relevant file and double-check l
 ## File Structure
 ```
 index.html · vite.config.js · package.json · netlify.toml · .gitignore
+              playwright.config.js
 public/   manifest.json · sw.js · icon.svg · _headers · _redirects
-src/      main.jsx · tokens.js · data.js · hooks.js
+src/      main.jsx · tokens.js (APP_VERSION) · data.js · hooks.js
           useGoogleDrive.js · useCoach.js
-          App.jsx · components.jsx
+          App.jsx · components.jsx (Pulse)
           pages/  LibraryPage.jsx · SetsPage.jsx · SessionPage.jsx
                   ProgressPage.jsx · SettingsPage.jsx
+scripts/  sync-version.mjs
+tests/    smoke.spec.js
 netlify/functions/  coach.js · youtube.js
 memory/   RULES.md · PRODUCT.md · ARCHITECTURE.md · DESIGN.md
           CHANGELOG.md · BACKLOG.md · BUGS.md · HOUSEKEEPING.md
+          BRANDING.md · Performance-audit.md
 ```
 
 ---
@@ -134,6 +139,8 @@ Apply the bump to:
 Commit format: "vX.X — one-line summary of what shipped"
 ```
 
+**Single source of truth:** `APP_VERSION` in `src/tokens.js`. SettingsPage About card imports it; `public/sw.js` cache names are rewritten to match by `scripts/sync-version.mjs` on `prebuild`. Never hardcode the version anywhere else.
+
 **Current series:** `0.9.x` — patch fixes · `1.0` — first feature-complete minor
 
 ---
@@ -149,6 +156,8 @@ Commit format: "vX.X — one-line summary of what shipped"
 **AI:** All calls via `useCoach`. `MODELS.fast` (Haiku) for structured tasks. `MODELS.smart` (Sonnet) for nuanced judgment. All prompts in `useCoach.js`.
 
 **React:** `useCallback` on async functions. `useMemo` on expensive computations. No useState after early returns. `dangerouslySetInnerHTML` only in `renderResult` (strips HTML first).
+
+**Motion:** Looping animations (`iterations: Infinity`) → WAAPI via the `<Pulse>` component, never CSS `infinite` (CSS loops flash on display toggle). One-shots → CSS is fine. App root wraps `<MotionConfig reducedMotion="user">`; `<Pulse>` honours reduced motion. See DESIGN.md → Motion System.
 
 **Copy:** No exclamation marks. No forward pressure. No emojis in UI text (motivational or system).
 
