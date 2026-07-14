@@ -1,20 +1,20 @@
 import { C } from "./tokens";
 
-// #1a1a1a — body parts that aren't muscle zones (head, forearms, shins)
-const NEUTRAL = "#1a1a1a";
+// Body parts that aren't muscle zones (head, forearms, shins)
+const NEUTRAL = C.mapNeutral;
 
 function muscleFill(name, highlighted, volume, maxVol, muscles) {
   if (muscles) {
     if (muscles.primary?.includes(name))   return C.accent;
-    if (muscles.secondary?.includes(name)) return "rgba(200,255,0,0.35)";
+    if (muscles.secondary?.includes(name)) return C.accentMid;
     return C.border;
   }
   if (highlighted) return highlighted === name ? C.accent : C.border;
   if (!volume || !volume[name]) return C.border;
   const ratio = volume[name] / maxVol;
   if (ratio > 0.66) return C.accent;
-  if (ratio > 0.33) return "rgba(200,255,0,0.5)";
-  return "rgba(200,255,0,0.2)";
+  if (ratio > 0.33) return C.accentSoft;
+  return C.accentFaint;
 }
 
 // viewBox: 0 0 150 175  (front figure 0–65, gap, back figure 85–150)

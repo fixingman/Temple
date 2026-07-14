@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef, lazy, Suspense } from 
 import { AnimatePresence, motion, MotionConfig } from "framer-motion";
 import { T, C } from "./tokens";
 import { uid } from "./data";
-import { useAppData, usePWA } from "./hooks";
+import { useAppData, usePWA, useTheme } from "./hooks";
 import { useGoogleDrive } from "./useGoogleDrive";
 import { useCoach } from "./useCoach";
 import { GlobalStyles, Tabs, InstallBanner, Logo, LogoIcon, Pulse } from "./components";
@@ -142,6 +142,7 @@ class ErrorBoundary extends React.Component {
 
 export default function Temple() {
   const { data, loading, saving, save } = useAppData();
+  useTheme(data?.settings?.theme ?? "system");
   const [tab, setTab] = useState("sets");
   const [activeSet, setActiveSet] = useState(null);
   const pwa = usePWA();

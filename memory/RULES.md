@@ -4,16 +4,16 @@
 
 ## Where We Left Off
 ```
-Version:     v1.3
-Date:        2026-06-16
-Shipped:     v1.3 — Gap analysis, session detail, recovery tip, active-session dot, API key UX ·
-             Standards adoption — single APP_VERSION source + sync script ·
-             Playwright smoke test · WAAPI <Pulse> · reduced-motion · tab aria-labels ·
-             Performance-audit.md
-Tested:      Build clean · `npm run test:smoke` passing (verified it fails on injected crash) ·
-             NOT yet tested on real device — all features [shipped]
-Next:        Manual device pass of v1.2/v1.3 features (S1–S10) ·
-             Day-14 Wallpaper Test on AI surfaces (~2026-06-30) ·
+Version:     v1.4
+Date:        2026-07-14
+Shipped:     v1.4 — Dark/light mode + Auto (follow OS): PALETTES + --c-* CSS vars,
+             useTheme hook, Settings Appearance card, themed MuscleMap,
+             pre-boot splash media query, theme-color meta sync
+Tested:      Build clean · smoke test passing · both themes verified headless
+             (Auto follows OS, manual override persists, meta syncs) ·
+             NOT yet tested on real device (v1.2–v1.4 all pending device pass)
+Next:        Manual device pass of v1.2–v1.4 features (S1–S10 + theme toggle) ·
+             Day-14 Wallpaper Test on AI surfaces (overdue — was ~2026-06-30) ·
              Session notes + RPE · Superset/circuit mode
 Open issues: Google OAuth still in testing mode (OAuth consent screen)
              YouTube may 503 on dev previews if YOUTUBE_API_KEY not set for all contexts
@@ -150,6 +150,8 @@ Commit format: "vX.X — one-line summary of what shipped"
 **Storage:** idb-keyval only. Key: `"temple-data"`. Weights always in kg internally.
 
 **Styling:** Inline styles via `T` tokens. No raw hex outside `tokens.js`. No `transition: all`.
+
+**Theming:** Literal colors live only in `PALETTES` (`tokens.js`); `T.color` values are `var(--c-*)` references resolved by GlobalStyles per `:root[data-theme]`. New colors must be added to *both* palettes. Theme applied by `useTheme` (`hooks.js`) — never set `data-theme` elsewhere.
 
 **Privacy:** Fetch only in `useCoach.js` + `useGoogleDrive.js` + `sw.js` + VideoSheet (`/api/youtube`). No analytics. Export/import = local only.
 

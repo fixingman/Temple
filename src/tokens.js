@@ -1,19 +1,46 @@
 // Single source of truth for the app version.
 // public/sw.js cache names are kept in sync by scripts/sync-version.mjs (runs on prebuild).
-export const APP_VERSION = "1.3";
+export const APP_VERSION = "1.4";
 
-export const T = {
-  color: {
+// Theme palettes — the only place literal theme colors live. GlobalStyles emits these
+// as `--c-*` CSS variables per `:root[data-theme]`; T.color values below are var()
+// references, so every existing inline-style call site resolves live on theme switch.
+export const PALETTES = {
+  dark: {
     bg: "#000000", surface: "#111111", border: "#222222",
     text: "#ffffff", textDim: "#666666", textOnAccent: "#000000",
     accent: "#c8ff00", accentDim: "rgba(200,255,0,0.10)", accentBorder: "rgba(200,255,0,0.25)",
+    accentMid: "rgba(200,255,0,0.35)", accentSoft: "rgba(200,255,0,0.5)", accentFaint: "rgba(200,255,0,0.2)",
     pr: "#ffffff", prDim: "rgba(255,255,255,0.08)", prBorder: "rgba(255,255,255,0.20)",
     danger: "#ff4455", dangerDim: "rgba(255,68,85,0.12)", dangerBorder: "rgba(255,68,85,0.20)",
     youtube: "#ff4444", youtubeDim: "rgba(255,0,0,0.12)",
     overlay: "rgba(0,0,0,0.85)",
     videoOverlay: "rgba(0,0,0,0.7)",
     inputBg: "#181818",
+    mapNeutral: "#1a1a1a",
   },
+  light: {
+    bg: "#f5f5f4", surface: "#ffffff", border: "#e0e0de",
+    text: "#1a1a1a", textDim: "#8a8a86", textOnAccent: "#ffffff",
+    accent: "#5f7d00", accentDim: "rgba(95,125,0,0.10)", accentBorder: "rgba(95,125,0,0.30)",
+    accentMid: "rgba(95,125,0,0.30)", accentSoft: "rgba(95,125,0,0.45)", accentFaint: "rgba(95,125,0,0.15)",
+    pr: "#1a1a1a", prDim: "rgba(0,0,0,0.06)", prBorder: "rgba(0,0,0,0.18)",
+    danger: "#d92638", dangerDim: "rgba(217,38,56,0.10)", dangerBorder: "rgba(217,38,56,0.25)",
+    youtube: "#e02222", youtubeDim: "rgba(224,34,34,0.10)",
+    overlay: "rgba(0,0,0,0.45)",
+    videoOverlay: "rgba(0,0,0,0.7)",
+    inputBg: "#efefed",
+    mapNeutral: "#e2e2e0",
+  },
+};
+
+// T.color keys mirror the palette keys; values are live CSS variable references.
+const colorVars = Object.fromEntries(
+  Object.keys(PALETTES.dark).map((k) => [k, `var(--c-${k})`])
+);
+
+export const T = {
+  color: colorVars,
   font: {
     body: `"Space Grotesk", system-ui, sans-serif`,
     mono: `"DM Mono", "SF Mono", "Fira Code", monospace`,

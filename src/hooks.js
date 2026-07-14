@@ -1,6 +1,41 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useLayoutEffect, useCallback } from 'react';
 import { get, set } from 'idb-keyval';
 import { STORAGE_KEY, DEFAULT_SETTINGS, DEFAULT_EXERCISES, mkDefault } from './data';
+import { PALETTES } from './tokens';
+
+// Applies the theme to <html data-theme> and keeps <meta name="theme-color"> in sync.
+// themeSetting: "dark" | "light" | "system". "system" tracks prefers-color-scheme live.
+export function useTheme(themeSetting) {
+  const [resolved, setResolved] = useState(() =>
+    themeSetting === 'system' || !themeSetting
+      ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+      : themeSetting
+  );
+
+  // Layout effect: data-theme must be set before first paint or the initial frame
+  // renders with unresolved --c-* variables (broken colors for one frame).
+  useLayoutEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: light)');
+    const apply = () => {
+      const theme = themeSetting === 'system' || !themeSetting
+        ? (mq.matches ? 'light' : 'dark')
+        : themeSetting;
+      document.documentElement.dataset.theme = theme;
+      // Static media-query metas from index.html would fight the manual override —
+      // collapse to one JS-owned meta (media attr must go or the meta is ignored
+      // whenever its query doesn't match).
+      document.querySelectorAll('meta[name="theme-color"]').forEach((m, i) => { if (i > 0) m.remove(); });
+      const meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) { meta.removeAttribute('media'); meta.setAttribute('content', PALETTES[theme].bg); }
+      setResolved(theme);
+    };
+    apply();
+    mq.addEventListener('change', apply);
+    return () => mq.removeEventListener('change', apply);
+  }, [themeSetting]);
+
+  return resolved;
+}
 
 export function useAppData() {
   const [data, setData] = useState(null);

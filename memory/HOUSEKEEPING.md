@@ -67,6 +67,12 @@ Run before every deploy. Update Last Run when done.
 - **Smoke tests**: Not run
 - **Code checks**: B27–B29 fixed · ASSETS_CACHE bumped · recovery.js removed · all pages split · build clean
 
+## Last Run (2026-07-14 — v1.4 dark/light mode)
+- **Automated smoke test**: ✅ passing · **Build**: clean, sw.js synced to temple-v1.4
+- **Theme verification (headless)**: ✅ Auto follows OS both ways · manual override flips instantly + persists across reload · theme-color meta collapses to one and syncs · light-mode Settings/Library visually checked via screenshots
+- **Token check**: no raw hex outside tokens.js/PALETTES (MuscleMap literals tokenized this session)
+- **Manual device smoke tests (S1–S10 + theme toggle)**: Still not run — v1.2–v1.4 need a device pass
+
 ## Last Run (2026-06-16 — standards adoption)
 - **Automated smoke test**: ✅ passing (Playwright boot test added — visits all 5 tabs, asserts no page errors; verified it fails on an injected render crash)
 - **Build**: clean · prebuild version-sync confirmed
