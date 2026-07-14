@@ -1,14 +1,25 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import { motion, useReducedMotion } from "framer-motion";
-import { T, C } from "./tokens";
+import { T, C, PALETTES } from "./tokens";
+
+// One `--c-*` variable block per theme, generated from PALETTES so the palettes
+// stay the single source of truth. T.color values are var() references into these.
+const themeVars = Object.entries(PALETTES)
+  .map(([name, colors]) => {
+    // Dark doubles as the :root default so vars resolve even before data-theme is set.
+    const sel = name === "dark" ? `:root, :root[data-theme="dark"]` : `:root[data-theme="${name}"]`;
+    return `${sel} { ${Object.entries(colors).map(([k, v]) => `--c-${k}: ${v};`).join(" ")} }`;
+  })
+  .join("\n      ");
 import { IcLibrary, IcSets, IcTrain, IcProgress, IcSettings, IcClose, IcBack, IcForward, IcPlay, IcVideo } from "./icons";
 
 export function GlobalStyles() {
   return (
     <style>{`
+      ${themeVars}
       *, *::before, *::after { box-sizing: border-box; margin: 0; -webkit-tap-highlight-color: transparent; }
-      body { background: ${C.bg}; color: ${C.text}; font-family: ${T.font.body}; -webkit-font-smoothing: antialiased; overscroll-behavior: none; }
+      body { background: ${C.bg}; color: ${C.text}; font-family: ${T.font.body}; -webkit-font-smoothing: antialiased; overscroll-behavior: none; transition: background ${T.transition.medium}, color ${T.transition.medium}; }
       input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
       input[type=number] { -moz-appearance: textfield; }
       ::-webkit-scrollbar { display: none; }

@@ -1,6 +1,15 @@
 # 🟁 Temple — Changelog
 
-## v1.3 (Current)
+## v1.4 (Current)
+- **Dark/light mode**: Settings → Appearance card with Dark / Light / Auto pills; Auto follows the OS `prefers-color-scheme` live (default for everyone)
+- **Theming architecture**: literal colors moved to `PALETTES` (tokens.js); `T.color` values became `var(--c-*)` references emitted per `:root[data-theme]` by GlobalStyles — all 300+ inline-style call sites theme-switch via pure CSS, zero page rewrites
+- **Light palette**: warm off-white (`#f5f5f4`) + olive-lime accent (`#5f7d00` — electric lime is unreadable as text on white)
+- **useTheme hook** (hooks.js): sets `<html data-theme>` pre-paint (useLayoutEffect), matchMedia listener for Auto, syncs `<meta name="theme-color">`
+- **MuscleMap**: raw lime rgba literals + `#1a1a1a` neutral tokenized (`accentMid/Soft/Faint`, `mapNeutral`) — themes correctly
+- **index.html**: pre-boot splash + status-bar color follow OS via media queries (manual-override users may see one wrong frame on cold start; corrected pre-paint)
+- **SW cache**: Bumped to `temple-v1.4`
+
+## v1.3
 - **Tooling**: Single `APP_VERSION` source of truth in `tokens.js` — `scripts/sync-version.mjs` rewrites sw.js cache names on `prebuild` (fixes version drift that left SettingsPage stuck at v0.9.3)
 - **Tooling**: Automated Playwright smoke test (`npm run test:smoke`) — boots the built app, visits every tab, fails on any uncaught error; catches the boot-crash class (B33–B35) that `npm run build` misses
 - **Motion**: Looping pulse moved from CSS `infinite` to a WAAPI `<Pulse>` component — no keyframe-0 flash on display toggle (mobile wake / tab switch)

@@ -62,6 +62,8 @@ export function SettingsPage({ data, save, drive }) {
   const [showImport, setShowImport] = useState(false);
   const [confirmRestore, setConfirmRestore] = useState(false);
   const unit = data.settings?.unit || "kg";
+  const theme = data.settings?.theme || "system";
+  const setTheme = (t) => save({ ...data, settings: { ...data.settings, theme: t } });
 
   const setUnit = (u) => save({ ...data, settings: { ...data.settings, unit: u } });
 
@@ -151,6 +153,17 @@ export function SettingsPage({ data, save, drive }) {
           <span style={{ fontSize: T.fontSize.body, color: C.textDim, fontWeight: T.fontWeight.semi, minWidth: 28 }}>{unit}</span>
         </div>
         <div style={{ fontSize: T.fontSize.xs, color: C.textDim, lineHeight: 1.5 }}>Used to estimate calories burnt per session. Stored locally, never shared.</div>
+      </Card>
+
+      {/* Appearance — dark / light / follow system */}
+      <Card>
+        <div style={{ fontSize: T.fontSize.body, fontWeight: T.fontWeight.bold, marginBottom: T.space.lg }}>Appearance</div>
+        <div style={{ display: "flex", gap: T.space.sm, background: C.bg, borderRadius: T.radius.lg, padding: 3 }}>
+          {[{ v: "dark", l: "Dark" }, { v: "light", l: "Light" }, { v: "system", l: "Auto" }].map(o => (
+            <button key={o.v} onClick={() => setTheme(o.v)} style={{ flex: 1, border: "none", borderRadius: T.radius.md, padding: "10px 0", fontSize: T.fontSize.caption, fontWeight: T.fontWeight.semi, cursor: "pointer", background: theme === o.v ? C.accentDim : "transparent", color: theme === o.v ? C.accent : C.textDim, transition: `background ${T.transition.fast}, color ${T.transition.fast}` }}>{o.l}</button>
+          ))}
+        </div>
+        <div style={{ fontSize: T.fontSize.xs, color: C.textDim, lineHeight: 1.5, marginTop: T.space.base }}>Auto follows your device's light or dark setting.</div>
       </Card>
 
       {/* Sound Effects */}

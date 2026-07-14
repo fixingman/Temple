@@ -8,6 +8,7 @@ Status tags: `[shipped]` = deployed untested · `[tested]` = verified on device 
 ## Recently Shipped
 | Feature | Status |
 |---------|--------|
+| Dark/light mode + Auto (follow OS) | `[shipped]` |
 | Active session indicator on tab | `[shipped]` |
 | Gap analysis (undertrained muscles) | `[shipped]` |
 | Exercise swap mid-session | `[shipped]` |

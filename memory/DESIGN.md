@@ -1,7 +1,20 @@
 # Temple — Design System
 
 **Direction: Athletic (B)**
-Pure black + electric lime. Confident, physical, readable at a glance. Like a premium sport app.
+Pure black + electric lime (dark) · warm off-white + olive-lime (light). Confident, physical, readable at a glance. Like a premium sport app.
+
+---
+
+## Theming (v1.4+)
+
+Two themes — **dark** (original) and **light** — plus an **Auto** setting that follows the OS (`prefers-color-scheme`). Setting lives in `settings.theme` (`"dark" | "light" | "system"`, default `"system"`).
+
+**How it works:** literal colors live only in `PALETTES` (`src/tokens.js`). `GlobalStyles` emits them as `--c-*` CSS variables per `:root[data-theme]`; `T.color` values are `var(--c-*)` references, so all inline-style call sites resolve live — theme switches are pure CSS, no re-render. `useTheme` (`src/hooks.js`) sets `<html data-theme>` (useLayoutEffect, pre-paint), tracks the OS via `matchMedia` when on Auto, and keeps `<meta name="theme-color">` in sync.
+
+**Rules:**
+- Never hardcode a theme-specific literal outside `PALETTES`. New colors → add a key to *both* palettes.
+- `public/manifest.json` colors stay dark (static file, governs install splash only).
+- `index.html` pre-boot bg uses a `prefers-color-scheme` media query; manual-override users may see one wrong-color frame on cold start (setting is in idb-keyval, unreadable pre-JS) — accepted.
 
 ---
 
@@ -15,32 +28,27 @@ Pure black + electric lime. Confident, physical, readable at a glance. Like a pr
 
 ---
 
-## Palette (`T.color` / `C`)
+## Palette (`T.color` / `C` — values are `var(--c-*)`; literals live in `PALETTES`)
 
-```
-bg           #000000      Page background
-surface      #111111      Cards, tab bar, sheets
-border       #222222      Card/input borders
-text         #ffffff      Primary text
-textDim      #666666      Labels, secondary info
-textOnAccent #000000      Text on lime buttons
-
-accent       #c8ff00      Electric lime — CTAs, active states, highlights
-accentDim    rgba(200,255,0,0.10)
-accentBorder rgba(200,255,0,0.25)
-
-pr           #ffffff      PR achievements (monochrome, no separate color)
-prDim        rgba(255,255,255,0.08)
-prBorder     rgba(255,255,255,0.20)
-
-danger       #ff4455      Destructive actions only
-dangerDim    rgba(255,68,85,0.12)
-dangerBorder rgba(255,68,85,0.20)
-
-youtube      #ff4444
-youtubeDim   rgba(255,0,0,0.12)
-overlay      rgba(0,0,0,0.85)
-```
+| Token | Dark | Light | Usage |
+|---|---|---|---|
+| bg | `#000000` | `#f5f5f4` | Page background |
+| surface | `#111111` | `#ffffff` | Cards, tab bar, sheets |
+| border | `#222222` | `#e0e0de` | Card/input borders |
+| text | `#ffffff` | `#1a1a1a` | Primary text |
+| textDim | `#666666` | `#8a8a86` | Labels, secondary info |
+| textOnAccent | `#000000` | `#ffffff` | Text on accent buttons |
+| accent | `#c8ff00` | `#5f7d00` | CTAs, active states (lime → olive-lime: lime is unreadable as text on white) |
+| accentDim | lime α.10 | olive α.10 | Accent fills |
+| accentBorder | lime α.25 | olive α.30 | Accent borders |
+| accentMid / accentSoft / accentFaint | lime α.35/.5/.2 | olive α.30/.45/.15 | MuscleMap volume gradations |
+| pr / prDim / prBorder | white / α.08 / α.20 | near-black / α.06 / α.18 | PR achievements (monochrome) |
+| danger | `#ff4455` | `#d92638` | Destructive actions only |
+| youtube | `#ff4444` | `#e02222` | Form-video buttons |
+| overlay | black α.85 | black α.45 | Sheet backdrops |
+| videoOverlay | black α.7 | black α.7 | Video player |
+| inputBg | `#181818` | `#efefed` | Inputs within cards |
+| mapNeutral | `#1a1a1a` | `#e2e2e0` | MuscleMap non-muscle zones |
 
 ---
 
@@ -222,7 +230,7 @@ const { enabled: soundEnabled, toggle: toggleSound } = useSound();
 
 ## Implementation Notes
 
-- **Input-within-card background:** `#181818` — used inline for session weight/reps fields. Cards are `#111111`, page bg is `#000`. Not a token, intentional one-off.
+- **Input-within-card background:** `C.inputBg` — used for session weight/reps fields, sits between surface and bg in both themes.
 - **Framer Motion import:** always `import { motion, AnimatePresence } from "framer-motion"`. Never inline spring configs — use `T.motion.*` presets.
 - **`Btn` is `motion.button`** with `whileTap={{ scale: 0.96 }}`. No `whileHover` — mobile-first, no hover states.
 - **Tab buttons are `motion.button`** with `whileTap={{ scale: 0.88 }}` — slightly stronger press than Btn to match smaller tap target.
