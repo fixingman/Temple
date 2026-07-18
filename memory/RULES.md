@@ -30,6 +30,7 @@ Open issues: Google OAuth still in testing mode (OAuth consent screen)
 | `CHANGELOG.md` | Recent changes |
 | `BACKLOG.md` | Pending work |
 | `BUGS.md` | Known bugs & status |
+| `design/ProductThinking.md` | North star, what not to build, core principles, decision log |
 
 ### Tier 2 — Read when task requires
 | Task | Read |
