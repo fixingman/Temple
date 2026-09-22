@@ -1,6 +1,7 @@
 # 🟁 Temple — Changelog
 
 ## v1.4 (Current)
+- **Regression coverage (2026-09-22, no app version change)**: automated workout test creates a workout through the UI, logs two weighted sets and one bodyweight set, finishes it, then verifies one history record with exact values before and after reload. Uses real IndexedDB in an isolated browser context; external services are blocked.
 - **Dark/light mode**: Settings → Appearance card with Dark / Light / Auto pills; Auto follows the OS `prefers-color-scheme` live (default for everyone)
 - **Theming architecture**: literal colors moved to `PALETTES` (tokens.js); `T.color` values became `var(--c-*)` references emitted per `:root[data-theme]` by GlobalStyles — all 300+ inline-style call sites theme-switch via pure CSS, zero page rewrites
 - **Light palette**: warm off-white (`#f5f5f4`) + olive-lime accent (`#5f7d00` — electric lime is unreadable as text on white)

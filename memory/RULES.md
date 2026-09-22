@@ -5,12 +5,13 @@
 ## Where We Left Off
 ```
 Version:     v1.4
-Date:        2026-07-14
+Date:        2026-09-22
 Shipped:     v1.4 — Dark/light mode + Auto (follow OS): PALETTES + --c-* CSS vars,
              useTheme hook, Settings Appearance card, themed MuscleMap,
              pre-boot splash media query, theme-color meta sync
-Tested:      Build clean · smoke test passing · both themes verified headless
-             (Auto follows OS, manual override persists, meta syncs) ·
+Latest:      Full-workout regression test added (tooling only, app stays v1.4)
+Tested:      Build clean · tab smoke + workout persistence tests pass (2026-09-22)
+             Both themes verified headless previously (2026-07-14) ·
              NOT yet tested on real device (v1.2–v1.4 all pending device pass)
 Next:        Manual device pass of v1.2–v1.4 features (S1–S10 + theme toggle) ·
              Day-14 Wallpaper Test on AI surfaces (overdue — was ~2026-06-30) ·
@@ -108,7 +109,7 @@ src/      main.jsx · tokens.js (APP_VERSION) · data.js · hooks.js
           pages/  LibraryPage.jsx · SetsPage.jsx · SessionPage.jsx
                   ProgressPage.jsx · SettingsPage.jsx
 scripts/  sync-version.mjs
-tests/    smoke.spec.js
+tests/    smoke.spec.js · workout.spec.js
 netlify/functions/  coach.js · youtube.js
 memory/   RULES.md · PRODUCT.md · ARCHITECTURE.md · DESIGN.md
           CHANGELOG.md · BACKLOG.md · BUGS.md · HOUSEKEEPING.md

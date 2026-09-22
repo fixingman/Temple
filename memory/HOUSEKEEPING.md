@@ -40,9 +40,9 @@ Run before every deploy. Update Last Run when done.
 
 ## Smoke Tests
 
-**Automated (`npm run test:smoke`, ~5s):** Playwright boots the built app and visits every tab, failing on any uncaught page error or `console.error`. Catches the boot-crash class (missing imports, TDZ — bugs B33/B34/B35) that `npm run build` passes straight through. Hermetic: all external network blocked. See `tests/smoke.spec.js`. Run before every commit touching `src/`.
+**Automated (`npm run test:smoke`):** Playwright runs both the tab-render smoke test (`tests/smoke.spec.js`) and workout regression (`tests/workout.spec.js`) against the built app. The workout test creates a workout through the UI, logs two weighted sets (including a fractional weight) and one bodyweight set, finishes it, and checks exact history values plus a single session before and after reload. It uses real IndexedDB in an isolated browser context and blocks external services and service workers. Both tests fail on uncaught runtime errors. Run `npm run build` first so tests cover current code; run before every commit touching `src/` or `tests/`.
 
-**Manual (device, the table below):** the automated test does not log a real set or exercise device-specific behavior (iOS zoom, Drive auth, YouTube). Run these by hand before a release.
+**Manual (device, the table below):** automated coverage now logs sets and verifies persistence, but does not exercise real-device behavior (iOS zoom, lock/wake, Drive auth, YouTube) or service-worker updates/offline behavior. Run these by hand before a release.
 
 | # | Scenario | Steps | Expected |
 |---|----------|-------|----------|
@@ -58,6 +58,13 @@ Run before every deploy. Update Last Run when done.
 | S10 | **iOS zoom** | Tap any input on iPhone | No zoom |
 
 ## Last Run
+- **Date**: 2026-09-22 — workout regression coverage
+- **Build**: clean; sw.js already at temple-v1.4 (no application changes)
+- **Automated tests**: `npm run test:smoke` — 2 passed (11.1s), including full workout → exact history → reload persistence; no runtime errors
+- **Environment**: installed the Chromium browser required by the existing Playwright dependency
+- **Manual device tests**: Still pending; browser automation does not mark v1.2–v1.4 device-tested
+
+## Previous Run
 - **Date**: 2026-05-10
 - **Smoke tests**: Not run
 - **Code checks**: 2 token violations fixed (B25, B26) · fetch in VideoSheet documented as acceptable (Netlify function)
