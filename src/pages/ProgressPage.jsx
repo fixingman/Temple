@@ -9,6 +9,13 @@ import { IcTrophy, IcClose } from "../icons";
 import { MuscleMap } from "../MuscleMap";
 import { coachError, prompts } from "../useCoach";
 
+// Use the device's calendar month, matching the dates shown in session history.
+function sessionMonth(timestamp) {
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return null;
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
 function PRBadge() { return <span style={{ background: C.prDim, color: C.pr, fontSize: T.fontSize.xxs, fontWeight: T.fontWeight.heavy, padding: "2px 8px", borderRadius: T.radius.full, letterSpacing: T.letterSpacing.label, display: "inline-flex", alignItems: "center", gap: 3 }}><IcTrophy size={10} /> PR</span>; }
 
 function MuscleBar({ label, value, max, icon, unit }) {
@@ -33,6 +40,7 @@ export function ProgressPage({ data, save, onRepeatSession, coach }) {
   const [confirmDeleteSession, setConfirmDeleteSession] = useState(null);
   const [gapOpen, setGapOpen] = useState(false);
   const [expandedSession, setExpandedSession] = useState(null);
+  const [musclePeriod, setMusclePeriod] = useState("all");
   const unit = data.settings?.unit || "kg";
   const wl = weightLabel(unit);
 
@@ -59,7 +67,7 @@ export function ProgressPage({ data, save, onRepeatSession, coach }) {
     setConfirmDeleteSession(null);
   };
 
-  const { prEntries, totalSessions, totalVol, weeksActive, thisWeekSessions, muscleEntries, best1RMByExercise } = React.useMemo(() => {
+  const { prEntries, totalSessions, totalVol, weeksActive, thisWeekSessions, best1RMByExercise } = React.useMemo(() => {
     const prEntries = Object.entries(data.prs).map(([eid, pr]) => {
       const ex = data.exercises.find(e => e.id === eid);
       return { ...pr, exerciseId: eid, exerciseName: ex?.name || "Unknown", muscle: ex?.muscle || "" };
@@ -83,17 +91,6 @@ export function ProgressPage({ data, save, onRepeatSession, coach }) {
       if (w === 0) thisWeekSessions = count;
     }
 
-    const muscleVol = {};
-    data.sessions.forEach(s => {
-      s.entries.forEach(e => {
-        const ex = data.exercises.find(x => x.id === e.exerciseId);
-        if (!ex) return;
-        const vol = e.sets.reduce((a, st) => a + st.reps * st.weight, 0);
-        muscleVol[ex.muscle] = (muscleVol[ex.muscle] || 0) + vol;
-      });
-    });
-    const muscleEntries = Object.entries(muscleVol).sort((a, b) => b[1] - a[1]);
-
     // Precompute best est1RM per exercise to avoid per-render loops
     const best1RMByExercise = {};
     data.sessions.forEach(s => {
@@ -105,9 +102,33 @@ export function ProgressPage({ data, save, onRepeatSession, coach }) {
       });
     });
 
-    return { prEntries, totalSessions, totalVol, weeksActive, thisWeekSessions, muscleEntries, best1RMByExercise };
+    return { prEntries, totalSessions, totalVol, weeksActive, thisWeekSessions, best1RMByExercise };
   }, [data.sessions, data.prs, data.exercises]);
 
+  const muscleMonths = React.useMemo(() => {
+    const months = new Map();
+    data.sessions.forEach(session => {
+      const key = sessionMonth(session.date);
+      if (key) months.set(key, new Date(session.date).toLocaleDateString("en-US", { month: "long", year: "numeric" }));
+    });
+    return [...months].sort(([a], [b]) => b.localeCompare(a));
+  }, [data.sessions]);
+  // Deleting/importing sessions can remove the selected month.
+  const activeMusclePeriod = muscleMonths.some(([key]) => key === musclePeriod) ? musclePeriod : "all";
+  const musclePeriodLabel = muscleMonths.find(([key]) => key === activeMusclePeriod)?.[1] || "All time";
+  const muscleEntries = React.useMemo(() => {
+    const muscleVol = {};
+    data.sessions.forEach(session => {
+      if (activeMusclePeriod !== "all" && sessionMonth(session.date) !== activeMusclePeriod) return;
+      session.entries.forEach(entry => {
+        const exercise = data.exercises.find(ex => ex.id === entry.exerciseId);
+        if (!exercise) return;
+        const volume = entry.sets.reduce((sum, set) => sum + set.reps * set.weight, 0);
+        muscleVol[exercise.muscle] = (muscleVol[exercise.muscle] || 0) + volume;
+      });
+    });
+    return Object.entries(muscleVol).sort((a, b) => b[1] - a[1]);
+  }, [data.sessions, data.exercises, activeMusclePeriod]);
   const maxMuscleVol = Math.max(...muscleEntries.map(([, v]) => v), 1);
 
   const prTooltip = useCallback(({ active, payload }) => {
@@ -258,7 +279,15 @@ export function ProgressPage({ data, save, onRepeatSession, coach }) {
 
       {/* Muscles tab */}
       {view === "muscles" && (
-        <>
+        <section aria-label="Muscle summary" style={{ display: "flex", flexDirection: "column", gap: T.space.xl }}>
+          <div style={{ display: "flex", alignItems: "center", gap: T.space.lg }}>
+            <label htmlFor="muscle-period" style={{ fontSize: T.fontSize.small, fontWeight: T.fontWeight.semi, color: C.textDim }}>Period</label>
+            <select id="muscle-period" value={activeMusclePeriod} onChange={event => setMusclePeriod(event.target.value)}
+              style={{ flex: 1, minWidth: 0, background: C.inputBg, color: C.text, border: `1px solid ${C.border}`, borderRadius: T.radius.lg, padding: T.space.lg, fontFamily: T.font.body, fontSize: T.fontSize.h3 }}>
+              <option value="all">All time</option>
+              {muscleMonths.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+            </select>
+          </div>
           {muscleEntries.length > 0 && (
             <MuscleMap volume={Object.fromEntries(muscleEntries)} size={110} />
           )}
@@ -268,7 +297,7 @@ export function ProgressPage({ data, save, onRepeatSession, coach }) {
               <MuscleBar key={muscle} label={muscle} value={vol} max={maxMuscleVol} unit={unit} />
             ))}
             {muscleEntries.length > 0 && (
-              <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: T.space.base, textAlign: "center" }}>Total volume across all sessions</div>
+              <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: T.space.base, textAlign: "center" }}>{activeMusclePeriod === "all" ? "Total volume across all sessions" : `Total volume in ${musclePeriodLabel}`}</div>
             )}
           </Card>
           {coach?.hasKey && muscleEntries.length > 0 && (
@@ -277,6 +306,7 @@ export function ProgressPage({ data, save, onRepeatSession, coach }) {
           {gapOpen && (
             <GapSheet
               muscleEntries={muscleEntries}
+              periodLabel={musclePeriodLabel}
               existingSets={data.sets}
               exercises={data.exercises}
               coach={coach}
@@ -287,7 +317,7 @@ export function ProgressPage({ data, save, onRepeatSession, coach }) {
               onClose={() => setGapOpen(false)}
             />
           )}
-        </>
+        </section>
       )}
 
       {/* History tab */}
@@ -395,7 +425,7 @@ export function ProgressPage({ data, save, onRepeatSession, coach }) {
 
 
 // ─── Gap Analysis Sheet ───
-function GapSheet({ muscleEntries, existingSets, exercises, coach, onCreateSet, onClose }) {
+function GapSheet({ muscleEntries, periodLabel, existingSets, exercises, coach, onCreateSet, onClose }) {
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -427,7 +457,7 @@ function GapSheet({ muscleEntries, existingSets, exercises, coach, onCreateSet, 
         <div style={{ padding: `0 ${T.space.xl}px ${T.space.base}px`, display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
           <div>
             <div style={{ fontSize: T.fontSize.h3, fontWeight: T.fontWeight.bold }}>Training Gap Analysis</div>
-            <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: T.space.xs }}>Based on your session history</div>
+            <div style={{ fontSize: T.fontSize.xs, color: C.textDim, marginTop: T.space.xs }}>Based on your session history · {periodLabel}</div>
           </div>
           <button onClick={onClose} style={{ background: C.bg, border: "none", color: C.textDim, cursor: "pointer", borderRadius: T.radius.full, width: T.size.iconBtn, height: T.size.iconBtn, display: "flex", alignItems: "center", justifyContent: "center" }}><IcClose size={16} /></button>
         </div>

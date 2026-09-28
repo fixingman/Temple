@@ -230,6 +230,7 @@ const { enabled: soundEnabled, toggle: toggleSound } = useSound();
 
 ## Implementation Notes
 
+- **Muscle summary period (v1.5):** native labelled Period select inside the Muscles tab, using existing input/color/spacing tokens. Default All time; recorded months appear newest first with month and year. Selection scopes the map, bars, caption, and gap analysis; the page-level stats and other tabs keep their existing scope.
 - **Input-within-card background:** `C.inputBg` — used for session weight/reps fields, sits between surface and bg in both themes.
 - **Framer Motion import:** always `import { motion, AnimatePresence } from "framer-motion"`. Never inline spring configs — use `T.motion.*` presets.
 - **`Btn` is `motion.button`** with `whileTap={{ scale: 0.96 }}`. No `whileHover` — mobile-first, no hover states.

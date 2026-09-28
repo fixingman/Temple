@@ -1,6 +1,6 @@
 // Single source of truth for the app version.
 // public/sw.js cache names are kept in sync by scripts/sync-version.mjs (runs on prebuild).
-export const APP_VERSION = "1.4";
+export const APP_VERSION = "1.5";
 
 // Theme palettes — the only place literal theme colors live. GlobalStyles emits these
 // as `--c-*` CSS variables per `:root[data-theme]`; T.color values below are var()

@@ -32,7 +32,7 @@ Run this check before shipping a recurring surface, and schedule a day-14 review
 
 **Train (▶️)** — Pre-fills from last session. Log Set → 90s rest → REST DONE → next. Chunky inputs, PR reference bar, completed set summaries, workout timer.
 
-**Progress (📊)** — Stats grid. Sub-tabs: 🏆 PRs (recharts chart inline), 💪 Muscles (volume bars), 📅 History (repeat session).
+**Progress (📊)** — Stats grid. Sub-tabs: 🏆 PRs (recharts chart inline), 💪 Muscles (map and volume bars with All time or recorded-month selection, using the device's calendar months), 📅 History (repeat session). Muscle gap analysis follows the selected period.
 
 **Settings (⚙️)** — Unit toggle (kg/lbs). Google Drive backup/restore. Export/import JSON. Reset. Data summary.
 

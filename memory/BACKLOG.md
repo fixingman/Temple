@@ -3,7 +3,7 @@
 Status tags: `[shipped]` = deployed untested · `[tested]` = verified on device · `[wip]` = in progress
 
 ## Up Next
-— nothing queued, pick from Feature Backlog below —
+- Deploy v1.5 monthly muscle summary, then verify the period selector on device. Implemented locally; automated coverage includes month/year boundaries.
 
 ## Recently Shipped
 | Feature | Status |
@@ -30,7 +30,7 @@ Status tags: `[shipped]` = deployed untested · `[tested]` = verified on device 
 |---------|----------|-------|
 | Session notes + RPE | Medium | — |
 | Superset / circuit mode | Medium | — |
-| Weekly/monthly volume charts | Medium | — |
+| Weekly/monthly volume charts | Medium | v1.5 adds monthly muscle summaries; volume-over-time charts remain pending. |
 | Calendar heatmap | Low | — |
 
 ## Watch Decisions
