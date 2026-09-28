@@ -1,6 +1,6 @@
 # 🟁 Temple — Changelog
 
-## v1.5 (Current — local, pending deployment)
+## v1.5 (Current)
 - **Monthly muscle summary**: Progress → Muscles now has a Period selector with All time (default) and recorded months, newest first. Muscle map, volume bars, and gap analysis use the selected period. Months follow the device's local calendar; years remain distinct.
 - **Regression coverage**: empty history, monthly totals, local midnight/year boundaries, and returning to all-time totals.
 - **Version**: APP_VERSION and package version updated; service-worker cache names sync to v1.5 on build.

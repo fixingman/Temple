@@ -4,17 +4,14 @@
 
 ## Where We Left Off
 ```
-Version:     v1.5 (local, pending deployment)
+Version:     v1.5
 Date:        2026-09-28
-Shipped:     v1.4 — Dark/light mode + Auto (follow OS): PALETTES + --c-* CSS vars,
-             useTheme hook, Settings Appearance card, themed MuscleMap,
-             pre-boot splash media query, theme-color meta sync
-Latest:      Monthly muscle summary: All time + recorded months; map, bars and
+Release:     v1.5 — Monthly muscle summary: All time + recorded months; map, bars and
              gap analysis follow the selected period using local calendar months
 Tested:      Build clean · automated test results in HOUSEKEEPING.md
              Both themes verified headless previously (2026-07-14) ·
              NOT yet tested on real device (v1.2–v1.4 all pending device pass)
-Next:        Manual device pass of v1.2–v1.4 features (S1–S10 + theme toggle) ·
+Next:        Manual device pass of v1.2–v1.5 (S1–S10 + theme + muscle period) ·
              Day-14 Wallpaper Test on AI surfaces (overdue — was ~2026-06-30) ·
              Session notes + RPE · Superset/circuit mode
 Open issues: Google OAuth still in testing mode (OAuth consent screen)

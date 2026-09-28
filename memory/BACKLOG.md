@@ -3,7 +3,7 @@
 Status tags: `[shipped]` = deployed untested · `[tested]` = verified on device · `[wip]` = in progress
 
 ## Up Next
-- Deploy v1.5 monthly muscle summary, then verify the period selector on device. Implemented locally; automated coverage includes month/year boundaries.
+- Verify the v1.5 monthly muscle summary period selector on device. Automated coverage includes month/year boundaries.
 
 ## Recently Shipped
 | Feature | Status |

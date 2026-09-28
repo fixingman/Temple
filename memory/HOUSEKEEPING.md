@@ -58,6 +58,7 @@ Run before every deploy. Update Last Run when done.
 | S10 | **iOS zoom** | Tap any input on iPhone | No zoom |
 
 ## Last Run
+- **Release validation (2026-09-28)**: rebuilt committed v1.5 in an isolated checkout, excluding the pre-existing uncommitted History calorie changes; all 3 Playwright tests passed (9.6s). Release prepared for dev and main.
 - **Date**: 2026-09-28 — v1.5 monthly muscle summary (local, pending deployment)
 - **Build**: clean; sw.js synced to temple-v1.5
 - **Automated tests**: `npm run test:smoke` — 3 passed (10.1s): tab rendering, workout persistence, monthly muscle summaries
