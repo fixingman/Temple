@@ -7,6 +7,7 @@ import { IcPause, IcPlay, IcRepeat, IcTrophy, IcBack, IcForward, IcClose, IcEdit
 import { MuscleMap } from "../MuscleMap";
 import { coachError, prompts, MODELS } from "../useCoach";
 import { useSound } from "../useSound";
+import { healthShortcutUrl, isAppleMobile, HEALTH_SHORTCUT_NAME } from "../appleHealth";
 
 // ─── Recovery / Body Check Sheet ───
 const BODY_AREAS = [
@@ -138,6 +139,9 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
   const [resting, setResting] = useState(false);
   const [restDone, setRestDone] = useState(false);
   const [finished, setFinished] = useState(false);
+  const [completedSession, setCompletedSession] = useState(null);
+  const [showHealthSetup, setShowHealthSetup] = useState(false);
+  const [healthOpened, setHealthOpened] = useState(false);
   const [newPRs, setNewPRs] = useState([]);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [showRecovery, setShowRecovery] = useState(false);
@@ -190,7 +194,8 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
       });
       setSessionData(entries);
       setCurrentIdx(0); setCurrentSetIdx(0); setTimer(0); setTimerRunning(true);
-      setFinished(false); setNewPRs([]); setResting(false); setRestTimer(0); setRestDone(false);
+      setFinished(false); setCompletedSession(null); setShowHealthSetup(false); setHealthOpened(false);
+      setNewPRs([]); setResting(false); setRestTimer(0); setRestDone(false);
       setRecoveryTip(""); setRecoveryTipLoading(false);
     } else { setSessionData(null); setTimerRunning(false); }
   }, [activeSet]);
@@ -292,6 +297,7 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
 
   // ── Completion screen ──
   if (finished) {
+    const healthUrl = healthShortcutUrl(completedSession);
     const totalSets = sessionData.reduce((a, e) => a + e.logged.length, 0);
     const totalVol = sessionData.reduce((a, e) => a + e.logged.reduce((b, s) => b + (Number(s.reps) || 0) * (Number(s.weight) || 0), 0), 0);
     const sessionMuscleVol = {};
@@ -340,6 +346,31 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
           </Card>
         )}
         <MuscleMap volume={sessionMuscleVol} size={110} />
+        {isAppleMobile() && (
+          <Card>
+            <div style={{ fontWeight: T.fontWeight.bold, fontSize: T.fontSize.body, marginBottom: T.space.sm }}>Apple Health</div>
+            <p style={{ fontSize: T.fontSize.small, color: C.textDim, lineHeight: 1.5, marginBottom: T.space.lg }}>First set up the iPhone Shortcut below. It sends this workout’s duration to Apple Health.</p>
+            {healthUrl ? (
+              <a href={healthUrl} onClick={() => setHealthOpened(true)} style={{ display: "block", background: C.accentDim, color: C.accent, fontWeight: T.fontWeight.bold, letterSpacing: T.letterSpacing.label, textDecoration: "none", textAlign: "center", borderRadius: T.radius.lg, padding: 14 }}>Open Temple Health Shortcut</a>
+            ) : (
+              <p style={{ fontSize: T.fontSize.small, color: C.textDim, marginBottom: T.space.base }}>A timed workout is needed to log it in Health.</p>
+            )}
+            {healthOpened && <p style={{ fontSize: T.fontSize.small, color: C.textDim, lineHeight: 1.5, marginTop: T.space.base }}>Temple cannot confirm whether Health saved it. Check Health before opening the Shortcut again to avoid a duplicate.</p>}
+            <button onClick={() => setShowHealthSetup(v => !v)} aria-expanded={showHealthSetup} style={{ background: "none", border: "none", color: C.textDim, fontSize: T.fontSize.small, cursor: "pointer", padding: `${T.space.lg}px 0 0`, textAlign: "left" }}>{showHealthSetup ? "Hide setup" : "Set up the Shortcut"}</button>
+            {showHealthSetup && (
+              <div style={{ fontSize: T.fontSize.small, color: C.textDim, lineHeight: 1.6, paddingTop: T.space.base }}>
+                <p>One-time setup on your iPhone:</p>
+                <ol style={{ paddingLeft: T.space["2xl"], margin: `${T.space.base}px 0 0` }}>
+                  <li>Create a Shortcut named <strong>{HEALTH_SHORTCUT_NAME}</strong>.</li>
+                  <li>Add <strong>Get Dictionary from Input</strong>, using Shortcut Input.</li>
+                  <li>Add <strong>Get Dictionary Value</strong> for <strong>durationMinutes</strong>.</li>
+                  <li>Add <strong>Log Workout</strong>. Choose Traditional Strength Training and set its duration in minutes to the Dictionary Value.</li>
+                </ol>
+                <p style={{ marginTop: T.space.base }}>When iOS asks, allow the Shortcut to write workouts to Health. The Shortcut uses its run time as the workout date.</p>
+              </div>
+            )}
+          </Card>
+        )}
         {(recoveryTipLoading || recoveryTip) && (
           <Card style={{ background: C.surface, border: `1px solid ${C.border}` }}>
             <div style={{ fontSize: T.fontSize.xs, color: C.accent, fontWeight: T.fontWeight.bold, textTransform: "uppercase", letterSpacing: T.letterSpacing.label, marginBottom: T.space.base }}>Recovery Tip</div>
@@ -440,7 +471,9 @@ export function SessionPage({ data, save, activeSet, setActiveSet, setTab, coach
       prs[e.exerciseId] = { maxWeight: Math.max(maxW, prev.maxWeight), maxReps: Math.max(maxR, prev.maxReps), maxVolume: Math.max(vol, prev.maxVolume), date: Date.now() };
     });
     const caloriesBurnt = calcCalories(clean.map(e => e.exerciseId), data.exercises, timer, bodyweightKg);
-    save({ ...data, sessions: [...data.sessions, { id: uid(), setId: activeSet.id, date: Date.now(), duration: timer, entries: clean, caloriesBurnt }], prs });
+    const completed = { id: uid(), setId: activeSet.id, date: Date.now(), duration: timer, entries: clean, caloriesBurnt };
+    save({ ...data, sessions: [...data.sessions, completed], prs });
+    setCompletedSession(completed);
     setNewPRs(found); setTimerRunning(false); setFinished(true);
     sound.play(found.length > 0 ? "pr" : "sessionDone");
   };

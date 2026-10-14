@@ -4,14 +4,15 @@
 
 ## Where We Left Off
 ```
-Version:     v1.5
-Date:        2026-09-28
-Release:     v1.5 — Monthly muscle summary: All time + recorded months; map, bars and
-             gap analysis follow the selected period using local calendar months
-Tested:      Build clean · automated test results in HOUSEKEEPING.md
+Version:     v1.6
+Date:        2026-10-14
+Release:     v1.6 — Completed iPhone workouts can pass duration to a user-created
+             Shortcuts Log Workout action for Apple Health
+Tested:      Build clean · automated test results in HOUSEKEEPING.md ·
+             Apple Health write and installed-PWA deep link pending iPhone test
              Both themes verified headless previously (2026-07-14) ·
              NOT yet tested on real device (v1.2–v1.4 all pending device pass)
-Next:        Manual device pass of v1.2–v1.5 (S1–S10 + theme + muscle period) ·
+Next:        Manual device pass of v1.2–v1.6 (S1–S10 + theme + muscle period + Health) ·
              Day-14 Wallpaper Test on AI surfaces (overdue — was ~2026-06-30) ·
              Session notes + RPE · Superset/circuit mode
 Open issues: Google OAuth still in testing mode (OAuth consent screen)
@@ -102,7 +103,7 @@ index.html · vite.config.js · package.json · netlify.toml · .gitignore
               playwright.config.js
 public/   manifest.json · sw.js · icon.svg · _headers · _redirects
 src/      main.jsx · tokens.js (APP_VERSION) · data.js · hooks.js
-          useGoogleDrive.js · useCoach.js
+          useGoogleDrive.js · useCoach.js · appleHealth.js (Shortcuts URL)
           App.jsx · components.jsx (Pulse)
           pages/  LibraryPage.jsx · SetsPage.jsx · SessionPage.jsx
                   ProgressPage.jsx · SettingsPage.jsx

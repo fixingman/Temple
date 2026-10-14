@@ -1,6 +1,11 @@
 # 🟁 Temple — Changelog
 
-## v1.5 (Current)
+## v1.6 (Current)
+- **Apple Health handoff**: A completed timed workout on iPhone or iPad can open a user-created `Temple Health` Shortcut. Temple sends only workout duration through Apple's Shortcuts URL scheme; the Shortcut's Log Workout action writes the workout after the user grants Health access.
+- **Setup and limits**: The completion screen explains the one-time Shortcut setup, its run-time date, and the possibility of duplicate entries if opened twice. No Health data is read by Temple and no third-party service or developer account is needed. iPhone Health write and installed-PWA deep linking still need device verification.
+- **Regression coverage**: Workout test checks the generated URL and minimal JSON payload, and existing persistence tests still pass.
+
+## v1.5
 - **Monthly muscle summary**: Progress → Muscles now has a Period selector with All time (default) and recorded months, newest first. Muscle map, volume bars, and gap analysis use the selected period. Months follow the device's local calendar; years remain distinct.
 - **Regression coverage**: empty history, monthly totals, local midnight/year boundaries, and returning to all-time totals.
 - **Version**: APP_VERSION and package version updated; service-worker cache names sync to v1.5 on build.

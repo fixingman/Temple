@@ -14,6 +14,7 @@ src/
   hooks.js         useAppData (idb-keyval), usePWA
   useGoogleDrive.js Google Drive OAuth + backup/restore
   useCoach.js      useCoach hook, MODELS, coachError, prompts (all AI prompts)
+  appleHealth.js   Minimal workout-duration Shortcuts URL builder, iOS detection
   pages/
     LibraryPage.jsx  Exercise library + CRUD + FilterBar (~170 lines)
     SetsPage.jsx     Workout set builder + AI ordering (~275 lines)
@@ -37,6 +38,9 @@ AppData {
 }
 ```
 Weights stored in kg. Display via `displayWeight(kg, unit)` / `toKg(val, unit)`.
+
+## Apple Health handoff
+`SessionPage` keeps the just-completed session in component state and generates a `shortcuts://run-shortcut` link only for a positive duration on iPhone/iPad. The URL carries JSON containing `durationMinutes` only. A user-created `Temple Health` Shortcut parses it and uses the iOS `Log Workout` action to write to Health. There is no HealthKit call, server request, automatic sync, or confirmation callback to Temple. The logged date is the Shortcut run time unless the user extends the Shortcut. The handoff must be checked on an iPhone before marking device-tested.
 
 ## AI Architecture
 ```

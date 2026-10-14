@@ -2,7 +2,11 @@ import { test, expect } from "@playwright/test";
 
 // Each test gets a fresh browser context and real IndexedDB. Create all workout
 // data through the UI so a broken save path cannot be hidden by seeded fixtures.
-test.use({ serviceWorkers: "block" });
+test.use({
+  serviceWorkers: "block",
+  // The Health handoff is shown only where iOS Shortcuts can write to Health.
+  userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1",
+});
 
 test("completed workout and exact set values survive a reload", async ({ page, baseURL }) => {
   const errors = [];
@@ -52,8 +56,22 @@ test("completed workout and exact set values survive a reload", async ({ page, b
   await expect(weight).toHaveCount(0);
   await reps.fill("12");
   await page.getByRole("button", { name: "Log Set 1", exact: true }).click();
+  // The Health handoff requires a nonzero timer; fast automation can finish in 0s.
+  await page.waitForTimeout(1100);
   await page.getByRole("button", { name: "Finish Workout", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Workout Complete", exact: true })).toBeVisible();
+  const healthLink = page.getByRole("link", { name: "Open Temple Health Shortcut" });
+  await expect(healthLink).toBeVisible();
+  const shortcutUrl = new URL(await healthLink.getAttribute("href"));
+  expect(shortcutUrl.protocol).toBe("shortcuts:");
+  expect(shortcutUrl.hostname).toBe("run-shortcut");
+  expect(shortcutUrl.searchParams.get("name")).toBe("Temple Health");
+  expect(shortcutUrl.searchParams.get("input")).toBe("text");
+  const healthPayload = JSON.parse(shortcutUrl.searchParams.get("text"));
+  expect(Object.keys(healthPayload)).toEqual(["durationMinutes"]);
+  expect(healthPayload.durationMinutes).toBeGreaterThan(0);
+  await page.getByRole("button", { name: "Set up the Shortcut" }).click();
+  await expect(page.getByText("Get Dictionary from Input", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "View Progress", exact: true }).click();
 
   async function checkHistory() {

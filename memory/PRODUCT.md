@@ -36,5 +36,7 @@ Run this check before shipping a recurring surface, and schedule a day-14 review
 
 **Settings (⚙️)** — Unit toggle (kg/lbs). Google Drive backup/restore. Export/import JSON. Reset. Data summary.
 
+**Apple Health (iPhone/iPad)** — After a timed workout, Temple can pass its duration to a user-created `Temple Health` Shortcut. The Shortcut's Log Workout action writes a Traditional Strength Training workout to Health with the user's permission. Temple does not read Health data or send the workout through a server. The Health workout date defaults to when the Shortcut runs, so this is intended for immediate post-workout use. The iPhone flow still needs a device test.
+
 ## Data
 Single JSON blob `"temple-data"` via idb-keyval: `exercises[]`, `sets[]`, `sessions[]`, `prs{}`, `settings{}`. Weights stored in kg. See ARCHITECTURE.md.
