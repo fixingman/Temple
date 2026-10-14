@@ -3,13 +3,14 @@
 Status tags: `[shipped]` = deployed untested · `[tested]` = verified on device · `[wip]` = in progress
 
 ## Up Next
+- Restore or trigger Netlify deployment for `tmple.netlify.app`. After the v1.6 push to both branches on 2026-10-14, the public `/sw.js` still served `temple-v1.1.1`; the Netlify dashboard requires a login in this workspace.
 - Verify the v1.6 Apple Health Shortcut on an iPhone: configure Log Workout, allow Health write access, finish a timed workout from the installed PWA, confirm duration and date in Health, and check Safari vs standalone launch behavior.
 - Verify the v1.5 monthly muscle summary period selector on device. Automated coverage includes month/year boundaries.
 
 ## Recently Shipped
 | Feature | Status |
 |---------|--------|
-| Apple Health workout-duration handoff via iPhone Shortcuts | `[shipped]` |
+| Apple Health workout-duration handoff via iPhone Shortcuts | `[wip]` — pushed to dev/main; deployment pending |
 | Dark/light mode + Auto (follow OS) | `[shipped]` |
 | Active session indicator on tab | `[shipped]` |
 | Gap analysis (undertrained muscles) | `[shipped]` |

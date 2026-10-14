@@ -6,8 +6,8 @@
 ```
 Version:     v1.6
 Date:        2026-10-14
-Release:     v1.6 — Completed iPhone workouts can pass duration to a user-created
-             Shortcuts Log Workout action for Apple Health
+Release:     v1.6 pushed to dev/main — completed iPhone workouts can pass duration
+             to a user-created Shortcuts Log Workout action for Apple Health
 Tested:      Build clean · automated test results in HOUSEKEEPING.md ·
              Apple Health write and installed-PWA deep link pending iPhone test
              Both themes verified headless previously (2026-07-14) ·
@@ -17,6 +17,7 @@ Next:        Manual device pass of v1.2–v1.6 (S1–S10 + theme + muscle period
              Session notes + RPE · Superset/circuit mode
 Open issues: Google OAuth still in testing mode (OAuth consent screen)
              YouTube may 503 on dev previews if YOUTUBE_API_KEY not set for all contexts
+             Documented Netlify URL still served v1.1.1 after v1.6 push; deploy pending
 ```
 
 ---

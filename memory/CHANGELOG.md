@@ -1,6 +1,7 @@
 # 🟁 Temple — Changelog
 
 ## v1.6 (Current)
+- **Release status**: Pushed to `dev` and `main` on 2026-10-14. The documented Netlify production URL was still serving v1.1.1 at the deployment check; v1.6 is not confirmed live.
 - **Apple Health handoff**: A completed timed workout on iPhone or iPad can open a user-created `Temple Health` Shortcut. Temple sends only workout duration through Apple's Shortcuts URL scheme; the Shortcut's Log Workout action writes the workout after the user grants Health access.
 - **Setup and limits**: The completion screen explains the one-time Shortcut setup, its run-time date, and the possibility of duplicate entries if opened twice. No Health data is read by Temple and no third-party service or developer account is needed. iPhone Health write and installed-PWA deep linking still need device verification.
 - **Regression coverage**: Workout test checks the generated URL and minimal JSON payload, and existing persistence tests still pass.

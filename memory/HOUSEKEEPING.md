@@ -64,6 +64,7 @@ The workout regression also uses an iPhone user agent to inspect the `shortcuts:
 - **Build**: clean; sw.js synced to temple-v1.6
 - **Automated tests**: `npm run test:smoke` — 3 passed; workout test covers URL scheme and minimal payload
 - **Manual device tests**: Pending on iPhone (Health write permission, duration/date, Safari and installed PWA deep links)
+- **Deployment**: `origin/dev` and `origin/main` both at `52c3cf87`; `https://tmple.netlify.app/sw.js` still served `temple-v1.1.1` after push. Dashboard requested login, so automatic deploy was not confirmed.
 - **Workspace**: existing uncommitted History calorie-display changes remain separate
 
 ## Previous Run
