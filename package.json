@@ -1,12 +1,13 @@
 {
   "name": "temple",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
     "prebuild": "node scripts/sync-version.mjs",
     "build": "vite build",
+    "postbuild": "node scripts/netlify-headers.mjs",
     "preview": "vite preview",
     "test:smoke": "playwright test"
   },
