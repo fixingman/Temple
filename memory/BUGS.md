@@ -20,7 +20,7 @@ Numbering is sequential, never reused.
 *None currently known.*
 
 ## Unverified (fix shipped, awaiting device confirmation)
-All v1.2/v1.3 fixes are shipped but untested on a real device (RULES.md "Where We Left Off"). When verifying, record each as the format above and tick **Verified fixed: ☑** once confirmed.
+All v1.2–v1.6 changes are shipped but untested on a real device (RULES.md "Where We Left Off"); v1.6 Apple Health handoff also needs an iPhone check (see BACKLOG Up Next). When verifying, record each as the format above and tick **Verified fixed: ☑** once confirmed.
 
 ---
 

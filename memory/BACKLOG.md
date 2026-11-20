@@ -3,6 +3,7 @@
 Status tags: `[shipped]` = deployed untested · `[tested]` = verified on device · `[wip]` = in progress
 
 ## Up Next
+- After the next Netlify deploy, confirm the badge is gone: `curl -sI` the site for a `content-security-policy: script-src-elem …` header, load it in a browser, and confirm Drive connect still works (it loads two Google scripts). If anything is blocked, add its origin to `EXTERNAL_SCRIPTS` in `scripts/netlify-headers.mjs`.
 - Restore or trigger Netlify deployment for `tmple.netlify.app`. After the v1.6 push to both branches on 2026-10-14, the public `/sw.js` still served `temple-v1.1.1`; the Netlify dashboard requires a login in this workspace.
 - Verify the v1.6 Apple Health Shortcut on an iPhone: configure Log Workout, allow Health write access, finish a timed workout from the installed PWA, confirm duration and date in Health, and check Safari vs standalone launch behavior.
 - Verify the v1.5 monthly muscle summary period selector on device. Automated coverage includes month/year boundaries.
@@ -10,6 +11,7 @@ Status tags: `[shipped]` = deployed untested · `[tested]` = verified on device 
 ## Recently Shipped
 | Feature | Status |
 |---------|--------|
+| History: estimated calories per session | `[shipped]` |
 | Apple Health workout-duration handoff via iPhone Shortcuts | `[wip]` — pushed to dev/main; deployment pending |
 | Dark/light mode + Auto (follow OS) | `[shipped]` |
 | Active session indicator on tab | `[shipped]` |
@@ -53,7 +55,9 @@ Explicit rejections — kept so they aren't re-proposed.
 | Two-audience changelog (user + dev) | No in-app changelog surface exists to maintain a second voice for. Revisit if one is added. |
 
 ## Technical Debt
-- recharts 537KB gzip — acceptable, needs lighter lib to fix
+- recharts chunk ~114KB gzip (lazy, Progress tab only) — acceptable, needs lighter lib to fix
 - Timezone-naive week calculation
 - Accessibility: tab `aria-label`s + reduced-motion now in place; still no keyboard nav / focus management
 - Google OAuth in testing mode (publish app in Google Cloud Console to remove warning)
+- Memory docs total ~60KB vs the 40KB budget in HOUSEKEEPING.md — prune history or raise the limit
+- No Content-Security-Policy header (see Performance-audit.md)

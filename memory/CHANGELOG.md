@@ -1,6 +1,12 @@
 # 🟁 Temple — Changelog
 
-## v1.6 (Current)
+## v1.7 (Current)
+- **Version**: APP_VERSION and package version 1.7; service-worker cache names sync to v1.7 on build.
+- **Netlify badge removed**: Netlify appends a badge script (`/.netlify/scripts/hud`) to served pages. `scripts/netlify-headers.mjs` (`postbuild`) now adds a `script-src-elem` Content-Security-Policy to `dist/_headers` on Netlify builds, allowing `<script>` elements only from the deployment's `/assets/` plus the two Google Drive scripts. Workers, styles, fonts and fetch are unaffected. Local builds skip it. A missing deployment URL on Netlify fails the build. Verified in Chromium (badge blocked, app renders; control without the policy runs the badge). Not yet confirmed on the live site; needs a deploy. New `tests/netlify-headers.spec.js`.
+- **History calories**: each session in Progress → History shows estimated kcal beside exercises, sets and volume. Uses the existing `calcCalories` (MET × bodyweight × duration); hidden when no bodyweight is set in Settings. 
+- **Docs refresh (2026-11-19)**: ARCHITECTURE.md rewritten to v1.6 (it still said v0.9.1); RULES.md versioning, z-index table, file structure and bundle sizes corrected; PRODUCT/DESIGN/HOUSEKEEPING/BACKLOG/BUGS/Performance-audit synced. (docs only).
+
+## v1.6
 - **Release status**: Pushed to `dev` and `main` on 2026-10-14. The documented Netlify production URL was still serving v1.1.1 at the deployment check; v1.6 is not confirmed live.
 - **Apple Health handoff**: A completed timed workout on iPhone or iPad can open a user-created `Temple Health` Shortcut. Temple sends only workout duration through Apple's Shortcuts URL scheme; the Shortcut's Log Workout action writes the workout after the user grants Health access.
 - **Setup and limits**: The completion screen explains the one-time Shortcut setup, its run-time date, and the possibility of duplicate entries if opened twice. No Health data is read by Temple and no third-party service or developer account is needed. iPhone Health write and installed-PWA deep linking still need device verification.

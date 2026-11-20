@@ -1,4 +1,4 @@
-# 🟁 Temple — Product (v0.6)
+# 🟁 Temple — Product (v1.6)
 
 ## Philosophy
 Most fitness apps make you feel bad. Temple's stance: **measurement is a mirror, not a judge.**
@@ -30,11 +30,13 @@ Run this check before shipping a recurring surface, and schedule a day-14 review
 
 **Sets (📋)** — Exercise picker, reordering (▲▼), muscle activation highlight. Edit/delete with confirm.
 
-**Train (▶️)** — Pre-fills from last session. Log Set → 90s rest → REST DONE → next. Chunky inputs, PR reference bar, completed set summaries, workout timer.
+**Train (▶️)** — Pre-fills from last session. Log Set → 90s rest → REST DONE → next. Chunky inputs, PR reference bar, completed set summaries, workout timer. Edit/delete logged sets, swap an exercise mid-session, recovery tip on completion (AI, optional).
 
-**Progress (📊)** — Stats grid. Sub-tabs: 🏆 PRs (recharts chart inline), 💪 Muscles (map and volume bars with All time or recorded-month selection, using the device's calendar months), 📅 History (repeat session). Muscle gap analysis follows the selected period.
+**Progress (📊)** — Stats grid. Sub-tabs: 🏆 PRs (recharts chart inline), 💪 Muscles (map and volume bars with All time or recorded-month selection, using the device's calendar months), 📅 History (tap a session for the full breakdown, repeat session). Muscle gap analysis follows the selected period.
 
-**Settings (⚙️)** — Unit toggle (kg/lbs). Google Drive backup/restore. Export/import JSON. Reset. Data summary.
+**Settings (⚙️)** — Unit toggle (kg/lbs). Appearance: Dark / Light / Auto (follows the OS). Optional bodyweight, used only for calorie estimates. Google Drive backup/restore. Export/import JSON. Reset. Data summary.
+
+**Calories** — With a bodyweight set, Temple estimates calories from workout duration and exercise type (MET-based). It appears during a session, on the completion screen, and as metadata in History. It is an estimate; with no bodyweight set it is hidden, never shown as zero.
 
 **Apple Health (iPhone/iPad)** — After a timed workout, Temple can pass its duration to a user-created `Temple Health` Shortcut. The Shortcut's Log Workout action writes a Traditional Strength Training workout to Health with the user's permission. Temple does not read Health data or send the workout through a server. The Health workout date defaults to when the Shortcut runs, so this is intended for immediate post-workout use. The iPhone flow still needs a device test.
 

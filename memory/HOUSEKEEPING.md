@@ -40,7 +40,7 @@ Run before every deploy. Update Last Run when done.
 
 ## Smoke Tests
 
-**Automated (`npm run test:smoke`):** Playwright runs the tab-render smoke test (`tests/smoke.spec.js`), workout regression (`tests/workout.spec.js`), and monthly muscle summary test (`tests/muscles.spec.js`) against the built app. The workout test creates a workout through the UI, logs two weighted sets (including a fractional weight) and one bodyweight set, finishes it, and checks exact history values plus a single session before and after reload. The muscle test imports dated sessions through Settings and checks local month/year boundaries, empty history, and monthly/all-time totals. These data tests use isolated browser contexts and block external services and service workers. All tests fail on uncaught runtime errors. Run `npm run build` first so tests cover current code; run before every commit touching `src/` or `tests/`.
+**Automated (`npm run test:smoke`):** Playwright also runs `tests/netlify-headers.spec.js` (pure logic for the badge-blocking script policy). Playwright runs the tab-render smoke test (`tests/smoke.spec.js`), workout regression (`tests/workout.spec.js`), and monthly muscle summary test (`tests/muscles.spec.js`) against the built app. The workout test creates a workout through the UI, logs two weighted sets (including a fractional weight) and one bodyweight set, finishes it, and checks exact history values plus a single session before and after reload. The muscle test imports dated sessions through Settings and checks local month/year boundaries, empty history, and monthly/all-time totals. These data tests use isolated browser contexts and block external services and service workers. All tests fail on uncaught runtime errors. Run `npm run build` first so tests cover current code; run before every commit touching `src/` or `tests/`.
 
 The workout regression also uses an iPhone user agent to inspect the `shortcuts://` URL and confirm that only a positive duration is sent. It cannot verify an actual Health write or PWA-to-Shortcuts switch; those require an iPhone.
 
@@ -60,6 +60,13 @@ The workout regression also uses an iPhone user agent to inspect the `shortcuts:
 | S10 | **iOS zoom** | Tap any input on iPhone | No zoom |
 
 ## Last Run
+- **Date**: 2026-11-19 — v1.7 release (History calories, Netlify badge block, docs refresh)
+- **Build**: clean (`npm run build`); sw.js synced to temple-v1.7
+- **Netlify badge**: script policy added (`scripts/netlify-headers.mjs`); `npm run test:smoke` 6 passed; verified blocked in headless Chromium. Live-site check pending deploy.
+- **Docs**: ARCHITECTURE rewritten to v1.6 (data model, files, functions, calories); RULES versioning, z-index and file structure corrected; PRODUCT, DESIGN, CHANGELOG, BACKLOG, BUGS, Performance-audit synced
+- **Memory size**: ~60KB across `memory/*.md`, over the 40KB budget. Needs a decision: prune CHANGELOG/HOUSEKEEPING history or raise the limit.
+
+## Previous Run (2026-10-14)
 - **Date**: 2026-10-14 — v1.6 Apple Health Shortcut handoff
 - **Build**: clean; sw.js synced to temple-v1.6
 - **Automated tests**: `npm run test:smoke` — 3 passed; workout test covers URL scheme and minimal payload
@@ -67,7 +74,7 @@ The workout regression also uses an iPhone user agent to inspect the `shortcuts:
 - **Deployment**: `origin/dev` and `origin/main` both at `52c3cf87`; `https://tmple.netlify.app/sw.js` still served `temple-v1.1.1` after push. Dashboard requested login, so automatic deploy was not confirmed.
 - **Workspace**: existing uncommitted History calorie-display changes remain separate
 
-## Previous Run
+## Previous Run (2026-09-28)
 - **Release validation (2026-09-28)**: rebuilt committed v1.5 in an isolated checkout, excluding the pre-existing uncommitted History calorie changes; all 3 Playwright tests passed (9.6s). Release prepared for dev and main.
 - **Date**: 2026-09-28 — v1.5 monthly muscle summary (local, pending deployment)
 - **Build**: clean; sw.js synced to temple-v1.5

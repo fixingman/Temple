@@ -218,12 +218,15 @@ const { enabled: soundEnabled, toggle: toggleSound } = useSound();
 
 ## Z-Index Stack
 
+Source of truth: `T.z` in `tokens.js` (also listed in RULES.md).
+
 | Layer | Token | Value |
 |---|---|---|
 | Base content | — | 1 |
 | Sticky headers | `T.z.header` | 50 |
 | Tab bar | `T.z.tabBar` | 100 |
-| Modals / sheets | `T.z.modal` | 200 |
+| Modals / confirm dialogs | `T.z.modal` | 200 |
+| Sheets | `T.z.modal + 10` / `+ 20` | 210 / 220 |
 | Toasts / debug | `T.z.toast` | 300 |
 
 ---
@@ -231,6 +234,7 @@ const { enabled: soundEnabled, toggle: toggleSound } = useSound();
 ## Implementation Notes
 
 - **Muscle summary period (v1.5):** native labelled Period select inside the Muscles tab, using existing input/color/spacing tokens. Default All time; recorded months appear newest first with month and year. Selection scopes the map, bars, caption, and gap analysis; the page-level stats and other tabs keep their existing scope.
+- **History calories (unreleased):** a `{n} kcal` span sits beside exercises, sets and volume in each History row; hidden when `calcCalories` returns null (no bodyweight in Settings). Same dim meta styling as the other counts.
 - **Input-within-card background:** `C.inputBg` — used for session weight/reps fields, sits between surface and bg in both themes.
 - **Framer Motion import:** always `import { motion, AnimatePresence } from "framer-motion"`. Never inline spring configs — use `T.motion.*` presets.
 - **`Btn` is `motion.button`** with `whileTap={{ scale: 0.96 }}`. No `whileHover` — mobile-first, no hover states.
