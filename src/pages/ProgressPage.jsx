@@ -3,7 +3,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { T, C } from "../tokens";
-import { fmtDateFull, displayWeight, weightLabel, est1RM, uid } from "../data";
+import { fmtDateFull, displayWeight, weightLabel, est1RM, uid, calcCalories } from "../data";
 import { Card, Btn, ConfirmDialog, Pulse } from "../components";
 import { IcTrophy, IcClose } from "../icons";
 import { MuscleMap } from "../MuscleMap";
@@ -336,6 +336,7 @@ export function ProgressPage({ data, save, onRepeatSession, coach }) {
           {[...data.sessions].reverse().map(s => {
             const set = data.sets.find(ws => ws.id === s.setId);
             const vol = s.entries.reduce((a, e) => a + e.sets.reduce((b, st) => b + st.reps * st.weight, 0), 0);
+            const cals = calcCalories(s.entries.map(e => e.exerciseId), data.exercises, s.duration, data.settings?.bodyweightKg);
             const isExpanded = expandedSession === s.id;
             const sessionMuscleVol = {};
             if (isExpanded) {
@@ -368,6 +369,7 @@ export function ProgressPage({ data, save, onRepeatSession, coach }) {
                   <span>{s.entries.length} exercises</span>
                   <span>{s.entries.reduce((a, e) => a + e.sets.length, 0)} sets</span>
                   <span style={{ color: C.accent, fontWeight: T.fontWeight.bold }}>{displayWeight(vol, unit).toLocaleString()} {wl}</span>
+                  {cals && <span>{cals} kcal</span>}
                 </div>
 
                 {/* Expanded detail */}
